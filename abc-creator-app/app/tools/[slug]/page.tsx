@@ -1,0 +1,180 @@
+"use client";
+
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { ToolFormRenderer } from "@/components/ToolFormRenderer";
+import { getToolBySlug } from "@/lib/tools/public-tools";
+import { useEffect, useState } from "react";
+
+export default function DynamicToolPage() {
+  const params = useParams();
+  const slug = params?.slug as string;
+  const [tool, setTool] = useState(getToolBySlug(slug));
+
+  useEffect(() => {
+    if (slug) {
+      const foundTool = getToolBySlug(slug);
+      setTool(foundTool);
+    }
+  }, [slug]);
+
+  if (!tool) {
+    return (
+      <main className="min-h-screen bg-black">
+        <nav className="sticky top-0 z-50 bg-black/50 backdrop-blur-xl border-b border-purple-500/10">
+          <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
+            <Link href="/" className="flex items-center gap-2.5 hover:opacity-90 transition-opacity">
+              <img
+                src="/abc-logo.png"
+                alt="Creator Logo"
+                className="h-14 object-contain flex-shrink-0"
+              />
+              <span className="text-2xl font-semibold text-white">Creator</span>
+            </Link>
+            <div className="flex gap-3">
+              <Link
+                href="/tools"
+                className="px-6 py-2 text-gray-300 hover:text-white transition-colors text-sm"
+              >
+                Tools
+              </Link>
+              <Link
+                href="/dashboard"
+                className="px-6 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-full transition-all duration-200 text-sm font-medium"
+              >
+                Dashboard
+              </Link>
+            </div>
+          </div>
+        </nav>
+
+        <section className="max-w-7xl mx-auto px-6 py-24 text-center">
+          <h1 className="text-3xl font-bold text-white mb-4">Tool not found</h1>
+          <p className="text-gray-400 mb-8">
+            The tool you're looking for doesn't exist.
+          </p>
+          <Link
+            href="/tools"
+            className="inline-block px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-full transition-all duration-200 font-medium shadow-lg shadow-purple-500/20 hover:shadow-purple-500/40"
+          >
+            Back to Tools
+          </Link>
+        </section>
+      </main>
+    );
+  }
+
+  return (
+    <main className="min-h-screen bg-black">
+      {/* Navigation */}
+      <nav className="sticky top-0 z-50 bg-black/50 backdrop-blur-xl border-b border-purple-500/10">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2.5 hover:opacity-90 transition-opacity">
+            <img
+              src="/abc-logo.png"
+              alt="Creator Logo"
+              className="h-14 object-contain flex-shrink-0"
+            />
+            <span className="text-2xl font-semibold text-white">Creator</span>
+          </Link>
+          <div className="flex gap-3">
+            <Link
+              href="/tools"
+              className="px-6 py-2 text-gray-300 hover:text-white transition-colors text-sm"
+            >
+              Tools
+            </Link>
+            <Link
+              href="/dashboard"
+              className="px-6 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-full transition-all duration-200 text-sm font-medium"
+            >
+              Dashboard
+            </Link>
+          </div>
+        </div>
+      </nav>
+
+      {/* Breadcrumb */}
+      <div className="max-w-7xl mx-auto px-6 pt-8 pb-6">
+        <div className="flex items-center gap-2 text-gray-400 text-sm">
+          <Link href="/tools" className="hover:text-gray-300 transition-colors">
+            Tools
+          </Link>
+          <span>/</span>
+          <span className="text-gray-200">{tool.name}</span>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <section className="max-w-6xl mx-auto px-6 pb-12">
+        {/* Header */}
+        <div className="mb-12">
+          <div className="flex items-center gap-6 mb-6">
+            <span className="text-6xl">{tool.icon}</span>
+            <div>
+              <h1 className="text-4xl font-bold text-white mb-2">{tool.name}</h1>
+              <p className="text-gray-400">{tool.description}</p>
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <span className="px-4 py-1 text-xs bg-purple-500/30 text-purple-300 rounded-full font-medium">
+              {tool.category}
+            </span>
+            <span className="px-4 py-1 text-xs bg-blue-500/20 text-blue-300 rounded-full font-medium">
+              ⚡ Fast
+            </span>
+          </div>
+        </div>
+
+        {/* Tool Form & Output */}
+        <div className="grid lg:grid-cols-2 gap-10">
+          <div>
+            <h2 className="text-xl font-semibold text-white mb-8">Create Your Content</h2>
+            <ToolFormRenderer tool={tool} />
+          </div>
+
+          {/* Info Panel */}
+          <div className="space-y-6">
+            <div className="rounded-2xl bg-white/5 border border-purple-500/20 p-8 backdrop-blur-sm hover:border-purple-500/40 transition-all duration-200">
+              <h3 className="text-lg font-semibold text-white mb-6">How it works</h3>
+              <ol className="space-y-4 text-gray-400 text-sm leading-relaxed">
+                <li className="flex gap-4">
+                  <span className="font-semibold text-purple-400 min-w-6">1.</span>
+                  <span>Fill in the form with your details on the left</span>
+                </li>
+                <li className="flex gap-4">
+                  <span className="font-semibold text-purple-400 min-w-6">2.</span>
+                  <span>Click the "Generate" button to create content</span>
+                </li>
+                <li className="flex gap-4">
+                  <span className="font-semibold text-purple-400 min-w-6">3.</span>
+                  <span>See your AI-generated output instantly</span>
+                </li>
+                <li className="flex gap-4">
+                  <span className="font-semibold text-purple-400 min-w-6">4.</span>
+                  <span>Copy, edit, or save your content</span>
+                </li>
+              </ol>
+            </div>
+
+            <div className="rounded-2xl bg-blue-500/10 border border-blue-500/30 p-8 backdrop-blur-sm">
+              <h3 className="text-lg font-semibold text-blue-300 mb-4">💡 Pro Tips</h3>
+              <ul className="space-y-3 text-blue-200 text-sm leading-relaxed">
+                <li>• Be specific in your inputs for better results</li>
+                <li>• Try different tones to find what works best</li>
+                <li>• Generate multiple variations if needed</li>
+              </ul>
+            </div>
+
+            <div className="rounded-2xl bg-yellow-500/10 border border-yellow-500/30 p-8 backdrop-blur-sm">
+              <h3 className="text-lg font-semibold text-yellow-300 mb-3">⚠️ Development Notice</h3>
+              <p className="text-yellow-200 text-sm leading-relaxed">
+                This is a demonstration. Real AI integration and API connections are in development.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  );
+}
