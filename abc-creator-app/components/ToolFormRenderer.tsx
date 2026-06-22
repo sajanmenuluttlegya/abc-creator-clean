@@ -20,20 +20,41 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
     setFormData((prev) => ({ ...prev, [id]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
+  const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setIsLoading(true);
+  setOutput("");
 
-    // Simulate API delay
-    setTimeout(() => {
-      const placeholderOutput = `[DEV MODE - Placeholder Output]\n\nTool: ${tool.name}\nInputs received:\n${Object.entries(formData)
-        .map(([key, value]) => `• ${key}: ${value}`)
-        .join("\n")}\n\nThis is a placeholder. Real AI generation is not connected yet.`;
+  try {
+    const res = await fetch("/api/generate", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        toolSlug: tool.slug,
+        inputs: formData,
+      }),
+    });
 
-      setOutput(placeholderOutput);
-      setIsLoading(false);
-    }, 1200);
-  };
+    const data = await res.json();
+
+    if (!res.ok || !data.ok) {
+      setOutput(`Error:\n${data.error || "Generation failed."}`);
+      return;
+    }
+
+    setOutput(data.output || "No output returned.");
+  } catch (error) {
+    setOutput(
+      `Error:\nCould not reach /api/generate.\n\n${
+        error instanceof Error ? error.message : String(error)
+      }`
+    );
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
