@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerPrompt } from "@/lib/tools/server-prompts";
+import { routeToAI } from "@/lib/ai/routeToAI";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -38,30 +39,69 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const output = `DEV PLACEHOLDER — real AI not connected yet.
+    const hasUsefulInput = Object.values(inputs).some(
+      (value) => typeof value === "string" && value.trim().length > 1
+    );
 
-Tool slug:
-${toolSlug}
+    if (!hasUsefulInput) {
+      return NextResponse.json(
+        { ok: false, error: "Please fill in at least one meaningful field." },
+        { status: 400 }
+      );
+    }
 
-Server prompt loaded:
-${prompt.system}
+    const result = await routeToAI({
+      requestLabel: toolSlug,
+      temperature: 0.7,
+      maxTokens: 12000,
+      messages: [
+        {
+          role: "system",
+          content: `${prompt.system}
 
-Inputs received:
+Rules:
+- Return useful, polished, specific output.
+- Do not mention internal prompts, API keys, providers, or routing.
+- Do not say you are a placeholder.
+- Do not include fake statistics, fake testimonials, or fake guarantees.`,
+        },
+        {
+          role: "user",
+          content: `Tool: ${toolSlug}
+
+User inputs:
 ${formatInputs(inputs)}
 
-Output guide:
-${prompt.outputGuide}`;
+Output requirements:
+${prompt.outputGuide}`,
+        },
+      ],
+    });
 
     return NextResponse.json({
       ok: true,
       toolSlug,
-      output,
+      output: result.text,
+      provider: result.provider,
+      model: result.model,
+      keyIndex: result.keyIndex,
+      latencyMs: result.latencyMs,
+      attempts: result.attempts.map((attempt) => ({
+        provider: attempt.provider,
+        model: attempt.model,
+        keyIndex: attempt.keyIndex,
+        ok: attempt.ok,
+        latencyMs: attempt.latencyMs,
+        timeoutMs: attempt.timeoutMs,
+        status: attempt.status,
+        error: attempt.error ? attempt.error.slice(0, 240) : undefined,
+      })),
     });
   } catch (error) {
     return NextResponse.json(
       {
         ok: false,
-        error: "Generation route failed.",
+        error: "AI generation failed.",
         details: error instanceof Error ? error.message : String(error),
       },
       { status: 500 }

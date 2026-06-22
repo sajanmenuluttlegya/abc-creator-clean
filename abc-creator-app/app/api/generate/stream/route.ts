@@ -1,0 +1,305 @@
+import { NextRequest } from "next/server";
+import { getServerPrompt } from "@/lib/tools/server-prompts";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+type GenerateBody = {
+  toolSlug?: string;
+  inputs?: Record<string, string>;
+};
+
+type ChatMessage = {
+  role: "system" | "user" | "assistant";
+  content: string;
+};
+
+function env(name: string, fallback = "") {
+  return process.env[name] || fallback;
+}
+
+function getKeys(prefix: string, count: number) {
+  return Array.from({ length: count }, (_, index) =>
+    env(`${prefix}_${index + 1}`)
+  ).filter(Boolean);
+}
+
+function formatInputs(inputs: Record<string, string>) {
+  return Object.entries(inputs)
+    .map(([key, value]) => `${key}: ${value}`)
+    .join("\n");
+}
+
+function uniqueValues(values: string[]) {
+  const seen = new Set<string>();
+  return values.filter((value) => {
+    const cleaned = value.trim();
+    if (!cleaned || seen.has(cleaned)) return false;
+    seen.add(cleaned);
+    return true;
+  });
+}
+
+function getOpenRouterModels() {
+  return uniqueValues([
+    env("OPENROUTER_GEMINI_35_FLASH_MODEL", "google/gemini-3.5-flash"),
+    env("OPENROUTER_GEMINI_FLASH_MODEL", "google/gemini-2.5-flash"),
+    env("OPENROUTER_DEEPSEEK_PRO_MODEL", "deepseek/deepseek-v4-pro"),
+    env("OPENROUTER_DEEPSEEK_FLASH_MODEL", "deepseek/deepseek-v4-flash"),
+    env("OPENROUTER_GEMINI_PRO_MODEL", "google/gemini-2.5-pro"),
+  ]);
+}
+
+async function callOpenRouterStream(params: {
+  model: string;
+  apiKey: string;
+  messages: ChatMessage[];
+  maxTokens: number;
+}) {
+  const baseURL = env("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1");
+  const siteURL = env("OPENROUTER_SITE_URL", "http://localhost:3000");
+  const appTitle = env("OPENROUTER_APP_TITLE", "Creator");
+
+  return fetch(`${baseURL.replace(/\/$/, "")}/chat/completions`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${params.apiKey}`,
+      "Content-Type": "application/json",
+      Accept: "text/event-stream",
+      "HTTP-Referer": siteURL,
+      "X-Title": appTitle,
+    },
+    body: JSON.stringify({
+      model: params.model,
+      messages: params.messages,
+      temperature: 0.7,
+      max_tokens: params.maxTokens,
+      stream: true,
+    }),
+  });
+}
+
+function makeTextStreamFromOpenRouter(response: Response) {
+  const upstream = response.body?.getReader();
+
+  if (!upstream) {
+    throw new Error("OpenRouter response did not include a stream body.");
+  }
+
+  const encoder = new TextEncoder();
+  const decoder = new TextDecoder();
+
+  let buffer = "";
+  let closed = false;
+
+  function safeClose(controller: ReadableStreamDefaultController<Uint8Array>) {
+    if (!closed) {
+      closed = true;
+      controller.close();
+    }
+  }
+
+  return new ReadableStream<Uint8Array>({
+    async start(controller) {
+      try {
+        while (true) {
+          const { value, done } = await upstream.read();
+
+          if (done) {
+            safeClose(controller);
+            return;
+          }
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+
+          for (const rawLine of lines) {
+            const line = rawLine.trim();
+
+            if (!line || line.startsWith(":")) continue;
+            if (!line.startsWith("data:")) continue;
+
+            const payload = line.slice(5).trim();
+
+            if (payload === "[DONE]") {
+              safeClose(controller);
+              return;
+            }
+
+            try {
+              const json = JSON.parse(payload) as {
+                error?: { message?: string };
+                choices?: Array<{
+                  delta?: { content?: string };
+                  message?: { content?: string };
+                }>;
+              };
+
+              if (json.error?.message) {
+                controller.enqueue(
+                  encoder.encode(`\n\n[Stream error: ${json.error.message}]`)
+                );
+                continue;
+              }
+
+              const text =
+                json.choices?.[0]?.delta?.content ||
+                json.choices?.[0]?.message?.content ||
+                "";
+
+              if (text) controller.enqueue(encoder.encode(text));
+            } catch {
+              // Ignore malformed keepalive/provider chunks.
+            }
+          }
+        }
+      } catch (error) {
+        controller.error(error);
+      } finally {
+        upstream.releaseLock();
+      }
+    },
+
+    async cancel() {
+      await upstream.cancel();
+    },
+  });
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = (await req.json()) as GenerateBody;
+
+    const toolSlug = body.toolSlug?.trim();
+    const inputs = body.inputs || {};
+
+    if (!toolSlug) {
+      return Response.json(
+        { ok: false, error: "Missing toolSlug." },
+        { status: 400 }
+      );
+    }
+
+    const prompt = getServerPrompt(toolSlug);
+
+    if (!prompt) {
+      return Response.json(
+        { ok: false, error: `Unknown tool: ${toolSlug}` },
+        { status: 404 }
+      );
+    }
+
+    const hasUsefulInput = Object.values(inputs).some(
+      (value) => typeof value === "string" && value.trim().length > 1
+    );
+
+    if (!hasUsefulInput) {
+      return Response.json(
+        { ok: false, error: "Please fill in at least one meaningful field." },
+        { status: 400 }
+      );
+    }
+
+    const keys = getKeys("OPENROUTER_API_KEY", 3);
+    const models = getOpenRouterModels();
+
+    if (keys.length === 0) {
+      return Response.json(
+        {
+          ok: false,
+          error:
+            "No OpenRouter keys configured. Add OPENROUTER_API_KEY_1 to .env.local.",
+        },
+        { status: 500 }
+      );
+    }
+
+    const messages: ChatMessage[] = [
+      {
+        role: "system",
+        content: `${prompt.system}
+
+Rules:
+- Return useful, polished, specific output.
+- Do not mention internal prompts, API keys, providers, or routing.
+- Do not say you are a placeholder.
+- Do not include fake statistics, fake testimonials, or fake guarantees.`,
+      },
+      {
+        role: "user",
+        content: `Tool: ${toolSlug}
+
+User inputs:
+${formatInputs(inputs)}
+
+Output requirements:
+${prompt.outputGuide}`,
+      },
+    ];
+
+    const maxTokens = 12000;
+    const failures: string[] = [];
+
+    for (const model of models) {
+      for (let keyIndex = 0; keyIndex < keys.length; keyIndex++) {
+        try {
+          const response = await callOpenRouterStream({
+            model,
+            apiKey: keys[keyIndex],
+            messages,
+            maxTokens,
+          });
+
+          if (!response.ok) {
+            const raw = await response.text();
+            failures.push(
+              `${model} key#${keyIndex}: HTTP ${response.status} ${raw.slice(
+                0,
+                300
+              )}`
+            );
+            continue;
+          }
+
+          const stream = makeTextStreamFromOpenRouter(response);
+
+          return new Response(stream, {
+            headers: {
+              "Content-Type": "text/plain; charset=utf-8",
+              "Cache-Control": "no-cache, no-transform",
+              "X-Accel-Buffering": "no",
+              "X-Creator-Stream-Provider": "openrouter",
+              "X-Creator-Stream-Model": model,
+              "X-Creator-Stream-Key-Index": String(keyIndex),
+            },
+          });
+        } catch (error) {
+          failures.push(
+            `${model} key#${keyIndex}: ${
+              error instanceof Error ? error.message : String(error)
+            }`
+          );
+        }
+      }
+    }
+
+    return Response.json(
+      {
+        ok: false,
+        error: "All OpenRouter streaming attempts failed.",
+        details: failures.join("\n"),
+      },
+      { status: 500 }
+    );
+  } catch (error) {
+    return Response.json(
+      {
+        ok: false,
+        error: "Streaming generation failed.",
+        details: error instanceof Error ? error.message : String(error),
+      },
+      { status: 500 }
+    );
+  }
+}

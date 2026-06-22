@@ -106,7 +106,7 @@ export default function DynamicToolPage() {
       </div>
 
       {/* Main Content */}
-      <section className="max-w-6xl mx-auto px-6 pb-12">
+      <section className="max-w-7xl mx-auto px-6 pb-12">
         {/* Header */}
         <div className="mb-12">
           <div className="flex items-center gap-6 mb-6">
@@ -126,54 +126,8 @@ export default function DynamicToolPage() {
           </div>
         </div>
 
-        {/* Tool Form & Output */}
-        <div className="grid lg:grid-cols-2 gap-10">
-          <div>
-            <h2 className="text-xl font-semibold text-white mb-8">Create Your Content</h2>
-            <ToolFormRenderer tool={tool} />
-          </div>
-
-          {/* Info Panel */}
-          <div className="space-y-6">
-            <div className="rounded-2xl bg-white/5 border border-purple-500/20 p-8 backdrop-blur-sm hover:border-purple-500/40 transition-all duration-200">
-              <h3 className="text-lg font-semibold text-white mb-6">How it works</h3>
-              <ol className="space-y-4 text-gray-400 text-sm leading-relaxed">
-                <li className="flex gap-4">
-                  <span className="font-semibold text-purple-400 min-w-6">1.</span>
-                  <span>Fill in the form with your details on the left</span>
-                </li>
-                <li className="flex gap-4">
-                  <span className="font-semibold text-purple-400 min-w-6">2.</span>
-                  <span>Click the "Generate" button to create content</span>
-                </li>
-                <li className="flex gap-4">
-                  <span className="font-semibold text-purple-400 min-w-6">3.</span>
-                  <span>See your AI-generated output instantly</span>
-                </li>
-                <li className="flex gap-4">
-                  <span className="font-semibold text-purple-400 min-w-6">4.</span>
-                  <span>Copy, edit, or save your content</span>
-                </li>
-              </ol>
-            </div>
-
-            <div className="rounded-2xl bg-blue-500/10 border border-blue-500/30 p-8 backdrop-blur-sm">
-              <h3 className="text-lg font-semibold text-blue-300 mb-4">💡 Pro Tips</h3>
-              <ul className="space-y-3 text-blue-200 text-sm leading-relaxed">
-                <li>• Be specific in your inputs for better results</li>
-                <li>• Try different tones to find what works best</li>
-                <li>• Generate multiple variations if needed</li>
-              </ul>
-            </div>
-
-            <div className="rounded-2xl bg-yellow-500/10 border border-yellow-500/30 p-8 backdrop-blur-sm">
-              <h3 className="text-lg font-semibold text-yellow-300 mb-3">⚠️ Development Notice</h3>
-              <p className="text-yellow-200 text-sm leading-relaxed">
-                This is a demonstration. Real AI integration and API connections are in development.
-              </p>
-            </div>
-          </div>
-        </div>
+        {/* Tool Form, Help Panels & Output */}
+        <ToolFormRenderer tool={tool} />
       </section>
     </main>
   );

@@ -61,3 +61,27 @@ html {
   transform: scaleX(0.96);
   transform-origin: left center;
 }
+
+.creator-output-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #2b123f #050505;
+}
+
+.creator-output-scroll::-webkit-scrollbar {
+  width: 10px;
+}
+
+.creator-output-scroll::-webkit-scrollbar-track {
+  background: #050505;
+  border-radius: 999px;
+}
+
+.creator-output-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #31204a, #111111);
+  border: 2px solid #050505;
+  border-radius: 999px;
+}
+
+.creator-output-scroll::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #5b21b6, #1f102e);
+}

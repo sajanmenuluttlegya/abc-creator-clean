@@ -21,133 +21,225 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setIsLoading(true);
-  setOutput("");
+    e.preventDefault();
+    setIsLoading(true);
+    setOutput("");
 
-  try {
-    const res = await fetch("/api/generate", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        toolSlug: tool.slug,
-        inputs: formData,
-      }),
-    });
+    try {
+      const res = await fetch("/api/generate/stream", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          toolSlug: tool.slug,
+          inputs: formData,
+        }),
+      });
 
-    const data = await res.json();
+      if (!res.ok) {
+        const text = await res.text();
 
-    if (!res.ok || !data.ok) {
-      setOutput(`Error:\n${data.error || "Generation failed."}`);
-      return;
+        try {
+          const data = JSON.parse(text);
+          setOutput(
+            `Error:\n${data.error || "Generation failed."}\n\n${
+              data.details || ""
+            }`
+          );
+        } catch {
+          setOutput(`Error:\n${text || "Generation failed."}`);
+        }
+
+        return;
+      }
+
+      if (!res.body) {
+        setOutput("Error:\nStreaming response body was empty.");
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+
+      let finalOutput = "";
+
+      while (true) {
+        const { value, done } = await reader.read();
+
+        if (done) {
+          break;
+        }
+
+        const chunk = decoder.decode(value, { stream: true });
+        finalOutput += chunk;
+        setOutput(finalOutput);
+      }
+    } catch (error) {
+      setOutput(
+        `Error:\nCould not reach /api/generate/stream.\n\n${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    } finally {
+      setIsLoading(false);
     }
-
-    setOutput(data.output || "No output returned.");
-  } catch (error) {
-    setOutput(
-      `Error:\nCould not reach /api/generate.\n\n${
-        error instanceof Error ? error.message : String(error)
-      }`
-    );
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Form Inputs */}
-      <div className="rounded-2xl bg-white/5 border border-purple-500/20 p-8 backdrop-blur-sm space-y-6 hover:border-purple-500/40 transition-all duration-200">
-        {tool.inputs.map((input) => (
-          <div key={input.id} className="space-y-3">
-            <label
-              htmlFor={input.id}
-              className="block text-sm font-semibold text-white"
+    <div className="grid gap-8 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] lg:items-start">
+      <div className="space-y-6">
+        <div>
+          <h2 className="mb-6 text-xl font-semibold text-white">
+            Create Your Content
+          </h2>
+
+          <form
+            onSubmit={handleSubmit}
+            className="rounded-2xl border border-purple-500/20 bg-white/5 p-8 backdrop-blur-sm transition-all duration-200 hover:border-purple-500/40"
+          >
+            <div className="space-y-6">
+              {tool.inputs.map((input) => (
+                <div key={input.id} className="space-y-3">
+                  <label
+                    htmlFor={input.id}
+                    className="block text-sm font-semibold text-white"
+                  >
+                    {input.label}
+                    {input.required && (
+                      <span className="ml-1 text-pink-400">*</span>
+                    )}
+                  </label>
+
+                  {input.type === "textarea" ? (
+                    <textarea
+                      id={input.id}
+                      placeholder={input.placeholder}
+                      value={formData[input.id] || ""}
+                      onChange={handleInputChange}
+                      required={input.required}
+                      className="h-28 w-full resize-none rounded-xl border border-purple-500/20 bg-white/5 px-4 py-3 text-white placeholder-gray-500 transition-all duration-200 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                  ) : input.type === "select" ? (
+                    <select
+                      id={input.id}
+                      value={formData[input.id] || ""}
+                      onChange={handleInputChange}
+                      required={input.required}
+                      className="w-full cursor-pointer appearance-none rounded-xl border border-purple-500/20 bg-white/5 px-4 py-3 text-white transition-all duration-200 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    >
+                      <option value="" className="bg-black text-white">
+                        Select an option
+                      </option>
+                      {input.options?.map((option) => (
+                        <option
+                          key={option}
+                          value={option}
+                          className="bg-black text-white"
+                        >
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      id={input.id}
+                      type="text"
+                      placeholder={input.placeholder}
+                      value={formData[input.id] || ""}
+                      onChange={handleInputChange}
+                      required={input.required}
+                      className="w-full rounded-xl border border-purple-500/20 bg-white/5 px-4 py-3 text-white placeholder-gray-500 transition-all duration-200 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="mt-8 flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-3 font-semibold text-white shadow-lg shadow-purple-500/20 transition-all duration-200 hover:from-indigo-700 hover:to-purple-700 hover:shadow-purple-500/40 disabled:from-indigo-600/50 disabled:to-purple-600/50"
             >
-              {input.label}
-              {input.required && <span className="text-pink-400 ml-1">*</span>}
-            </label>
+              {isLoading ? (
+                <>
+                  <svg
+                    className="h-4 w-4 animate-spin"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    />
+                  </svg>
+                  Generating...
+                </>
+              ) : (
+                <>✨ Generate</>
+              )}
+            </button>
+          </form>
+        </div>
 
-            {input.type === "textarea" ? (
-              <textarea
-                id={input.id}
-                placeholder={input.placeholder}
-                value={formData[input.id] || ""}
-                onChange={handleInputChange}
-                required={input.required}
-                className="w-full px-4 py-3 bg-white/5 border border-purple-500/20 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none h-24 transition-all duration-200"
-              />
-            ) : input.type === "select" ? (
-              <select
-                id={input.id}
-                value={formData[input.id] || ""}
-                onChange={handleInputChange}
-                required={input.required}
-                className="w-full px-4 py-3 bg-white/5 border border-purple-500/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent appearance-none cursor-pointer transition-all duration-200"
-              >
-                <option value="" className="bg-black text-white">Select an option</option>
-                {input.options?.map((option) => (
-                  <option key={option} value={option} className="bg-black text-white">
-                    {option}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <input
-                id={input.id}
-                type="text"
-                placeholder={input.placeholder}
-                value={formData[input.id] || ""}
-                onChange={handleInputChange}
-                required={input.required}
-                className="w-full px-4 py-3 bg-white/5 border border-purple-500/20 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
-              />
-            )}
-          </div>
-        ))}
+        <div className="rounded-2xl border border-purple-500/20 bg-white/5 p-7 backdrop-blur-sm transition-all duration-200 hover:border-purple-500/40">
+          <h3 className="mb-5 text-lg font-semibold text-white">
+            How it works
+          </h3>
+          <ol className="space-y-4 text-sm leading-relaxed text-gray-400">
+            <li className="flex gap-4">
+              <span className="min-w-6 font-semibold text-purple-400">1.</span>
+              <span>Fill in the form with clear details.</span>
+            </li>
+            <li className="flex gap-4">
+              <span className="min-w-6 font-semibold text-purple-400">2.</span>
+              <span>Click Generate to create content with AI.</span>
+            </li>
+            <li className="flex gap-4">
+              <span className="min-w-6 font-semibold text-purple-400">3.</span>
+              <span>Review the result on the right side.</span>
+            </li>
+            <li className="flex gap-4">
+              <span className="min-w-6 font-semibold text-purple-400">4.</span>
+              <span>Copy, edit, or regenerate as needed.</span>
+            </li>
+          </ol>
+        </div>
 
-        {/* Submit Button */}
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="w-full mt-8 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:from-indigo-600/50 disabled:to-purple-600/50 text-white font-semibold rounded-full transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-purple-500/20 hover:shadow-purple-500/40"
-        >
-          {isLoading ? (
-            <>
-              <svg
-                className="animate-spin h-4 w-4"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
-              Generating...
-            </>
-          ) : (
-            <>
-              ✨ Generate
-            </>
-          )}
-        </button>
+        <div className="rounded-2xl border border-blue-500/30 bg-blue-500/10 p-7 backdrop-blur-sm">
+          <h3 className="mb-4 text-lg font-semibold text-blue-300">
+            💡 Pro Tips
+          </h3>
+          <ul className="space-y-3 text-sm leading-relaxed text-blue-200">
+            <li>• Be specific in your inputs for better results.</li>
+            <li>• Try different tones to find what works best.</li>
+            <li>• Generate multiple versions when testing angles.</li>
+          </ul>
+        </div>
+
+        <div className="rounded-2xl border border-purple-500/20 bg-purple-500/10 p-7 backdrop-blur-sm">
+          <h3 className="mb-3 text-lg font-semibold text-purple-200">
+            ⚡ Live AI Generation
+          </h3>
+          <p className="text-sm leading-relaxed text-purple-100/80">
+            Creator is connected to live AI generation. Review factual claims before publishing.
+          </p>
+        </div>
       </div>
 
-      {/* Output Panel */}
-      <OutputPanel isLoading={isLoading} output={output} />
-    </form>
+      <div className="lg:sticky lg:top-28">
+        <OutputPanel isLoading={isLoading} output={output} />
+      </div>
+    </div>
   );
 }
