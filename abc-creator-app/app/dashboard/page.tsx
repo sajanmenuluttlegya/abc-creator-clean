@@ -1,93 +1,86 @@
-"use client";
-
 import Link from "next/link";
-import { publicTools } from "@/lib/tools/public-tools";
+import { redirect } from "next/navigation";
+import { SignOutButton } from "@/components/SignOutButton";
+import { createClient } from "@/lib/supabase/server";
 
-export default function DashboardPage() {
-  // Placeholder statistics
-  const stats = [
-    { label: "Total Generations", value: "0", icon: "✨" },
-    { label: "Content Created", value: "0", icon: "📄" },
-    { label: "Time Saved", value: "0h", icon: "⏱️" },
-  ];
+export const dynamic = "force-dynamic";
+
+export default async function DashboardPage() {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error || !user) {
+    redirect("/login");
+  }
+
+  if (!user.email_confirmed_at) {
+    redirect("/verify-email");
+  }
 
   return (
-    <main className="min-h-screen bg-black">
-      {/* Navigation */}
-      <nav className="sticky top-0 z-50 bg-black/50 backdrop-blur-xl border-b border-purple-500/10">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5 hover:opacity-90 transition-opacity">
-            <img
-              src="/abc-logo.png"
-              alt="Creator Logo"
-              className="h-14 object-contain flex-shrink-0"
-            />
-            <span className="text-2xl font-semibold text-white">Creator</span>
+    <main className="min-h-screen bg-black text-white">
+      <nav className="sticky top-0 z-50 border-b border-purple-500/10 bg-black/60 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+          <Link href="/" className="flex items-center gap-3">
+            <img src="/abc-logo.png" alt="Creator" className="h-12 w-auto" />
+            <span className="text-xl font-semibold">Creator</span>
           </Link>
-          <div className="flex gap-3">
+
+          <div className="flex items-center gap-3">
             <Link
               href="/tools"
-              className="px-6 py-2 text-gray-300 hover:text-white transition-colors text-sm"
+              className="rounded-full px-5 py-2 text-sm text-gray-300 transition hover:text-white"
             >
               Tools
             </Link>
-            <Link
-              href="/dashboard"
-              className="px-6 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-full transition-all duration-200 text-sm font-medium"
-            >
-              Dashboard
-            </Link>
+            <SignOutButton />
           </div>
         </div>
       </nav>
 
-      {/* Main Content */}
-      <section className="max-w-7xl mx-auto px-6 py-12">
-        <div className="mb-12">
-          <h1 className="text-4xl font-bold text-white mb-2">Dashboard</h1>
-          <p className="text-gray-400">Welcome to your Creator dashboard</p>
-        </div>
+      <section className="mx-auto max-w-7xl px-6 py-12">
+        <div className="rounded-3xl border border-purple-500/20 bg-white/[0.04] p-8 shadow-2xl shadow-purple-950/25">
+          <p className="mb-2 text-sm text-purple-200">Signed in as</p>
+          <h1 className="mb-6 text-3xl font-bold">{user.email}</h1>
 
-        {/* Stats Grid */}
-        <div className="grid md:grid-cols-3 gap-6 mb-12">
-          {stats.map((stat, idx) => (
-            <div
-              key={idx}
-              className="rounded-2xl bg-white/5 border border-purple-500/20 p-8 backdrop-blur-sm hover:border-purple-500/40 transition-all duration-200"
-            >
-              <div className="text-4xl mb-4">{stat.icon}</div>
-              <div className="text-gray-400 text-sm mb-2">{stat.label}</div>
-              <div className="text-3xl font-bold text-white">{stat.value}</div>
+          <div className="grid gap-5 md:grid-cols-3">
+            <div className="rounded-2xl border border-purple-500/20 bg-black/40 p-6">
+              <p className="text-sm text-gray-400">Current plan</p>
+              <h2 className="mt-2 text-2xl font-bold">Free</h2>
+              <p className="mt-2 text-sm text-gray-400">
+                Credits system comes next.
+              </p>
             </div>
-          ))}
-        </div>
 
-        {/* Recent Tools Section */}
-        <div className="rounded-2xl bg-white/5 border border-purple-500/20 p-8 backdrop-blur-sm hover:border-purple-500/40 transition-all duration-200">
-          <h2 className="text-2xl font-semibold text-white mb-8">Quick Access</h2>
-          <div className="grid md:grid-cols-3 gap-6">
-            {publicTools.map((tool) => (
-              <Link
-                key={tool.id}
-                href={`/tools/${tool.slug}`}
-                className="group p-6 rounded-xl bg-white/5 border border-purple-500/20 hover:border-purple-500/50 hover:bg-white/10 transition-all duration-200"
-              >
-                <div className="flex items-center gap-3 mb-4">
-                  <span className="text-3xl">{tool.icon}</span>
-                  <h3 className="font-semibold text-white group-hover:text-purple-300 transition-colors">
-                    {tool.name}
-                  </h3>
-                </div>
-                <p className="text-sm text-gray-400">{tool.description}</p>
-              </Link>
-            ))}
+            <div className="rounded-2xl border border-purple-500/20 bg-black/40 p-6">
+              <p className="text-sm text-gray-400">Free credits</p>
+              <h2 className="mt-2 text-2xl font-bold">10 lifetime</h2>
+              <p className="mt-2 text-sm text-gray-400">
+                Final ledger will be server-side only.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-purple-500/20 bg-black/40 p-6">
+              <p className="text-sm text-gray-400">Status</p>
+              <h2 className="mt-2 text-2xl font-bold text-green-300">
+                Verified
+              </h2>
+              <p className="mt-2 text-sm text-gray-400">
+                Email verified. Dashboard unlocked.
+              </p>
+            </div>
           </div>
-        </div>
 
-        {/* Dev Note */}
-        <div className="mt-8 p-6 bg-blue-500/10 border border-blue-500/30 rounded-xl text-blue-300 text-sm">
-          ℹ️ Dashboard features are in development. Statistics and user data will be
-          available once backend integration is complete.
+          <Link
+            href="/tools"
+            className="mt-8 inline-flex rounded-full bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-3 font-semibold text-white shadow-lg shadow-purple-600/20"
+          >
+            Open tools
+          </Link>
         </div>
       </section>
     </main>
