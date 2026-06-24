@@ -21,6 +21,13 @@ export default async function DashboardPage() {
     redirect("/verify-email");
   }
 
+  const creditResult = await supabase.rpc("ensure_credit_account");
+  const creditData = creditResult.data as { ok?: boolean; balance?: number } | null;
+  const creditBalance =
+    !creditResult.error && typeof creditData?.balance === "number"
+      ? creditData.balance
+      : 0;
+
   return (
     <main className="min-h-screen bg-black text-white">
       <nav className="sticky top-0 z-50 border-b border-purple-500/10 bg-black/60 backdrop-blur-xl">
@@ -52,15 +59,19 @@ export default async function DashboardPage() {
               <p className="text-sm text-gray-400">Current plan</p>
               <h2 className="mt-2 text-2xl font-bold">Free</h2>
               <p className="mt-2 text-sm text-gray-400">
-                Credits system comes next.
+                Credit ledger is active.
               </p>
             </div>
 
             <div className="rounded-2xl border border-purple-500/20 bg-black/40 p-6">
-              <p className="text-sm text-gray-400">Free credits</p>
-              <h2 className="mt-2 text-2xl font-bold">10 lifetime</h2>
+              <p className="text-sm text-gray-400">Credits remaining</p>
+
+              <h2 className="mt-2 text-2xl font-bold">{creditBalance}</h2>
+
               <p className="mt-2 text-sm text-gray-400">
-                Final ledger will be server-side only.
+
+                Free plan includes 10 lifetime credits.
+
               </p>
             </div>
 

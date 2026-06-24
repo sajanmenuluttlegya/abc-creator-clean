@@ -1,5 +1,7 @@
 import { NextRequest } from "next/server";
+import { randomUUID } from "crypto";
 import { getServerPrompt } from "@/lib/tools/server-prompts";
+import { createClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -167,8 +169,68 @@ function makeTextStreamFromOpenRouter(response: Response) {
   });
 }
 
+type CreditReservation = {
+  ok?: boolean;
+  code?: string;
+  requiredCredits?: number;
+  currentCredits?: number;
+  remainingCredits?: number;
+  transactionId?: string;
+};
+
+function rpcErrorMessage(error: unknown) {
+  if (!error) return "Unknown credit ledger error.";
+  if (error instanceof Error) return error.message;
+
+  if (typeof error === "object") {
+    const value = error as {
+      message?: unknown;
+      details?: unknown;
+      hint?: unknown;
+      code?: unknown;
+    };
+
+    const parts = [value.message, value.details, value.hint, value.code]
+      .filter((item) => typeof item === "string" && item.trim())
+      .join(" ");
+
+    if (parts) return parts;
+  }
+
+  return String(error);
+}
+
 export async function POST(req: NextRequest) {
+  let reservedTransactionId: string | null = null;
+  let supabase: Awaited<ReturnType<typeof createClient>> | null = null;
+
+  async function refundIfReserved(reason: string) {
+    if (!supabase || !reservedTransactionId) return;
+
+    try {
+      await supabase.rpc("refund_reserved_credits", {
+        p_transaction_id: reservedTransactionId,
+        p_reason: reason,
+      });
+    } catch {
+      // Never expose refund internals to the user.
+    }
+  }
+
   try {
+    supabase = await createClient();
+
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return Response.json(
+        { ok: false, error: "Login required.", code: "AUTH_REQUIRED" },
+        { status: 401 }
+      );
+    }
     const body = (await req.json()) as GenerateBody;
 
     const toolSlug = body.toolSlug?.trim();
@@ -210,6 +272,51 @@ export async function POST(req: NextRequest) {
           ok: false,
           error:
             "No OpenRouter keys configured. Add OPENROUTER_API_KEY_1 to .env.local.",
+        },
+        { status: 500 }
+      );
+    }
+
+    const reserveResponse = await supabase.rpc("reserve_credits", {
+      p_tool_slug: toolSlug,
+      p_amount: prompt.creditCost,
+      p_idempotency_key: `${user.id}:${toolSlug}:${randomUUID()}`,
+    });
+
+    if (reserveResponse.error) {
+      return Response.json(
+        {
+          ok: false,
+          error: "Could not reserve credits.",
+          details: rpcErrorMessage(reserveResponse.error),
+        },
+        { status: 500 }
+      );
+    }
+
+    const reservation = reserveResponse.data as CreditReservation;
+
+    if (!reservation?.ok) {
+      return Response.json(
+        {
+          ok: false,
+          error: "Not enough credits.",
+          code: reservation?.code || "INSUFFICIENT_CREDITS",
+          requiredCredits: reservation?.requiredCredits ?? prompt.creditCost,
+          currentCredits: reservation?.currentCredits ?? 0,
+        },
+        { status: 402 }
+      );
+    }
+
+    reservedTransactionId = reservation.transactionId || null;
+
+    if (!reservedTransactionId) {
+      return Response.json(
+        {
+          ok: false,
+          error: "Credit reservation failed.",
+          code: "CREDIT_RESERVATION_MISSING_ID",
         },
         { status: 500 }
       );
@@ -262,6 +369,25 @@ ${prompt.outputGuide}`,
             continue;
           }
 
+            const spendResponse = await supabase.rpc("spend_reserved_credits", {
+              p_transaction_id: reservedTransactionId,
+              p_provider: "openrouter",
+              p_model: model,
+            });
+
+            if (spendResponse.error) {
+              await refundIfReserved("spend_mark_failed");
+
+              return Response.json(
+                {
+                  ok: false,
+                  error: "Could not finalize credit spend.",
+                  details: rpcErrorMessage(spendResponse.error),
+                },
+                { status: 500 }
+              );
+            }
+
           const stream = makeTextStreamFromOpenRouter(response);
 
           return new Response(stream, {
@@ -284,6 +410,8 @@ ${prompt.outputGuide}`,
       }
     }
 
+      await refundIfReserved("all_streaming_attempts_failed");
+
     return Response.json(
       {
         ok: false,
@@ -293,6 +421,8 @@ ${prompt.outputGuide}`,
       { status: 500 }
     );
   } catch (error) {
+      await refundIfReserved("streaming_generation_exception");
+
     return Response.json(
       {
         ok: false,

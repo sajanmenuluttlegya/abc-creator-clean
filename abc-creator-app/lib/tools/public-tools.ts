@@ -5,6 +5,7 @@ export interface Tool {
   description: string;
   icon: string;
   category: string;
+  displayCreditCost: number;
   inputs: ToolInput[];
 }
 
@@ -25,6 +26,7 @@ export const publicTools: Tool[] = [
     description: "Generate creative blog topic ideas based on your niche and keywords",
     icon: "📝",
     category: "Content",
+    displayCreditCost: 2,
     inputs: [
       {
         id: "niche",
@@ -56,6 +58,7 @@ export const publicTools: Tool[] = [
     description: "Create compelling Facebook ad copy that drives clicks and conversions",
     icon: "📢",
     category: "Marketing",
+    displayCreditCost: 4,
     inputs: [
       {
         id: "product",
@@ -87,6 +90,7 @@ export const publicTools: Tool[] = [
     description: "Write SEO-optimized product descriptions that sell",
     icon: "🛍️",
     category: "Ecommerce",
+    displayCreditCost: 3,
     inputs: [
       {
         id: "productName",

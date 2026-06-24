@@ -1,6 +1,8 @@
+import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getServerPrompt } from "@/lib/tools/server-prompts";
 import { routeToAI } from "@/lib/ai/routeToAI";
+import { createClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -10,14 +12,82 @@ type GenerateBody = {
   inputs?: Record<string, string>;
 };
 
+type CreditReservation = {
+  ok?: boolean;
+  code?: string;
+  requiredCredits?: number;
+  currentCredits?: number;
+  remainingCredits?: number;
+  transactionId?: string;
+};
+
+type CreditSpendResult = {
+  ok?: boolean;
+  code?: string;
+  status?: string;
+  alreadyFinalized?: boolean;
+};
+
 function formatInputs(inputs: Record<string, string>) {
   return Object.entries(inputs)
     .map(([key, value]) => `${key}: ${value}`)
     .join("\n");
 }
 
+function rpcErrorMessage(error: unknown) {
+  if (!error) return "Unknown credit ledger error.";
+  if (error instanceof Error) return error.message;
+
+  if (typeof error === "object") {
+    const value = error as {
+      message?: unknown;
+      details?: unknown;
+      hint?: unknown;
+      code?: unknown;
+    };
+
+    const parts = [value.message, value.details, value.hint, value.code]
+      .filter((item) => typeof item === "string" && item.trim())
+      .join(" ");
+
+    if (parts) return parts;
+  }
+
+  return String(error);
+}
+
 export async function POST(req: NextRequest) {
+  let reservedTransactionId: string | null = null;
+  let supabase: Awaited<ReturnType<typeof createClient>> | null = null;
+
+  async function refundIfReserved(reason: string) {
+    if (!supabase || !reservedTransactionId) return;
+
+    try {
+      await supabase.rpc("refund_reserved_credits", {
+        p_transaction_id: reservedTransactionId,
+        p_reason: reason,
+      });
+    } catch {
+      // Never expose refund internals to the user.
+    }
+  }
+
   try {
+    supabase = await createClient();
+
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { ok: false, error: "Login required.", code: "AUTH_REQUIRED" },
+        { status: 401 }
+      );
+    }
+
     const body = (await req.json()) as GenerateBody;
 
     const toolSlug = body.toolSlug?.trim();
@@ -50,6 +120,51 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const reserveResponse = await supabase.rpc("reserve_credits", {
+      p_tool_slug: toolSlug,
+      p_amount: prompt.creditCost,
+      p_idempotency_key: `${user.id}:${toolSlug}:${randomUUID()}`,
+    });
+
+    if (reserveResponse.error) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Could not reserve credits.",
+          details: rpcErrorMessage(reserveResponse.error),
+        },
+        { status: 500 }
+      );
+    }
+
+    const reservation = reserveResponse.data as CreditReservation;
+
+    if (!reservation?.ok) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Not enough credits.",
+          code: reservation?.code || "INSUFFICIENT_CREDITS",
+          requiredCredits: reservation?.requiredCredits ?? prompt.creditCost,
+          currentCredits: reservation?.currentCredits ?? 0,
+        },
+        { status: 402 }
+      );
+    }
+
+    reservedTransactionId = reservation.transactionId || null;
+
+    if (!reservedTransactionId) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Credit reservation failed.",
+          code: "CREDIT_RESERVATION_MISSING_ID",
+        },
+        { status: 500 }
+      );
+    }
+
     const result = await routeToAI({
       requestLabel: toolSlug,
       temperature: 0.7,
@@ -78,26 +193,50 @@ ${prompt.outputGuide}`,
       ],
     });
 
+    const spendResponse = await supabase.rpc("spend_reserved_credits", {
+      p_transaction_id: reservedTransactionId,
+      p_provider: result.provider,
+      p_model: result.model,
+    });
+
+    if (spendResponse.error) {
+      await refundIfReserved("spend_mark_failed");
+
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Could not finalize credit spend.",
+          details: rpcErrorMessage(spendResponse.error),
+        },
+        { status: 500 }
+      );
+    }
+
+    const spendData = spendResponse.data as CreditSpendResult | null;
+
+    if (spendData?.ok === false) {
+      await refundIfReserved("spend_mark_failed");
+
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Could not finalize credit spend.",
+          code: spendData.code || "SPEND_FAILED",
+          status: spendData.status,
+        },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json({
       ok: true,
       toolSlug,
       output: result.text,
-      provider: result.provider,
-      model: result.model,
-      keyIndex: result.keyIndex,
-      latencyMs: result.latencyMs,
-      attempts: result.attempts.map((attempt) => ({
-        provider: attempt.provider,
-        model: attempt.model,
-        keyIndex: attempt.keyIndex,
-        ok: attempt.ok,
-        latencyMs: attempt.latencyMs,
-        timeoutMs: attempt.timeoutMs,
-        status: attempt.status,
-        error: attempt.error ? attempt.error.slice(0, 240) : undefined,
-      })),
+      creditsSpent: prompt.creditCost,
     });
   } catch (error) {
+    await refundIfReserved("generation_exception");
+
     return NextResponse.json(
       {
         ok: false,
