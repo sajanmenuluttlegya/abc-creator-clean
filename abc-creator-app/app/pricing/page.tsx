@@ -2,59 +2,69 @@ import Link from "next/link";
 
 const plans = [
   {
-    name: "Free",
-    price: "$0",
-    note: "Start testing Creator",
-    credits: "10 lifetime credits",
-    highlight: false,
-    features: [
-      "Try core AI writing tools",
-      "No credit card required",
-      "Email verification required",
-    ],
-    cta: "Current free starter",
+    name: "Starter",
+    monthly: "$39/mo",
+    yearly: "$36/year",
+    credits: "150 credits / month",
+    description: "For beginners and light creators starting with ABC Creator.",
+    features: ["Core AI writing tools", "Monthly credit allowance", "Good for light content work"],
   },
   {
     name: "Plus",
-    price: "Coming soon",
-    note: "For regular creators",
+    monthly: "$69/mo",
+    yearly: "$468/year",
     credits: "400 credits / month",
+    description: "For regular creators, freelancers, and small businesses.",
+    features: ["More monthly credits", "All current writing tools", "Best everyday creator plan"],
     highlight: true,
-    features: [
-      "More monthly generations",
-      "Use all available writing tools",
-      "Designed for creators and small businesses",
-    ],
-    cta: "Payments coming soon",
   },
   {
-    name: "Yearly Creator Bundle",
-    price: "$129 / year",
-    note: "Best value for heavy users",
+    name: "Bundle",
+    monthly: "Yearly only",
+    yearly: "$129/year",
     credits: "1400 credits / month",
-    highlight: false,
-    features: [
-      "Large monthly credit allowance",
-      "Best for teams, agencies, and daily creators",
-      "Stripe and Razorpay support planned",
-    ],
-    cta: "Payments coming soon",
+    description: "A special yearly creator bundle with high monthly credits.",
+    features: ["Large monthly credit allowance", "Best low-cost yearly option", "Built for serious creators"],
   },
-];
-
-const usageCosts = [
-  ["Blog Topic Ideas", "2 credits"],
-  ["Product Description", "3 credits"],
-  ["Facebook Ad Copy", "4 credits"],
-  ["AI Image Generation", "46 credits"],
-  ["AI Video — 4 seconds", "98 credits"],
-  ["AI Video — 8 seconds", "198 credits"],
+  {
+    name: "Pro",
+    monthly: "$199/mo",
+    yearly: "$1,788/year",
+    credits: "2500 credits / month",
+    description: "For professional creators, marketers, and content teams.",
+    features: ["High-volume generation", "Professional content workflows", "More room for long-form tools"],
+  },
+  {
+    name: "Agency",
+    monthly: "$549/mo",
+    yearly: "$5,988/year",
+    credits: "9000 credits / month",
+    description: "For agencies handling multiple brands or clients.",
+    features: ["Agency-level credit allowance", "Client content workflows", "Designed for scale"],
+  },
+  {
+    name: "Business",
+    monthly: "$1,049/mo",
+    yearly: "$11,988/year",
+    credits: "20000 credits / month",
+    description: "For high-volume business teams and advanced usage.",
+    features: ["Large team usage", "Business-scale monthly credits", "High-output generation workflows"],
+  },
+  {
+    name: "Scale",
+    monthly: "$1,549/mo",
+    yearly: "Monthly only",
+    credits: "35000 credits / month",
+    description: "For maximum-volume teams and large-scale content operations.",
+    features: ["Highest monthly credit allowance", "Built for heavy usage", "Scale-level production workflow"],
+  },
 ];
 
 export default function PricingPage() {
   return (
     <main className="min-h-screen bg-black text-white">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,#4c1d95_0%,#160029_35%,#030006_75%)] opacity-80" />
+
       <div className="relative z-10 mx-auto max-w-7xl px-6 py-12">
         <div className="mb-10 flex items-center justify-between gap-6">
           <Link href="/" className="flex items-center gap-3">
@@ -74,20 +84,22 @@ export default function PricingPage() {
           <p className="mb-4 text-sm font-semibold uppercase tracking-[0.35em] text-purple-300">
             Pricing
           </p>
+
           <h1 className="mx-auto max-w-3xl text-4xl font-bold leading-tight md:text-6xl">
-            Choose the credits that match your creative workload.
+            Choose the plan that fits your content workflow.
           </h1>
+
           <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-gray-300">
-            Credits are spent only when you generate content. Failed generations are refunded automatically.
+            Every paid plan includes a monthly credit allowance for ABC Creator tools.
           </p>
         </section>
 
-        <section className="grid gap-6 lg:grid-cols-3">
+        <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
           {plans.map((plan) => (
             <div
               key={plan.name}
               className={[
-                "rounded-3xl border p-8 backdrop-blur-sm",
+                "rounded-3xl border p-8 backdrop-blur-sm transition",
                 plan.highlight
                   ? "border-purple-400/60 bg-purple-500/15 shadow-2xl shadow-purple-500/20"
                   : "border-purple-500/20 bg-white/5",
@@ -95,16 +107,21 @@ export default function PricingPage() {
             >
               {plan.highlight && (
                 <div className="mb-5 inline-flex rounded-full border border-purple-300/30 bg-purple-300/10 px-3 py-1 text-xs font-semibold text-purple-100">
-                  Most flexible
+                  Popular
                 </div>
               )}
 
               <h2 className="text-2xl font-bold">{plan.name}</h2>
-              <p className="mt-2 text-sm text-gray-400">{plan.note}</p>
+
+              <p className="mt-2 min-h-[52px] text-sm leading-6 text-gray-400">
+                {plan.description}
+              </p>
 
               <div className="mt-7">
-                <div className="text-4xl font-bold">{plan.price}</div>
-                <div className="mt-3 inline-flex rounded-full border border-emerald-400/25 bg-emerald-400/10 px-4 py-1.5 text-sm font-semibold text-emerald-200">
+                <div className="text-4xl font-bold">{plan.monthly}</div>
+                <div className="mt-2 text-sm text-gray-400">{plan.yearly}</div>
+
+                <div className="mt-5 inline-flex rounded-full border border-emerald-400/25 bg-emerald-400/10 px-4 py-1.5 text-sm font-semibold text-emerald-200">
                   {plan.credits}
                 </div>
               </div>
@@ -122,35 +139,14 @@ export default function PricingPage() {
                 disabled
                 className="mt-8 w-full rounded-full border border-white/10 bg-white/10 px-5 py-3 text-sm font-semibold text-white/70"
               >
-                {plan.cta}
+                Payments coming soon
               </button>
             </div>
           ))}
         </section>
 
-        <section className="mt-14 rounded-3xl border border-purple-500/20 bg-white/5 p-8 backdrop-blur-sm">
-          <h2 className="text-2xl font-bold">Credit usage</h2>
-          <p className="mt-2 text-sm text-gray-400">
-            Different tools use different credit amounts based on generation cost.
-          </p>
-
-          <div className="mt-6 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            {usageCosts.map(([name, cost]) => (
-              <div
-                key={name}
-                className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/30 px-5 py-4"
-              >
-                <span className="text-sm text-gray-200">{name}</span>
-                <span className="rounded-full bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-200">
-                  {cost}
-                </span>
-              </div>
-            ))}
-          </div>
-        </section>
-
         <p className="mt-10 text-center text-sm text-gray-500">
-          Stripe and Razorpay checkout will be added after the credit purchase flow is finalized.
+          Stripe and Razorpay checkout will be connected after the billing flow is finalized.
         </p>
       </div>
     </main>
