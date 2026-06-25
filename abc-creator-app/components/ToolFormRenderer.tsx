@@ -38,23 +38,38 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
         }),
       });
 
-      if (!res.ok) {
-        const text = await res.text();
+        if (!res.ok) {
+          const text = await res.text();
 
-        try {
-          const data = JSON.parse(text);
-          setOutput(
-            `Error:\n${data.error || "Generation failed."}\n\n${
-              data.details || ""
-            }`
-          );
-        } catch {
-          setOutput(`Error:\n${text || "Generation failed."}`);
+          try {
+            const data = JSON.parse(text);
+
+            if (res.status === 402 || data.code === "INSUFFICIENT_CREDITS") {
+              const requiredCredits = Number(data.requiredCredits ?? creditCost);
+              const currentCredits = Number(data.currentCredits ?? 0);
+
+              setOutput(
+`Not enough credits
+
+This tool needs ${requiredCredits} credits per generation.
+You currently have ${currentCredits} credit${currentCredits === 1 ? "" : "s"}.
+
+Get more credits: /pricing`
+              );
+              return;
+            }
+
+            setOutput(
+              `Error:\n${data.error || "Generation failed."}\n\n${
+                data.details || ""
+              }`
+            );
+          } catch {
+            setOutput(`Error:\n${text || "Generation failed."}`);
+          }
+
+          return;
         }
-
-        return;
-      }
-
       if (!res.body) {
         setOutput("Error:\nStreaming response body was empty.");
         return;
