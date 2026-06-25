@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getStripeClient } from "@/lib/billing/stripe";
+import { getPlanCreditGrant } from "@/lib/billing/plan-credits";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
@@ -13,6 +14,42 @@ function unixToIso(value: unknown) {
 
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Unknown webhook error.";
+}
+
+function getInvoiceSubscriptionId(invoice: Stripe.Invoice) {
+  const rawInvoice = invoice as unknown as {
+    subscription?: string | { id?: string } | null;
+  };
+
+  if (typeof rawInvoice.subscription === "string") {
+    return rawInvoice.subscription;
+  }
+
+  return rawInvoice.subscription?.id || null;
+}
+
+function getInvoicePeriod(invoice: Stripe.Invoice) {
+  const rawInvoice = invoice as unknown as {
+    period_start?: number;
+    period_end?: number;
+    lines?: {
+      data?: Array<{
+        period?: {
+          start?: number;
+          end?: number;
+        };
+      }>;
+    };
+  };
+
+  const linePeriod = rawInvoice.lines?.data?.find(
+    (line) => line.period?.start && line.period?.end
+  )?.period;
+
+  return {
+    periodStart: unixToIso(linePeriod?.start ?? rawInvoice.period_start),
+    periodEnd: unixToIso(linePeriod?.end ?? rawInvoice.period_end),
+  };
 }
 
 async function markEventProcessed(supabase: SupabaseClient, eventId: string) {
@@ -138,6 +175,57 @@ async function syncSubscription(
   }
 }
 
+async function grantSubscriptionCredits(
+  supabase: SupabaseClient,
+  subscription: Stripe.Subscription,
+  invoice: Stripe.Invoice
+) {
+  const metadata = subscription.metadata || {};
+  const userId = metadata.userId;
+  const planId = metadata.planId;
+  const billingInterval = metadata.billingInterval;
+
+  if (!userId || !planId || !billingInterval || !invoice.id) {
+    return;
+  }
+
+  const creditGrant = getPlanCreditGrant(planId, billingInterval);
+
+  if (!creditGrant.ok) {
+    throw new Error(creditGrant.error);
+  }
+
+  const rawSubscription = subscription as unknown as {
+    current_period_start?: number;
+    current_period_end?: number;
+  };
+
+  const invoicePeriod = getInvoicePeriod(invoice);
+
+  const periodStart =
+    invoicePeriod.periodStart || unixToIso(rawSubscription.current_period_start);
+  const periodEnd =
+    invoicePeriod.periodEnd || unixToIso(rawSubscription.current_period_end);
+
+  const { error } = await supabase.rpc("grant_subscription_credits", {
+    p_user_id: userId,
+    p_grant_amount: creditGrant.grantAmount,
+    p_monthly_credits: creditGrant.monthlyCredits,
+    p_months_granted: creditGrant.monthsGranted,
+    p_plan_id: creditGrant.planId,
+    p_billing_interval: creditGrant.billingInterval,
+    p_stripe_invoice_id: invoice.id,
+    p_stripe_subscription_id: subscription.id,
+    p_period_start: periodStart,
+    p_period_end: periodEnd,
+    p_idempotency_key: `stripe_invoice_${invoice.id}`,
+  });
+
+  if (error) {
+    throw error;
+  }
+}
+
 async function handleCheckoutCompleted(
   supabase: SupabaseClient,
   stripe: Stripe,
@@ -158,6 +246,39 @@ async function handleCheckoutCompleted(
     subscription,
     (session.metadata || {}) as Record<string, string>
   );
+}
+
+async function handlePaidInvoice(
+  supabase: SupabaseClient,
+  stripe: Stripe,
+  invoice: Stripe.Invoice
+) {
+  const subscriptionId = getInvoiceSubscriptionId(invoice);
+
+  if (!subscriptionId) {
+    return;
+  }
+
+  const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+
+  await syncSubscription(supabase, subscription);
+  await grantSubscriptionCredits(supabase, subscription, invoice);
+}
+
+async function handleInvoiceSubscriptionSync(
+  supabase: SupabaseClient,
+  stripe: Stripe,
+  invoice: Stripe.Invoice
+) {
+  const subscriptionId = getInvoiceSubscriptionId(invoice);
+
+  if (!subscriptionId) {
+    return;
+  }
+
+  const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+
+  await syncSubscription(supabase, subscription);
 }
 
 export async function POST(request: Request) {
@@ -242,6 +363,23 @@ export async function POST(request: Request) {
           supabase,
           stripe,
           event.data.object as Stripe.Checkout.Session
+        );
+        break;
+
+      case "invoice.paid":
+      case "invoice.payment_succeeded":
+        await handlePaidInvoice(
+          supabase,
+          stripe,
+          event.data.object as Stripe.Invoice
+        );
+        break;
+
+      case "invoice.payment_failed":
+        await handleInvoiceSubscriptionSync(
+          supabase,
+          stripe,
+          event.data.object as Stripe.Invoice
         );
         break;
 
