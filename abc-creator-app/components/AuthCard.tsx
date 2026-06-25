@@ -130,12 +130,22 @@ export function AuthCard({ mode }: AuthCardProps) {
 
       setIsBusy(false);
 
-      if (!response.ok || !result.ok) {
-        setErrorText(
-          result.error || "Email authentication failed. Check Supabase Auth logs."
-        );
-        return;
-      }
+        if (!response.ok || !result.ok) {
+          const errorMessage = result.error || "";
+
+          if (
+            !isSignup &&
+            /confirm|confirmed|verification|verify/i.test(errorMessage)
+          ) {
+            router.push(`/verify-email?email=${encodeURIComponent(cleanEmail)}`);
+            return;
+          }
+
+          setErrorText(
+            errorMessage || "Email authentication failed. Check Supabase Auth logs."
+          );
+          return;
+        }
 
       if (result.needsVerification) {
         router.push(`/verify-email?email=${encodeURIComponent(cleanEmail)}`);
