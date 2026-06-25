@@ -160,6 +160,39 @@ async function registerStripeEvent(
       .eq("id", event.id)
       .maybeSingle();
 
+    if (data?.status === "failed") {
+      const { error: retryError } = await supabase
+        .from("stripe_events")
+        .update({
+          status: "processing",
+          error_message: null,
+          updated_at: new Date().toISOString(),
+          payload: {
+            eventId: event.id,
+            eventType: event.type,
+            objectId: object.id || null,
+            created: event.created,
+            livemode: event.livemode,
+            retryingFailedEvent: true,
+          },
+        })
+        .eq("id", event.id);
+
+      if (retryError) {
+        return {
+          ok: false as const,
+          shouldProcess: false as const,
+          error: retryError,
+        };
+      }
+
+      return {
+        ok: true as const,
+        shouldProcess: true as const,
+        retryingFailedEvent: true as const,
+      };
+    }
+
     return {
       ok: true as const,
       shouldProcess: false as const,
