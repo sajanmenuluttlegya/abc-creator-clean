@@ -142,7 +142,7 @@ export function AuthCard({ mode }: AuthCardProps) {
         return;
       }
 
-      router.push("/dashboard");
+      window.location.href = "/dashboard";
       router.refresh();
     } catch (error) {
       console.error("Email auth client error:", error);

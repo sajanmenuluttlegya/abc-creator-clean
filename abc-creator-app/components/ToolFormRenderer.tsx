@@ -12,6 +12,7 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [output, setOutput] = useState<string>("");
+  const creditCost = tool.displayCreditCost;
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -90,9 +91,14 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
     <div className="grid gap-8 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] lg:items-start">
       <div className="space-y-6">
         <div>
-          <h2 className="mb-6 text-xl font-semibold text-white">
-            Create Your Content
-          </h2>
+            <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="text-xl font-semibold text-white">
+                Create Your Content
+              </h2>
+              <span className="inline-flex w-fit items-center rounded-full border border-emerald-400/25 bg-emerald-400/10 px-4 py-1.5 text-xs font-semibold text-emerald-200">
+                {creditCost} credits per generation
+              </span>
+            </div>
 
           <form
             onSubmit={handleSubmit}
@@ -186,7 +192,7 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
                   Generating...
                 </>
               ) : (
-                <>✨ Generate</>
+                  <>✨ Generate — {creditCost} credits</>
               )}
             </button>
           </form>
@@ -203,7 +209,7 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
             </li>
             <li className="flex gap-4">
               <span className="min-w-6 font-semibold text-purple-400">2.</span>
-              <span>Click Generate to create content with AI.</span>
+                <span>Click Generate to spend {creditCost} credits and create content with AI.</span>
             </li>
             <li className="flex gap-4">
               <span className="min-w-6 font-semibold text-purple-400">3.</span>
