@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { supabaseCookieOptions } from "./cookie-options";
 
 const PROTECTED_PAGE_PREFIXES = ["/dashboard", "/tools"];
-const PROTECTED_API_PREFIXES = ["/api/generate", "/api/billing"];
+const PROTECTED_API_PREFIXES = ["/api/generate", "/api/billing/checkout"];
 
 function isProtectedPath(pathname: string, prefixes: string[]) {
   return prefixes.some(
