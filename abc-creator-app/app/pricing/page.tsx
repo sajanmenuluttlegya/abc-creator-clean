@@ -90,7 +90,7 @@ export default function PricingPage() {
           </h1>
 
           <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-gray-300">
-            Every paid plan includes a monthly credit allowance for ABC Creator tools.
+            Every paid plan includes a monthly credit allowance for ABC Creator tools. No free trial. Credits are granted only after successful payment confirmation.
           </p>
         </section>
 
@@ -146,7 +146,7 @@ export default function PricingPage() {
         </section>
 
         <p className="mt-10 text-center text-sm text-gray-500">
-          Stripe and Razorpay checkout will be connected after the billing flow is finalized.
+          No money refunds are provided after payment. Cancelling a subscription stops future renewals. Stripe and Razorpay checkout will be connected after the billing flow is finalized.
         </p>
       </div>
     </main>

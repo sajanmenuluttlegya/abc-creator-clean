@@ -189,6 +189,17 @@ async function grantSubscriptionCredits(
     return;
   }
 
+  const rawInvoiceForPayment = invoice as unknown as {
+    amount_paid?: number;
+  };
+
+  if (
+    typeof rawInvoiceForPayment.amount_paid === "number" &&
+    rawInvoiceForPayment.amount_paid <= 0
+  ) {
+    return;
+  }
+
   const creditGrant = getPlanCreditGrant(planId, billingInterval);
 
   if (!creditGrant.ok) {

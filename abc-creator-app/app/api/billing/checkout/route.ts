@@ -102,7 +102,7 @@ export async function POST(request: Request) {
         billingInterval: priceResult.billingInterval,
       },
     },
-    allow_promotion_codes: true,
+    allow_promotion_codes: false,
   });
 
   if (!session.url) {
