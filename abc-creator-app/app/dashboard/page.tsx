@@ -1,9 +1,51 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { SignOutButton } from "@/components/SignOutButton";
+import { BillingPortalButton } from "@/components/BillingPortalButton";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
+
+type SubscriptionSummary = {
+  stripe_customer_id?: string | null;
+  plan_id?: string | null;
+  billing_interval?: string | null;
+  status?: string | null;
+  current_period_end?: string | null;
+  cancel_at_period_end?: boolean | null;
+};
+
+function titleCasePlan(planId?: string | null) {
+  if (!planId) return "Free";
+
+  return planId
+    .split("-")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function formatBillingStatus(status?: string | null) {
+  if (!status) return "No paid subscription";
+
+  return status
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function formatDate(value?: string | null) {
+  if (!value) return null;
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return new Intl.DateTimeFormat("en", {
+    dateStyle: "medium",
+  }).format(date);
+}
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -28,6 +70,27 @@ export default async function DashboardPage() {
       ? creditData.balance
       : 0;
 
+  const subscriptionResult = await supabase
+    .from("subscriptions")
+    .select(
+      "stripe_customer_id, plan_id, billing_interval, status, current_period_end, cancel_at_period_end"
+    )
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  const subscription =
+    !subscriptionResult.error && subscriptionResult.data
+      ? (subscriptionResult.data as SubscriptionSummary)
+      : null;
+
+  const hasActivePaidPlan = subscription?.status === "active";
+  const currentPlan = hasActivePaidPlan
+    ? titleCasePlan(subscription?.plan_id)
+    : "Free";
+
+  const billingStatus = formatBillingStatus(subscription?.status);
+  const periodEnd = formatDate(subscription?.current_period_end);
+
   return (
     <main className="min-h-screen bg-black text-white">
       <nav className="sticky top-0 z-50 border-b border-purple-500/10 bg-black/60 backdrop-blur-xl">
@@ -44,12 +107,14 @@ export default async function DashboardPage() {
             >
               Tools
             </Link>
+
             <Link
               href="/pricing"
               className="rounded-full border border-emerald-400/30 px-5 py-2 text-sm font-medium text-emerald-100 transition hover:border-emerald-300 hover:bg-emerald-500/10"
             >
               Get credits
             </Link>
+
             <SignOutButton />
           </div>
         </div>
@@ -60,29 +125,27 @@ export default async function DashboardPage() {
           <p className="mb-2 text-sm text-purple-200">Signed in as</p>
           <h1 className="mb-6 text-3xl font-bold">{user.email}</h1>
 
-          <div className="grid gap-5 md:grid-cols-3">
+          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
             <div className="rounded-2xl border border-purple-500/20 bg-black/40 p-6">
               <p className="text-sm text-gray-400">Current plan</p>
-              <h2 className="mt-2 text-2xl font-bold">Free</h2>
+              <h2 className="mt-2 text-2xl font-bold">{currentPlan}</h2>
               <p className="mt-2 text-sm text-gray-400">
-                Credit ledger is active.
+                {hasActivePaidPlan
+                  ? "Paid plan confirmed by Stripe webhook."
+                  : "No active paid subscription."}
               </p>
             </div>
 
             <div className="rounded-2xl border border-purple-500/20 bg-black/40 p-6">
               <p className="text-sm text-gray-400">Credits remaining</p>
-
               <h2 className="mt-2 text-2xl font-bold">{creditBalance}</h2>
-
               <p className="mt-2 text-sm text-gray-400">
-
-                Free plan includes 10 lifetime credits.
-
+                Credits are granted only after successful payment confirmation.
               </p>
             </div>
 
             <div className="rounded-2xl border border-purple-500/20 bg-black/40 p-6">
-              <p className="text-sm text-gray-400">Status</p>
+              <p className="text-sm text-gray-400">Account status</p>
               <h2 className="mt-2 text-2xl font-bold text-green-300">
                 Verified
               </h2>
@@ -90,7 +153,39 @@ export default async function DashboardPage() {
                 Email verified. Dashboard unlocked.
               </p>
             </div>
+
+            <div className="rounded-2xl border border-purple-500/20 bg-black/40 p-6">
+              <p className="text-sm text-gray-400">Billing</p>
+              <h2 className="mt-2 text-2xl font-bold">{billingStatus}</h2>
+
+              {periodEnd && (
+                <p className="mt-2 text-sm text-gray-400">
+                  Current period ends {periodEnd}.
+                </p>
+              )}
+
+              {subscription?.cancel_at_period_end && (
+                <p className="mt-2 text-sm text-amber-300">
+                  Cancelled. Access continues until the current period ends.
+                </p>
+              )}
+
+              {subscription?.stripe_customer_id ? (
+                <BillingPortalButton />
+              ) : (
+                <Link
+                  href="/pricing"
+                  className="mt-4 inline-flex rounded-full border border-emerald-400/30 px-4 py-2 text-sm font-semibold text-emerald-100 transition hover:border-emerald-300 hover:bg-emerald-500/10"
+                >
+                  View plans
+                </Link>
+              )}
+            </div>
           </div>
+
+          <p className="mt-6 text-sm text-gray-500">
+            No free trial. No money refunds after payment. Cancelling stops future renewals.
+          </p>
 
           <Link
             href="/tools"
