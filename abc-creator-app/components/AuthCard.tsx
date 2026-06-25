@@ -17,6 +17,20 @@ function getAppUrl() {
   ).replace(/\/$/, "");
 }
 
+function getSafeNextPath() {
+  if (typeof window === "undefined") {
+    return "/dashboard";
+  }
+
+  const next = new URLSearchParams(window.location.search).get("next");
+
+  if (!next || !next.startsWith("/") || next.startsWith("//")) {
+    return "/dashboard";
+  }
+
+  return next;
+}
+
 function readableAuthError(error: unknown) {
   console.error("Supabase auth error:", error);
 
@@ -91,7 +105,8 @@ export function AuthCard({ mode }: AuthCardProps) {
     setIsBusy(true);
     setErrorText("");
 
-    const redirectTo = `${getAppUrl()}/auth/callback?next=/dashboard`;
+    const nextPath = getSafeNextPath();
+    const redirectTo = `${getAppUrl()}/auth/callback?next=${encodeURIComponent(nextPath)}`;
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
@@ -152,7 +167,7 @@ export function AuthCard({ mode }: AuthCardProps) {
         return;
       }
 
-      window.location.href = "/dashboard";
+      window.location.href = getSafeNextPath();
       router.refresh();
     } catch (error) {
       console.error("Email auth client error:", error);

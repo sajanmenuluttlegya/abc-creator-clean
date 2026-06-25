@@ -16,16 +16,68 @@ function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Unknown webhook error.";
 }
 
+function readStripeId(value: unknown) {
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (
+    value &&
+    typeof value === "object" &&
+    "id" in value &&
+    typeof (value as { id?: unknown }).id === "string"
+  ) {
+    return (value as { id: string }).id;
+  }
+
+  return null;
+}
+
 function getInvoiceSubscriptionId(invoice: Stripe.Invoice) {
   const rawInvoice = invoice as unknown as {
     subscription?: string | { id?: string } | null;
+    parent?: {
+      subscription_details?: {
+        subscription?: string | { id?: string } | null;
+      } | null;
+    } | null;
+    lines?: {
+      data?: Array<{
+        parent?: {
+          subscription_item_details?: {
+            subscription?: string | { id?: string } | null;
+          } | null;
+          invoice_item_details?: {
+            subscription?: string | { id?: string } | null;
+          } | null;
+        } | null;
+      }>;
+    };
   };
 
-  if (typeof rawInvoice.subscription === "string") {
-    return rawInvoice.subscription;
-  }
+  return (
+    readStripeId(rawInvoice.subscription) ||
+    readStripeId(rawInvoice.parent?.subscription_details?.subscription) ||
+    rawInvoice.lines?.data
+      ?.map((line) =>
+        readStripeId(line.parent?.subscription_item_details?.subscription) ||
+        readStripeId(line.parent?.invoice_item_details?.subscription)
+      )
+      .find(Boolean) ||
+    null
+  );
+}
 
-  return rawInvoice.subscription?.id || null;
+function getInvoiceSubscriptionMetadata(invoice: Stripe.Invoice) {
+  const rawInvoice = invoice as unknown as {
+    parent?: {
+      subscription_details?: {
+        metadata?: Record<string, string> | null;
+      } | null;
+    } | null;
+  };
+
+  return rawInvoice.parent?.subscription_details?.metadata || {};
 }
 
 function getInvoicePeriod(invoice: Stripe.Invoice) {
@@ -180,7 +232,11 @@ async function grantSubscriptionCredits(
   subscription: Stripe.Subscription,
   invoice: Stripe.Invoice
 ) {
-  const metadata = subscription.metadata || {};
+  const metadata = {
+    ...getInvoiceSubscriptionMetadata(invoice),
+    ...(subscription.metadata || {}),
+  };
+
   const userId = metadata.userId;
   const planId = metadata.planId;
   const billingInterval = metadata.billingInterval;
