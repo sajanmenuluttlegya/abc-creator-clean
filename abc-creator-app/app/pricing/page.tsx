@@ -1,62 +1,120 @@
 import Link from "next/link";
+import { CheckoutButton } from "@/components/CheckoutButton";
 
 const plans = [
   {
+    id: "starter",
     name: "Starter",
     monthly: "$39/mo",
     yearly: "$36/year",
     credits: "150 credits / month",
     description: "For beginners and light creators starting with ABC Creator.",
-    features: ["Core AI writing tools", "Monthly credit allowance", "Good for light content work"],
+    features: [
+      "Core AI writing tools",
+      "Monthly credit allowance",
+      "Good for light content work",
+    ],
+    checkout: [
+      { interval: "monthly" as const, label: "Start monthly checkout" },
+      { interval: "yearly" as const, label: "Start yearly checkout" },
+    ],
   },
   {
+    id: "plus",
     name: "Plus",
     monthly: "$69/mo",
     yearly: "$468/year",
     credits: "400 credits / month",
     description: "For regular creators, freelancers, and small businesses.",
-    features: ["More monthly credits", "All current writing tools", "Best everyday creator plan"],
+    features: [
+      "More monthly credits",
+      "All current writing tools",
+      "Best everyday creator plan",
+    ],
     highlight: true,
+    checkout: [
+      { interval: "monthly" as const, label: "Start monthly checkout" },
+      { interval: "yearly" as const, label: "Start yearly checkout" },
+    ],
   },
   {
+    id: "bundle",
     name: "Bundle",
     monthly: "Yearly only",
     yearly: "$129/year",
     credits: "1400 credits / month",
     description: "A special yearly creator bundle with high monthly credits.",
-    features: ["Large monthly credit allowance", "Best low-cost yearly option", "Built for serious creators"],
+    features: [
+      "Large monthly credit allowance",
+      "Best low-cost yearly option",
+      "Built for serious creators",
+    ],
+    checkout: [{ interval: "yearly" as const, label: "Start yearly checkout" }],
   },
   {
+    id: "pro",
     name: "Pro",
     monthly: "$199/mo",
     yearly: "$1,788/year",
     credits: "2500 credits / month",
     description: "For professional creators, marketers, and content teams.",
-    features: ["High-volume generation", "Professional content workflows", "More room for long-form tools"],
+    features: [
+      "High-volume generation",
+      "Professional content workflows",
+      "More room for long-form tools",
+    ],
+    checkout: [
+      { interval: "monthly" as const, label: "Start monthly checkout" },
+      { interval: "yearly" as const, label: "Start yearly checkout" },
+    ],
   },
   {
+    id: "agency",
     name: "Agency",
     monthly: "$549/mo",
     yearly: "$5,988/year",
     credits: "9000 credits / month",
     description: "For agencies handling multiple brands or clients.",
-    features: ["Agency-level credit allowance", "Client content workflows", "Designed for scale"],
+    features: [
+      "Agency-level credit allowance",
+      "Client content workflows",
+      "Designed for scale",
+    ],
+    checkout: [
+      { interval: "monthly" as const, label: "Start monthly checkout" },
+      { interval: "yearly" as const, label: "Start yearly checkout" },
+    ],
   },
   {
+    id: "business",
     name: "Business",
     monthly: "$1,049/mo",
     yearly: "$11,988/year",
     credits: "20000 credits / month",
     description: "For high-volume business teams and advanced usage.",
-    features: ["Large team usage", "Business-scale monthly credits", "High-output generation workflows"],
+    features: [
+      "Large team usage",
+      "Business-scale monthly credits",
+      "High-output generation workflows",
+    ],
+    checkout: [
+      { interval: "monthly" as const, label: "Start monthly checkout" },
+      { interval: "yearly" as const, label: "Start yearly checkout" },
+    ],
   },
   {
+    id: "scale",
     name: "Scale",
     monthly: "$1,549/mo",
     yearly: "Monthly only",
     credits: "35000 credits / month",
     description: "For maximum-volume teams and large-scale content operations.",
-    features: ["Highest monthly credit allowance", "Built for heavy usage", "Scale-level production workflow"],
+    features: [
+      "Highest monthly credit allowance",
+      "Built for heavy usage",
+      "Scale-level production workflow",
+    ],
+    checkout: [{ interval: "monthly" as const, label: "Start monthly checkout" }],
   },
 ];
 
@@ -90,14 +148,15 @@ export default function PricingPage() {
           </h1>
 
           <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-gray-300">
-            Every paid plan includes a monthly credit allowance for ABC Creator tools. No free trial. Credits are granted only after successful payment confirmation.
+            Every paid plan includes a monthly credit allowance for ABC Creator tools.
+            No free trial. Credits are granted only after successful payment confirmation.
           </p>
         </section>
 
         <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
           {plans.map((plan) => (
             <div
-              key={plan.name}
+              key={plan.id}
               className={[
                 "rounded-3xl border p-8 backdrop-blur-sm transition",
                 plan.highlight
@@ -135,18 +194,22 @@ export default function PricingPage() {
                 ))}
               </ul>
 
-              <button
-                disabled
-                className="mt-8 w-full rounded-full border border-white/10 bg-white/10 px-5 py-3 text-sm font-semibold text-white/70"
-              >
-                Payments coming soon
-              </button>
+              <div className="mt-8 space-y-3">
+                {plan.checkout.map((checkoutOption) => (
+                  <CheckoutButton
+                    key={`${plan.id}-${checkoutOption.interval}`}
+                    planId={plan.id}
+                    billingInterval={checkoutOption.interval}
+                    label={checkoutOption.label}
+                  />
+                ))}
+              </div>
             </div>
           ))}
         </section>
 
         <p className="mt-10 text-center text-sm text-gray-500">
-          No money refunds are provided after payment. Cancelling a subscription stops future renewals. Stripe and Razorpay checkout will be connected after the billing flow is finalized.
+          No money refunds are provided after payment. Cancelling a subscription stops future renewals.
         </p>
       </div>
     </main>
