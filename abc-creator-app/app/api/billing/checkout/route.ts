@@ -74,9 +74,11 @@ export async function POST(request: Request) {
     );
   }
 
-  const appUrl =
-    process.env.NEXT_PUBLIC_APP_URL ||
-    new URL(request.url).origin;
+  const forwardedProto = request.headers.get("x-forwarded-proto") ?? "https";
+  const forwardedHost = request.headers.get("x-forwarded-host");
+  const appUrl = forwardedHost
+    ? `${forwardedProto}://${forwardedHost}`
+    : new URL(request.url).origin;
 
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
@@ -88,7 +90,7 @@ export async function POST(request: Request) {
         quantity: 1,
       },
     ],
-    success_url: `${appUrl}/dashboard?billing=success`,
+    success_url: `${appUrl}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${appUrl}/pricing?billing=cancelled`,
     metadata: {
       userId: user.id,

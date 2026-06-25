@@ -2,7 +2,15 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
 function getAppUrl(request: Request) {
-  const configuredAppUrl = process.env.NEXT_PUBLIC_APP_URL;
+  const forwardedProto = request.headers.get("x-forwarded-proto") ?? "https";
+  const forwardedHost = request.headers.get("x-forwarded-host");
+
+  if (forwardedHost) {
+    return `${forwardedProto}://${forwardedHost}`;
+  }
+
+  return new URL(request.url).origin;
+}
 
   if (configuredAppUrl) {
     return configuredAppUrl.replace(/\/$/, "");

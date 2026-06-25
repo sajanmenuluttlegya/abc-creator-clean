@@ -11,10 +11,11 @@ type AuthCardProps = {
 };
 
 function getAppUrl() {
-  return (
-    process.env.NEXT_PUBLIC_APP_URL ||
-    window.location.origin
-  ).replace(/\/$/, "");
+  if (typeof window !== "undefined") {
+    return window.location.origin.replace(/\/$/, "");
+  }
+
+  return (process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "");
 }
 
 function getSafeNextPath() {
@@ -128,13 +129,44 @@ export function AuthCard({ mode }: AuthCardProps) {
     setErrorText("");
 
     try {
+      if (!isSignup) {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password,
+        });
+
+        setIsBusy(false);
+
+        if (error) {
+          const errorMessage = readableAuthError(error);
+
+          if (/confirm|confirmed|verification|verify/i.test(errorMessage)) {
+            router.push(`/verify-email?email=${encodeURIComponent(cleanEmail)}`);
+            return;
+          }
+
+          setErrorText(errorMessage);
+          return;
+        }
+
+        if (!data.user?.email_confirmed_at) {
+          await supabase.auth.signOut();
+          router.push(`/verify-email?email=${encodeURIComponent(cleanEmail)}`);
+          return;
+        }
+
+        window.location.href = getSafeNextPath();
+        router.refresh();
+        return;
+      }
+
       const response = await fetch("/api/auth/email", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          mode: isSignup ? "signup" : "login",
+          mode: "signup",
           email: cleanEmail,
           password,
           fullName: fullName.trim(),
@@ -145,30 +177,14 @@ export function AuthCard({ mode }: AuthCardProps) {
 
       setIsBusy(false);
 
-        if (!response.ok || !result.ok) {
-          const errorMessage = result.error || "";
-
-          if (
-            !isSignup &&
-            /confirm|confirmed|verification|verify/i.test(errorMessage)
-          ) {
-            router.push(`/verify-email?email=${encodeURIComponent(cleanEmail)}`);
-            return;
-          }
-
-          setErrorText(
-            errorMessage || "Email authentication failed. Check Supabase Auth logs."
-          );
-          return;
-        }
-
-      if (result.needsVerification) {
-        router.push(`/verify-email?email=${encodeURIComponent(cleanEmail)}`);
+      if (!response.ok || !result.ok) {
+        setErrorText(
+          result.error || "Email authentication failed. Check Supabase Auth logs."
+        );
         return;
       }
 
-      window.location.href = getSafeNextPath();
-      router.refresh();
+      router.push(`/verify-email?email=${encodeURIComponent(cleanEmail)}`);
     } catch (error) {
       console.error("Email auth client error:", error);
       setIsBusy(false);
