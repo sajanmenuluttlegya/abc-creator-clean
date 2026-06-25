@@ -81,9 +81,14 @@ export default function ToolsPage() {
                     {tool.description}
                   </p>
 
-                  <div className="flex items-center text-purple-400 group-hover:text-purple-300 transition-colors text-sm font-medium">
-                    Get Started →
-                  </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-sm font-medium text-purple-400 transition-colors group-hover:text-purple-300">
+                        Get Started →
+                      </span>
+                      <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-200">
+                        {tool.displayCreditCost} credits
+                      </span>
+                    </div>
                 </Link>
               ))}
             </div>
