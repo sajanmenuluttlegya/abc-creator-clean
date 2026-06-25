@@ -33,6 +33,12 @@ export default function ToolsPage() {
               Tools
             </Link>
             <Link
+              href="/pricing"
+              className="px-4 py-2 rounded-full border border-emerald-400/30 text-emerald-200 hover:bg-emerald-500/10 transition-colors text-sm font-medium"
+            >
+              Pricing
+            </Link>
+            <Link
               href="/dashboard"
               className="px-6 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-full transition-all duration-200 text-sm font-medium"
             >

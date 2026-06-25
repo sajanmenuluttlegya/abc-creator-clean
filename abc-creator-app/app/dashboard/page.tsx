@@ -44,6 +44,12 @@ export default async function DashboardPage() {
             >
               Tools
             </Link>
+            <Link
+              href="/pricing"
+              className="rounded-full border border-emerald-400/30 px-5 py-2 text-sm font-medium text-emerald-100 transition hover:border-emerald-300 hover:bg-emerald-500/10"
+            >
+              Get credits
+            </Link>
             <SignOutButton />
           </div>
         </div>
