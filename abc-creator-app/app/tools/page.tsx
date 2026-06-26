@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ToolCategorySidebar } from "@/components/ToolCategorySidebar";
 import { publicTools } from "@/lib/tools/public-tools";
 
 export default function ToolsPage() {
@@ -14,6 +15,8 @@ export default function ToolsPage() {
 
   return (
     <main className="min-h-screen bg-black">
+      <ToolCategorySidebar />
+
       {/* Navigation */}
       <nav className="sticky top-0 z-50 bg-black/50 backdrop-blur-xl border-b border-purple-500/10">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -87,14 +90,14 @@ export default function ToolsPage() {
                     {tool.description}
                   </p>
 
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-sm font-medium text-purple-400 transition-colors group-hover:text-purple-300">
-                        Get Started →
-                      </span>
-                      <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-200">
-                        {tool.displayCreditCost} credits
-                      </span>
-                    </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-sm font-medium text-purple-400 transition-colors group-hover:text-purple-300">
+                      Get Started →
+                    </span>
+                    <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-200">
+                      {tool.displayCreditCost} credits
+                    </span>
+                  </div>
                 </Link>
               ))}
             </div>
