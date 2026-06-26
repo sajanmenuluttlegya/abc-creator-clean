@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { randomUUID } from "crypto";
 import { getServerPrompt } from "@/lib/tools/server-prompts";
 import { createClient } from "@/lib/supabase/server";
+import { routeToAI, type ChatMessage } from "@/lib/ai/routeToAI";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -9,11 +10,6 @@ export const dynamic = "force-dynamic";
 type GenerateBody = {
   toolSlug?: string;
   inputs?: Record<string, string>;
-};
-
-type ChatMessage = {
-  role: "system" | "user" | "assistant";
-  content: string;
 };
 
 function env(name: string, fallback = "") {
@@ -169,6 +165,17 @@ function makeTextStreamFromOpenRouter(response: Response) {
   });
 }
 
+function makeTextStreamFromText(text: string) {
+  const encoder = new TextEncoder();
+
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(encoder.encode(text));
+      controller.close();
+    },
+  });
+}
+
 type CreditReservation = {
   ok?: boolean;
   code?: string;
@@ -176,6 +183,13 @@ type CreditReservation = {
   currentCredits?: number;
   remainingCredits?: number;
   transactionId?: string;
+};
+
+type CreditSpendResult = {
+  ok?: boolean;
+  code?: string;
+  status?: string;
+  alreadyFinalized?: boolean;
 };
 
 function rpcErrorMessage(error: unknown) {
@@ -217,6 +231,65 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  async function spendReservation(provider: string, model: string) {
+    if (!supabase || !reservedTransactionId) {
+      return {
+        ok: false,
+        response: Response.json(
+          {
+            ok: false,
+            error: "Credit reservation failed.",
+            code: "CREDIT_RESERVATION_MISSING_ID",
+          },
+          { status: 500 }
+        ),
+      };
+    }
+
+    const spendResponse = await supabase.rpc("spend_reserved_credits", {
+      p_transaction_id: reservedTransactionId,
+      p_provider: provider,
+      p_model: model,
+    });
+
+    if (spendResponse.error) {
+      await refundIfReserved("spend_mark_failed");
+
+      return {
+        ok: false,
+        response: Response.json(
+          {
+            ok: false,
+            error: "Could not finalize credit spend.",
+            details: rpcErrorMessage(spendResponse.error),
+          },
+          { status: 500 }
+        ),
+      };
+    }
+
+    const spendData = spendResponse.data as CreditSpendResult | null;
+
+    if (spendData?.ok === false) {
+      await refundIfReserved("spend_mark_failed");
+
+      return {
+        ok: false,
+        response: Response.json(
+          {
+            ok: false,
+            error: "Could not finalize credit spend.",
+            code: spendData.code || "SPEND_FAILED",
+            status: spendData.status,
+          },
+          { status: 500 }
+        ),
+      };
+    }
+
+    return { ok: true, response: null };
+  }
+
   try {
     supabase = await createClient();
 
@@ -231,6 +304,7 @@ export async function POST(req: NextRequest) {
         { status: 401 }
       );
     }
+
     const body = (await req.json()) as GenerateBody;
 
     const toolSlug = body.toolSlug?.trim();
@@ -260,20 +334,6 @@ export async function POST(req: NextRequest) {
       return Response.json(
         { ok: false, error: "Please fill in at least one meaningful field." },
         { status: 400 }
-      );
-    }
-
-    const keys = getKeys("OPENROUTER_API_KEY", 3);
-    const models = getOpenRouterModels();
-
-    if (keys.length === 0) {
-      return Response.json(
-        {
-          ok: false,
-          error:
-            "No OpenRouter keys configured. Add OPENROUTER_API_KEY_1 to .env.local.",
-        },
-        { status: 500 }
       );
     }
 
@@ -347,13 +407,15 @@ ${prompt.outputGuide}`,
 
     const maxTokens = 12000;
     const failures: string[] = [];
+    const openRouterKeys = getKeys("OPENROUTER_API_KEY", 3);
+    const openRouterModels = getOpenRouterModels();
 
-    for (const model of models) {
-      for (let keyIndex = 0; keyIndex < keys.length; keyIndex++) {
+    for (const model of openRouterModels) {
+      for (let keyIndex = 0; keyIndex < openRouterKeys.length; keyIndex++) {
         try {
           const response = await callOpenRouterStream({
             model,
-            apiKey: keys[keyIndex],
+            apiKey: openRouterKeys[keyIndex],
             messages,
             maxTokens,
           });
@@ -369,24 +431,11 @@ ${prompt.outputGuide}`,
             continue;
           }
 
-            const spendResponse = await supabase.rpc("spend_reserved_credits", {
-              p_transaction_id: reservedTransactionId,
-              p_provider: "openrouter",
-              p_model: model,
-            });
+          const spend = await spendReservation("openrouter", model);
 
-            if (spendResponse.error) {
-              await refundIfReserved("spend_mark_failed");
-
-              return Response.json(
-                {
-                  ok: false,
-                  error: "Could not finalize credit spend.",
-                  details: rpcErrorMessage(spendResponse.error),
-                },
-                { status: 500 }
-              );
-            }
+          if (!spend.ok) {
+            return spend.response;
+          }
 
           const stream = makeTextStreamFromOpenRouter(response);
 
@@ -410,18 +459,47 @@ ${prompt.outputGuide}`,
       }
     }
 
-      await refundIfReserved("all_streaming_attempts_failed");
+    try {
+      const fallback = await routeToAI({
+        requestLabel: toolSlug,
+        temperature: 0.7,
+        maxTokens,
+        messages,
+      });
 
-    return Response.json(
-      {
-        ok: false,
-        error: "All OpenRouter streaming attempts failed.",
-        details: failures.join("\n"),
-      },
-      { status: 500 }
-    );
+      const spend = await spendReservation(fallback.provider, fallback.model);
+
+      if (!spend.ok) {
+        return spend.response;
+      }
+
+      return new Response(makeTextStreamFromText(fallback.text), {
+        headers: {
+          "Content-Type": "text/plain; charset=utf-8",
+          "Cache-Control": "no-cache, no-transform",
+          "X-Accel-Buffering": "no",
+          "X-Creator-Stream-Provider": fallback.provider,
+          "X-Creator-Stream-Model": fallback.model,
+          "X-Creator-Stream-Fallback": "true",
+        },
+      });
+    } catch (fallbackError) {
+      await refundIfReserved("all_streaming_and_fallback_attempts_failed");
+
+      return Response.json(
+        {
+          ok: false,
+          error: "All AI generation attempts failed.",
+          details: [
+            failures.length ? `Streaming attempts:\n${failures.join("\n")}` : "No OpenRouter streaming attempts were available.",
+            `Fallback error:\n${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`,
+          ].join("\n\n"),
+        },
+        { status: 500 }
+      );
+    }
   } catch (error) {
-      await refundIfReserved("streaming_generation_exception");
+    await refundIfReserved("streaming_generation_exception");
 
     return Response.json(
       {
