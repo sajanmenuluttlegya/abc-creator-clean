@@ -12,31 +12,18 @@ function getAppUrl(request: Request) {
   return new URL(request.url).origin;
 }
 
-  if (configuredAppUrl) {
-    return configuredAppUrl.replace(/\/$/, "");
+function getSafeNextPath(value: string | null) {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) {
+    return "/dashboard";
   }
 
-  const forwardedProto = request.headers.get("x-forwarded-proto") ?? "https";
-  const forwardedHost = request.headers.get("x-forwarded-host");
-
-  if (forwardedHost) {
-    return `${forwardedProto}://${forwardedHost}`;
-  }
-
-  const url = new URL(request.url);
-  return url.origin.replace("https://0.0.0.0:3000", "http://localhost:3000");
+  return value;
 }
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
-
-  let next = searchParams.get("next") ?? "/dashboard";
-
-  if (!next.startsWith("/")) {
-    next = "/dashboard";
-  }
-
+  const next = getSafeNextPath(searchParams.get("next"));
   const appUrl = getAppUrl(request);
 
   if (code) {
