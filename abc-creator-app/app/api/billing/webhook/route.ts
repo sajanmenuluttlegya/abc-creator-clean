@@ -16,6 +16,14 @@ function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Unknown webhook error.";
 }
 
+function logWebhookError(message: string, error: unknown, extra: Record<string, unknown> = {}) {
+  console.error(message, {
+    ...extra,
+    error,
+    errorMessage: getErrorMessage(error),
+  });
+}
+
 function readStripeId(value: unknown) {
   if (typeof value === "string") {
     return value;
@@ -154,11 +162,24 @@ async function registerStripeEvent(
   }
 
   if (error.code === "23505") {
-    const { data } = await supabase
+    const { data, error: selectError } = await supabase
       .from("stripe_events")
       .select("status")
       .eq("id", event.id)
       .maybeSingle();
+
+    if (selectError) {
+      logWebhookError("Stripe webhook duplicate lookup failed", selectError, {
+        eventId: event.id,
+        eventType: event.type,
+      });
+
+      return {
+        ok: false as const,
+        shouldProcess: false as const,
+        error: selectError,
+      };
+    }
 
     if (data?.status === "failed") {
       const { error: retryError } = await supabase
@@ -179,6 +200,11 @@ async function registerStripeEvent(
         .eq("id", event.id);
 
       if (retryError) {
+        logWebhookError("Stripe webhook failed-event retry update failed", retryError, {
+          eventId: event.id,
+          eventType: event.type,
+        });
+
         return {
           ok: false as const,
           shouldProcess: false as const,
@@ -199,6 +225,11 @@ async function registerStripeEvent(
       status: data?.status || "unknown",
     };
   }
+
+  logWebhookError("Stripe webhook event insert failed", error, {
+    eventId: event.id,
+    eventType: event.type,
+  });
 
   return {
     ok: false as const,
@@ -439,6 +470,11 @@ export async function POST(request: Request) {
   const registration = await registerStripeEvent(supabase, event);
 
   if (!registration.ok) {
+    logWebhookError("Stripe webhook registration failed", registration.error, {
+      eventId: event.id,
+      eventType: event.type,
+    });
+
     return NextResponse.json(
       {
         error: "Could not register Stripe event.",
@@ -503,6 +539,11 @@ export async function POST(request: Request) {
       received: true,
     });
   } catch (error) {
+    logWebhookError("Stripe webhook processing failed", error, {
+      eventId: event.id,
+      eventType: event.type,
+    });
+
     await markEventFailed(supabase, event.id, error);
 
     return NextResponse.json(
