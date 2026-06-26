@@ -37,7 +37,7 @@ export function OutputPanel({ isLoading, output }: OutputPanelProps) {
             </span>
           ) : isLoading ? (
             <span className="rounded-full border border-purple-400/25 bg-purple-500/10 px-3 py-1 text-xs font-semibold text-purple-200">
-              Connecting...
+              Generating...
             </span>
           ) : null}
         </div>
@@ -154,7 +154,7 @@ export function OutputPanel({ isLoading, output }: OutputPanelProps) {
       ) : isLoading ? (
         <div className="flex items-center gap-3 rounded-2xl border border-purple-500/20 bg-white/5 p-5 text-purple-200">
           <div className="h-5 w-5 animate-spin rounded-full border-2 border-purple-400 border-t-transparent" />
-          <p>Connecting to AI stream... the first words will appear here live.</p>
+          <p>Generating...</p>
         </div>
       ) : (
         <div className="rounded-2xl border border-purple-500/15 bg-black/70 p-6 text-gray-400">
