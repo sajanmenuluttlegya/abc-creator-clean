@@ -230,7 +230,10 @@ export async function GET(request: Request) {
 
   if (authError || !user) {
     const loginUrl = new URL(`${appUrl}/login`);
-    loginUrl.searchParams.set("next", "/pricing");
+    loginUrl.searchParams.set(
+      "next",
+      `/billing/success?session_id=${encodeURIComponent(sessionId)}`
+    );
     return NextResponse.redirect(loginUrl);
   }
 
