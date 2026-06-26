@@ -52,7 +52,7 @@ export default function ToolsPage() {
       </nav>
 
       {/* Main Content */}
-      <section className="max-w-7xl mx-auto px-6 py-12">
+      <section className="max-w-7xl mx-auto px-6 py-12 lg:pl-[330px] xl:pl-[340px]">
         <div className="mb-12">
           <h1 className="text-4xl font-bold text-white mb-2">AI Tools Library</h1>
           <p className="text-gray-400">
