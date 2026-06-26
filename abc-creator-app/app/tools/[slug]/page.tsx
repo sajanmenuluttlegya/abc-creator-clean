@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { ToolCategorySidebar } from "@/components/ToolCategorySidebar";
 import { ToolFormRenderer } from "@/components/ToolFormRenderer";
 import { getToolBySlug } from "@/lib/tools/public-tools";
 import { useEffect, useState } from "react";
@@ -21,6 +22,8 @@ export default function DynamicToolPage() {
   if (!tool) {
     return (
       <main className="min-h-screen bg-black">
+        <ToolCategorySidebar />
+
         <nav className="sticky top-0 z-50 bg-black/50 backdrop-blur-xl border-b border-purple-500/10">
           <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2.5 hover:opacity-90 transition-opacity">
@@ -57,7 +60,7 @@ export default function DynamicToolPage() {
         <section className="max-w-7xl mx-auto px-6 py-24 text-center">
           <h1 className="text-3xl font-bold text-white mb-4">Tool not found</h1>
           <p className="text-gray-400 mb-8">
-            The tool you're looking for doesn't exist.
+            This tool is not available.
           </p>
           <Link
             href="/tools"
@@ -72,6 +75,8 @@ export default function DynamicToolPage() {
 
   return (
     <main className="min-h-screen bg-black">
+      <ToolCategorySidebar activeSlug={tool.slug} />
+
       {/* Navigation */}
       <nav className="sticky top-0 z-50 bg-black/50 backdrop-blur-xl border-b border-purple-500/10">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
