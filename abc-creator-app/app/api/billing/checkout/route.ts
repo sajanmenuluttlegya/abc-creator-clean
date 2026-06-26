@@ -3,6 +3,15 @@ import { createClient } from "@/lib/supabase/server";
 import { getStripeClient } from "@/lib/billing/stripe";
 import { getStripePriceId } from "@/lib/billing/stripe-price-map";
 
+const CHECKOUT_BLOCKING_STATUSES = new Set([
+  "active",
+  "trialing",
+  "past_due",
+  "unpaid",
+  "incomplete",
+  "paused",
+]);
+
 export async function POST(request: Request) {
   const supabase = await createClient();
 
@@ -15,6 +24,50 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { error: "Login required.", code: "AUTH_REQUIRED" },
       { status: 401 }
+    );
+  }
+
+  const existingSubscriptionResult = await supabase
+    .from("subscriptions")
+    .select("stripe_customer_id, stripe_subscription_id, status, cancel_at_period_end")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (existingSubscriptionResult.error) {
+    return NextResponse.json(
+      {
+        error: "Could not verify existing subscription.",
+        code: "SUBSCRIPTION_CHECK_FAILED",
+      },
+      { status: 500 }
+    );
+  }
+
+  const existingSubscription = existingSubscriptionResult.data as
+    | {
+        stripe_customer_id?: string | null;
+        stripe_subscription_id?: string | null;
+        status?: string | null;
+        cancel_at_period_end?: boolean | null;
+      }
+    | null;
+
+  if (
+    existingSubscription?.stripe_subscription_id &&
+    existingSubscription.status &&
+    CHECKOUT_BLOCKING_STATUSES.has(existingSubscription.status)
+  ) {
+    return NextResponse.json(
+      {
+        error:
+          existingSubscription.cancel_at_period_end
+            ? "Your subscription is already paid and set to cancel at period end. Manage it in the billing portal."
+            : "You already have a subscription. Manage it in the billing portal before buying another plan.",
+        code: existingSubscription.cancel_at_period_end
+          ? "SUBSCRIPTION_CANCELS_AT_PERIOD_END"
+          : "ACTIVE_SUBSCRIPTION_EXISTS",
+      },
+      { status: 409 }
     );
   }
 
