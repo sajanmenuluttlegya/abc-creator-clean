@@ -24,13 +24,27 @@ function titleCasePlan(planId?: string | null) {
     .join(" ");
 }
 
-function formatBillingStatus(status?: string | null) {
+function titleCaseStatus(status?: string | null) {
   if (!status) return "No paid subscription";
 
   return status
     .split("_")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
+}
+
+function formatBillingStatus(subscription?: SubscriptionSummary | null) {
+  if (!subscription?.status) return "No paid subscription";
+
+  if (subscription.cancel_at_period_end && subscription.status === "active") {
+    return "Cancelling";
+  }
+
+  if (subscription.status === "canceled") {
+    return "Cancelled";
+  }
+
+  return titleCaseStatus(subscription.status);
 }
 
 function formatDate(value?: string | null) {
@@ -84,11 +98,14 @@ export default async function DashboardPage() {
       : null;
 
   const hasActivePaidPlan = subscription?.status === "active";
+  const isCancelling = Boolean(
+    subscription?.status === "active" && subscription.cancel_at_period_end
+  );
   const currentPlan = hasActivePaidPlan
     ? titleCasePlan(subscription?.plan_id)
     : "Free";
 
-  const billingStatus = formatBillingStatus(subscription?.status);
+  const billingStatus = formatBillingStatus(subscription);
   const periodEnd = formatDate(subscription?.current_period_end);
 
   return (
@@ -131,7 +148,9 @@ export default async function DashboardPage() {
               <h2 className="mt-2 text-2xl font-bold">{currentPlan}</h2>
               <p className="mt-2 text-sm text-gray-400">
                 {hasActivePaidPlan
-                  ? "Paid plan confirmed by Stripe webhook."
+                  ? isCancelling
+                    ? "Paid access remains until the current billing period ends."
+                    : "Paid plan confirmed by Stripe webhook."
                   : "No active paid subscription."}
               </p>
             </div>
@@ -164,9 +183,15 @@ export default async function DashboardPage() {
                 </p>
               )}
 
-              {subscription?.cancel_at_period_end && (
+              {isCancelling && (
                 <p className="mt-2 text-sm text-amber-300">
-                  Cancelled. Access continues until the current period ends.
+                  Renewal cancelled. No future renewal credits will be granted unless payment succeeds again.
+                </p>
+              )}
+
+              {subscription?.status === "canceled" && (
+                <p className="mt-2 text-sm text-amber-300">
+                  Subscription cancelled. Buy a plan again to receive future paid credits.
                 </p>
               )}
 
