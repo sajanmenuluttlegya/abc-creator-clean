@@ -11,6 +11,8 @@ interface OutputPanelProps {
 
 export function OutputPanel({ isLoading, output }: OutputPanelProps) {
   const [copied, setCopied] = useState(false);
+  const hasOutput = Boolean(output.trim());
+  const isStreamingVisible = isLoading && hasOutput;
 
   const copyOutput = async () => {
     if (!output) return;
@@ -29,9 +31,13 @@ export function OutputPanel({ isLoading, output }: OutputPanelProps) {
         <div className="flex items-center gap-3">
           <h2 className="text-2xl font-bold text-white">Output</h2>
 
-          {isLoading ? (
+          {isStreamingVisible ? (
+            <span className="rounded-full border border-emerald-400/25 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-200">
+              Streaming live...
+            </span>
+          ) : isLoading ? (
             <span className="rounded-full border border-purple-400/25 bg-purple-500/10 px-3 py-1 text-xs font-semibold text-purple-200">
-              Generating...
+              Connecting...
             </span>
           ) : null}
         </div>
@@ -140,15 +146,19 @@ export function OutputPanel({ isLoading, output }: OutputPanelProps) {
           >
             {output}
           </ReactMarkdown>
+
+          {isStreamingVisible ? (
+            <span className="mt-2 inline-block h-5 w-2 animate-pulse rounded-sm bg-purple-300 align-middle" />
+          ) : null}
         </div>
       ) : isLoading ? (
         <div className="flex items-center gap-3 rounded-2xl border border-purple-500/20 bg-white/5 p-5 text-purple-200">
           <div className="h-5 w-5 animate-spin rounded-full border-2 border-purple-400 border-t-transparent" />
-          <p>Connecting to AI stream...</p>
+          <p>Connecting to AI stream... the first words will appear here live.</p>
         </div>
       ) : (
         <div className="rounded-2xl border border-purple-500/15 bg-black/70 p-6 text-gray-400">
-          Your generated result will appear here.
+          Your generated result will appear here. Text tools can be copied from this panel.
         </div>
       )}
     </div>
