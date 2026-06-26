@@ -192,6 +192,10 @@ type CreditSpendResult = {
   alreadyFinalized?: boolean;
 };
 
+type SpendReservationResult =
+  | { ok: true }
+  | { ok: false; response: Response };
+
 function rpcErrorMessage(error: unknown) {
   if (!error) return "Unknown credit ledger error.";
   if (error instanceof Error) return error.message;
@@ -231,7 +235,10 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  async function spendReservation(provider: string, model: string) {
+  async function spendReservation(
+    provider: string,
+    model: string
+  ): Promise<SpendReservationResult> {
     if (!supabase || !reservedTransactionId) {
       return {
         ok: false,
@@ -287,7 +294,7 @@ export async function POST(req: NextRequest) {
       };
     }
 
-    return { ok: true, response: null };
+    return { ok: true };
   }
 
   try {
@@ -491,8 +498,14 @@ ${prompt.outputGuide}`,
           ok: false,
           error: "All AI generation attempts failed.",
           details: [
-            failures.length ? `Streaming attempts:\n${failures.join("\n")}` : "No OpenRouter streaming attempts were available.",
-            `Fallback error:\n${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`,
+            failures.length
+              ? `Streaming attempts:\n${failures.join("\n")}`
+              : "No OpenRouter streaming attempts were available.",
+            `Fallback error:\n${
+              fallbackError instanceof Error
+                ? fallbackError.message
+                : String(fallbackError)
+            }`,
           ].join("\n\n"),
         },
         { status: 500 }
