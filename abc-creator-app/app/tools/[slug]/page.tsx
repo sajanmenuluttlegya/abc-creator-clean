@@ -57,7 +57,7 @@ export default function DynamicToolPage() {
           </div>
         </nav>
 
-        <section className="max-w-7xl mx-auto px-6 py-24 text-center">
+        <section className="max-w-7xl mx-auto px-6 py-24 text-center lg:pl-[330px] xl:pl-[340px]">
           <h1 className="text-3xl font-bold text-white mb-4">Tool not found</h1>
           <p className="text-gray-400 mb-8">
             This tool is not available.
@@ -106,7 +106,7 @@ export default function DynamicToolPage() {
       </nav>
 
       {/* Breadcrumb */}
-      <div className="max-w-7xl mx-auto px-6 pt-8 pb-6">
+      <div className="max-w-7xl mx-auto px-6 pt-8 pb-6 lg:pl-[330px] xl:pl-[340px]">
         <div className="flex items-center gap-2 text-gray-400 text-sm">
           <Link href="/tools" className="hover:text-gray-300 transition-colors">
             Tools
@@ -117,7 +117,7 @@ export default function DynamicToolPage() {
       </div>
 
       {/* Main Content */}
-      <section className="max-w-7xl mx-auto px-6 pb-12">
+      <section className="max-w-7xl mx-auto px-6 pb-12 lg:pl-[330px] xl:pl-[340px]">
         {/* Header */}
         <div className="mb-12">
           <div className="flex items-center gap-6 mb-6">
