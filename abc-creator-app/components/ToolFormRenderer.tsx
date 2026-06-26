@@ -8,6 +8,10 @@ interface ToolFormRendererProps {
   tool: Tool;
 }
 
+function wait(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
 export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -19,6 +23,21 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
   ) => {
     const { id, value } = e.target;
     setFormData((prev) => ({ ...prev, [id]: value }));
+  };
+
+  const revealChunk = async (currentOutput: string, chunk: string) => {
+    if (!chunk) return currentOutput;
+
+    let nextOutput = currentOutput;
+    const stepSize = chunk.length > 800 ? 28 : chunk.length > 240 ? 18 : 10;
+
+    for (let index = 0; index < chunk.length; index += stepSize) {
+      nextOutput += chunk.slice(index, index + stepSize);
+      setOutput(nextOutput);
+      await wait(12);
+    }
+
+    return nextOutput;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -89,8 +108,7 @@ Get more credits: /pricing`
         }
 
         const chunk = decoder.decode(value, { stream: true });
-        finalOutput += chunk;
-        setOutput(finalOutput);
+        finalOutput = await revealChunk(finalOutput, chunk);
       }
     } catch (error) {
       setOutput(
