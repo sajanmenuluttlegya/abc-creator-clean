@@ -38,38 +38,39 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
         }),
       });
 
-        if (!res.ok) {
-          const text = await res.text();
+      if (!res.ok) {
+        const text = await res.text();
 
-          try {
-            const data = JSON.parse(text);
+        try {
+          const data = JSON.parse(text);
 
-            if (res.status === 402 || data.code === "INSUFFICIENT_CREDITS") {
-              const requiredCredits = Number(data.requiredCredits ?? creditCost);
-              const currentCredits = Number(data.currentCredits ?? 0);
+          if (res.status === 402 || data.code === "INSUFFICIENT_CREDITS") {
+            const requiredCredits = Number(data.requiredCredits ?? creditCost);
+            const currentCredits = Number(data.currentCredits ?? 0);
 
-              setOutput(
+            setOutput(
 `Not enough credits
 
 This tool needs ${requiredCredits} credits per generation.
 You currently have ${currentCredits} credit${currentCredits === 1 ? "" : "s"}.
 
 Get more credits: /pricing`
-              );
-              return;
-            }
-
-            setOutput(
-              `Error:\n${data.error || "Generation failed."}\n\n${
-                data.details || ""
-              }`
             );
-          } catch {
-            setOutput(`Error:\n${text || "Generation failed."}`);
+            return;
           }
 
-          return;
+          setOutput(
+            `Error:\n${data.error || "Generation failed."}\n\n${
+              data.details || ""
+            }`
+          );
+        } catch {
+          setOutput(`Error:\n${text || "Generation failed."}`);
         }
+
+        return;
+      }
+
       if (!res.body) {
         setOutput("Error:\nStreaming response body was empty.");
         return;
@@ -106,14 +107,14 @@ Get more credits: /pricing`
     <div className="grid gap-8 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] lg:items-start">
       <div className="space-y-6">
         <div>
-            <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <h2 className="text-xl font-semibold text-white">
-                Create Your Content
-              </h2>
-              <span className="inline-flex w-fit items-center rounded-full border border-emerald-400/25 bg-emerald-400/10 px-4 py-1.5 text-xs font-semibold text-emerald-200">
-                {creditCost} credits per generation
-              </span>
-            </div>
+          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-xl font-semibold text-white">
+              Create Your Content
+            </h2>
+            <span className="inline-flex w-fit items-center rounded-full border border-emerald-400/25 bg-emerald-400/10 px-4 py-1.5 text-xs font-semibold text-emerald-200">
+              {creditCost} credits per generation
+            </span>
+          </div>
 
           <form
             onSubmit={handleSubmit}
@@ -204,10 +205,10 @@ Get more credits: /pricing`
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                     />
                   </svg>
-                  Generating...
+                  Streaming...
                 </>
               ) : (
-                  <>✨ Generate — {creditCost} credits</>
+                <>✨ Generate — {creditCost} credits</>
               )}
             </button>
           </form>
@@ -224,15 +225,15 @@ Get more credits: /pricing`
             </li>
             <li className="flex gap-4">
               <span className="min-w-6 font-semibold text-purple-400">2.</span>
-                <span>Click Generate to spend {creditCost} credits and create content with AI.</span>
+              <span>Click Generate to spend {creditCost} credits and create content with AI.</span>
             </li>
             <li className="flex gap-4">
               <span className="min-w-6 font-semibold text-purple-400">3.</span>
-              <span>Review the result on the right side.</span>
+              <span>Watch the result appear live on the right side.</span>
             </li>
             <li className="flex gap-4">
               <span className="min-w-6 font-semibold text-purple-400">4.</span>
-              <span>Copy, edit, or regenerate as needed.</span>
+              <span>Copy the current result when it is ready.</span>
             </li>
           </ol>
         </div>
@@ -244,7 +245,7 @@ Get more credits: /pricing`
           <ul className="space-y-3 text-sm leading-relaxed text-blue-200">
             <li>• Be specific in your inputs for better results.</li>
             <li>• Try different tones to find what works best.</li>
-            <li>• Generate multiple versions when testing angles.</li>
+            <li>• Run another generation when testing a different angle.</li>
           </ul>
         </div>
 
@@ -253,7 +254,7 @@ Get more credits: /pricing`
             ⚡ Live AI Generation
           </h3>
           <p className="text-sm leading-relaxed text-purple-100/80">
-            Creator is connected to live AI generation. Review factual claims before publishing.
+            Creator streams text output into this page. Review factual claims before publishing.
           </p>
         </div>
       </div>
