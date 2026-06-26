@@ -16,7 +16,11 @@ function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Unknown webhook error.";
 }
 
-function logWebhookError(message: string, error: unknown, extra: Record<string, unknown> = {}) {
+function logWebhookError(
+  message: string,
+  error: unknown,
+  extra: Record<string, unknown> = {}
+) {
   console.error(message, {
     ...extra,
     error,
@@ -110,6 +114,26 @@ function getInvoicePeriod(invoice: Stripe.Invoice) {
     periodStart: unixToIso(linePeriod?.start ?? rawInvoice.period_start),
     periodEnd: unixToIso(linePeriod?.end ?? rawInvoice.period_end),
   };
+}
+
+function isPaidInvoice(invoice: Stripe.Invoice) {
+  const rawInvoice = invoice as unknown as {
+    amount_paid?: number;
+    paid?: boolean;
+    status?: string | null;
+  };
+
+  if (rawInvoice.status && rawInvoice.status !== "paid") {
+    return false;
+  }
+
+  if (rawInvoice.paid === false) {
+    return false;
+  }
+
+  return (
+    typeof rawInvoice.amount_paid === "number" && rawInvoice.amount_paid > 0
+  );
 }
 
 async function markEventProcessed(supabase: SupabaseClient, eventId: string) {
@@ -309,14 +333,7 @@ async function grantSubscriptionCredits(
     return;
   }
 
-  const rawInvoiceForPayment = invoice as unknown as {
-    amount_paid?: number;
-  };
-
-  if (
-    typeof rawInvoiceForPayment.amount_paid === "number" &&
-    rawInvoiceForPayment.amount_paid <= 0
-  ) {
+  if (!isPaidInvoice(invoice)) {
     return;
   }
 
@@ -503,7 +520,6 @@ export async function POST(request: Request) {
         break;
 
       case "invoice.paid":
-      case "invoice.payment_succeeded":
         await handlePaidInvoice(
           supabase,
           stripe,
@@ -511,6 +527,7 @@ export async function POST(request: Request) {
         );
         break;
 
+      case "invoice.payment_succeeded":
       case "invoice.payment_failed":
         await handleInvoiceSubscriptionSync(
           supabase,
