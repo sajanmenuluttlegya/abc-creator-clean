@@ -12,20 +12,6 @@ function getAppUrl(request: Request) {
   return new URL(request.url).origin;
 }
 
-  if (configuredAppUrl) {
-    return configuredAppUrl.replace(/\/$/, "");
-  }
-
-  const forwardedProto = request.headers.get("x-forwarded-proto") ?? "https";
-  const forwardedHost = request.headers.get("x-forwarded-host");
-
-  if (forwardedHost) {
-    return `${forwardedProto}://${forwardedHost}`;
-  }
-
-  return new URL(request.url).origin;
-}
-
 function readableError(error: unknown) {
   console.error("Email auth route error:", error);
 
