@@ -4,7 +4,6 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getStripeClient } from "@/lib/billing/stripe";
-import { getPlanCreditGrant } from "@/lib/billing/plan-credits";
 
 export const runtime = "nodejs";
 
@@ -40,30 +39,6 @@ function readStripeId(value: unknown) {
   return null;
 }
 
-function readInvoicePeriod(invoice: Stripe.Invoice) {
-  const rawInvoice = invoice as unknown as {
-    period_start?: number;
-    period_end?: number;
-    lines?: {
-      data?: Array<{
-        period?: {
-          start?: number;
-          end?: number;
-        };
-      }>;
-    };
-  };
-
-  const linePeriod = rawInvoice.lines?.data?.find(
-    (line) => line.period?.start && line.period?.end
-  )?.period;
-
-  return {
-    periodStart: unixToIso(linePeriod?.start ?? rawInvoice.period_start),
-    periodEnd: unixToIso(linePeriod?.end ?? rawInvoice.period_end),
-  };
-}
-
 async function getSubscriptionFromCheckoutSession(
   stripe: Stripe,
   session: Stripe.Checkout.Session
@@ -80,24 +55,6 @@ async function getSubscriptionFromCheckoutSession(
   }
 
   return await stripe.subscriptions.retrieve(subscriptionId);
-}
-
-async function getInvoiceFromCheckoutSession(
-  stripe: Stripe,
-  session: Stripe.Checkout.Session
-) {
-  const invoiceValue = session.invoice as unknown;
-  const invoiceId = readStripeId(invoiceValue);
-
-  if (!invoiceId) {
-    return null;
-  }
-
-  if (typeof invoiceValue === "object" && invoiceValue) {
-    return invoiceValue as Stripe.Invoice;
-  }
-
-  return await stripe.invoices.retrieve(invoiceId);
 }
 
 async function syncSubscription(
@@ -155,60 +112,6 @@ async function syncSubscription(
   }
 }
 
-async function grantCreditsFromPaidInvoice(
-  supabase: SupabaseClient,
-  subscription: Stripe.Subscription,
-  invoice: Stripe.Invoice,
-  fallbackMetadata: Record<string, string> = {}
-) {
-  const metadata = {
-    ...fallbackMetadata,
-    ...(subscription.metadata || {}),
-  };
-
-  const userId = metadata.userId;
-  const planId = metadata.planId;
-  const billingInterval = metadata.billingInterval;
-
-  if (!userId || !planId || !billingInterval || !invoice.id) {
-    return;
-  }
-
-  const rawInvoice = invoice as unknown as {
-    amount_paid?: number;
-  };
-
-  if (typeof rawInvoice.amount_paid === "number" && rawInvoice.amount_paid <= 0) {
-    return;
-  }
-
-  const creditGrant = getPlanCreditGrant(planId, billingInterval);
-
-  if (!creditGrant.ok) {
-    throw new Error(creditGrant.error);
-  }
-
-  const invoicePeriod = readInvoicePeriod(invoice);
-
-  const { error } = await supabase.rpc("grant_subscription_credits", {
-    p_user_id: userId,
-    p_grant_amount: creditGrant.grantAmount,
-    p_monthly_credits: creditGrant.monthlyCredits,
-    p_months_granted: creditGrant.monthsGranted,
-    p_plan_id: creditGrant.planId,
-    p_billing_interval: creditGrant.billingInterval,
-    p_stripe_invoice_id: invoice.id,
-    p_stripe_subscription_id: subscription.id,
-    p_period_start: invoicePeriod.periodStart,
-    p_period_end: invoicePeriod.periodEnd,
-    p_idempotency_key: `stripe_invoice_${invoice.id}`,
-  });
-
-  if (error) {
-    throw error;
-  }
-}
-
 export async function GET(request: Request) {
   const appUrl = getAppUrl(request);
   const redirectToDashboard = (billing: string) =>
@@ -246,7 +149,7 @@ export async function GET(request: Request) {
 
   try {
     const session = await stripe.checkout.sessions.retrieve(sessionId, {
-      expand: ["subscription", "invoice"],
+      expand: ["subscription"],
     });
 
     const sessionUserId = session.client_reference_id || session.metadata?.userId;
@@ -261,17 +164,15 @@ export async function GET(request: Request) {
       return redirectToDashboard("missing_subscription");
     }
 
-    const metadata = (session.metadata || {}) as Record<string, string>;
+    await syncSubscription(
+      admin,
+      subscription,
+      (session.metadata || {}) as Record<string, string>
+    );
 
-    await syncSubscription(admin, subscription, metadata);
-
-    const invoice = await getInvoiceFromCheckoutSession(stripe, session);
-
-    if (session.payment_status === "paid" && invoice) {
-      await grantCreditsFromPaidInvoice(admin, subscription, invoice, metadata);
-    }
-
-    return redirectToDashboard("synced");
+    return redirectToDashboard(
+      session.payment_status === "paid" ? "synced" : "awaiting_payment"
+    );
   } catch (error) {
     console.error("Billing success sync failed:", error);
     return redirectToDashboard("sync_failed");
