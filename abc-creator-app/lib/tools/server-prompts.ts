@@ -30,7 +30,7 @@ General rules:
 
 export const serverPrompts: Record<string, ServerPrompt> = {
   "blog-topic-ideas": {
-    creditCost: 3,
+    creditCost: 2,
     requiredInputs: [
       { id: "niche", label: "Niche", required: true, minLength: 2, maxLength: 180 },
       { id: "keyword", label: "Keyword", required: true, minLength: 2, maxLength: 180 },
@@ -115,7 +115,7 @@ Blog Content Premium rules:
 ${commonGenerationRules}
 
 Pro Image Brief rules:
-- This is not an actual image generation tool yet. Never claim that images were generated.
+- The main generation output for this tool is a text-only image plan. Actual images, when enabled, are generated separately through the Generate Images panel after this output appears.
 - Build a premium editorial image plan from the blog topic, outline/article, style, ratio, image plan, image count guidance, and brand context.
 - Only include avoidance prompts, alt text, captions, and placement notes when the user selected Yes for those options.
 - Keep prompts usable for future image-generation providers, but do not mention provider names, keys, routing, or backend details.
@@ -124,7 +124,7 @@ Pro Image Brief rules:
 - Include accessibility-minded alt text when requested.
 - Do not include audio options or audio generation suggestions.`,
     outputGuide:
-      "Return a premium Markdown image brief package. Include: 1) Visual Strategy Overview, 2) Recommended Image Count, 3) Hero Image Brief, 4) Section Image Briefs according to the selected image plan, 5) Style Consistency Guide, 6) Optional Avoidance Prompts only if requested, 7) Optional Alt Text only if requested, 8) Optional Captions only if requested, 9) Optional Placement Notes only if requested, 10) Final Production Notes. Clearly state these are text-only briefs/prompts, not generated images.",
+      "Return a premium Markdown image brief package. Include: 1) Visual Strategy Overview, 2) Recommended Image Count, 3) Hero Image Brief, 4) Section Image Briefs according to the selected image plan, 5) Style Consistency Guide, 6) Optional Avoidance Prompts only if requested, 7) Optional Alt Text only if requested, 8) Optional Captions only if requested, 9) Optional Placement Notes only if requested, 10) Final Production Notes. Clearly state these are text-only briefs/prompts; actual image generation is handled separately through the page's Generate Images panel when available.",
   },
   "blog-seo-pack": {
     creditCost: 5,
