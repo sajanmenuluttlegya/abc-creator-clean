@@ -30,17 +30,18 @@ General rules:
 
 export const serverPrompts: Record<string, ServerPrompt> = {
   "blog-topic-ideas": {
-    creditCost: 2,
+    creditCost: 3,
     requiredInputs: [
       { id: "niche", label: "Niche", required: true, minLength: 2, maxLength: 180 },
       { id: "keyword", label: "Keyword", required: true, minLength: 2, maxLength: 180 },
+      { id: "idea_count", label: "How many ideas", required: true, minLength: 2, maxLength: 80 },
       { id: "audience", label: "Audience", required: true, minLength: 2, maxLength: 120 },
       { id: "language", label: "Language", required: true, minLength: 2, maxLength: 80 },
       { id: "tone", label: "Tone", required: true, minLength: 2, maxLength: 80 },
     ],
     system: `You are ABC Creator's specialist for Blog Workflow and Blog Topic Ideas.${commonGenerationRules}`,
     outputGuide:
-      "Return 20 SEO-aware blog topic ideas. Use a Markdown table with columns: #, Suggested Title, Core Keyword/Angle, Search Intent, Target Reader, Difficulty Guess, and Why It Could Work. Label difficulty as a strategic guess, not a verified SEO metric. Add a short section called How to Use These Ideas and a short Verify Before Publishing note.",
+      "Return exactly the requested number of SEO-aware blog topic ideas from the idea_count input. Use a Markdown table with columns: #, Suggested Title, Core Keyword/Angle, Search Intent, Target Reader, Difficulty Guess, and Why It Could Work. Label difficulty as a strategic guess, not a verified SEO metric. Add a short section called How to Use These Ideas and a short Verify Before Publishing note.",
   },
   "blog-outline": {
     creditCost: 5,
