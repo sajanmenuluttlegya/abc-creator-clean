@@ -6,6 +6,13 @@ export type CreditEstimate = {
   label: string;
 };
 
+export const IMAGE_CREDITS_PER_IMAGE = 23;
+
+export const IMAGE_GENERATION_TOOL_SLUGS = [
+  "blog-content",
+  "pro-image-brief-for-blog",
+] as const;
+
 const BASE_TOOL_CREDITS: Record<string, number> = {
   "blog-topic-ideas": 2,
   "blog-outline": 5,
@@ -64,6 +71,20 @@ function matchCredit(
 
 function yes(value: string | undefined) {
   return (value || "").trim().toLowerCase() === "yes";
+}
+
+export function supportsImageGeneration(toolSlug: string) {
+  return IMAGE_GENERATION_TOOL_SLUGS.includes(
+    toolSlug as (typeof IMAGE_GENERATION_TOOL_SLUGS)[number]
+  );
+}
+
+export function calculateImageGenerationCredits(imageCount: number) {
+  const safeCount = Number.isFinite(imageCount)
+    ? Math.min(Math.max(Math.floor(imageCount), 1), 7)
+    : 1;
+
+  return safeCount * IMAGE_CREDITS_PER_IMAGE;
 }
 
 export function calculateToolCreditCost(
