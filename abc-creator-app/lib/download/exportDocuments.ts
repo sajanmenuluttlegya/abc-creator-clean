@@ -194,11 +194,19 @@ function buildPremiumHtml(renderedHtml: string, title: string) {
 }
 
 function makeTemporaryExportNode(renderedHtml: string, title: string) {
-  const wrapper = document.createElement("div");
-  wrapper.innerHTML = buildPremiumHtml(renderedHtml, title);
+  const style = document.createElement("style");
+  style.textContent = getExportStyles();
 
-  const page = wrapper.querySelector(".abc-export-page") as HTMLElement | null;
-  if (!page) throw new Error("Could not prepare export content.");
+  const page = document.createElement("main");
+  page.className = "abc-export-page";
+  page.innerHTML = `
+    <header class="abc-export-header">
+      <p class="abc-export-kicker">ABC Creator Export</p>
+      <h1 class="abc-export-title">${htmlEscape(title)}</h1>
+    </header>
+    <section class="abc-export-content">${renderedHtml}</section>
+    <footer class="abc-export-footer">Generated on demand. No output was stored by ABC Creator.</footer>
+  `;
 
   const host = document.createElement("div");
   host.style.position = "fixed";
@@ -206,6 +214,7 @@ function makeTemporaryExportNode(renderedHtml: string, title: string) {
   host.style.top = "0";
   host.style.width = "980px";
   host.style.background = "#ffffff";
+  host.appendChild(style);
   host.appendChild(page);
   document.body.appendChild(host);
 
