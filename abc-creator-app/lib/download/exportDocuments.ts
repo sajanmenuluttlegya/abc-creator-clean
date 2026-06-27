@@ -222,6 +222,7 @@ function createZip(files: Array<{ name: string; content: string }>) {
     centralView.setUint32(42, offset, true);
     centralHeader.set(nameBytes, 46);
     centralParts.push(centralHeader);
+
     offset += localHeader.length + data.length;
   }
 
@@ -387,13 +388,14 @@ async function buildPdfBlob(blocks: ExportBlock[], title: string) {
   };
 
   try {
-    const response = await fetch("/abc-logo.png");
+    const response = await fetch("/abc-export-logo.png", { cache: "force-cache" });
     if (response.ok) {
       const logo = await pdfDoc.embedPng(await response.arrayBuffer());
-      const logoWidth = 86;
+      const logoWidth = 76;
       const logoHeight = (logo.height / logo.width) * logoWidth;
-      page.drawImage(logo, { x: margin, y: pageSize[1] - logoHeight - 18, width: logoWidth, height: logoHeight });
-      y -= logoHeight + 20;
+      const logoY = pageSize[1] - logoHeight - 24;
+      page.drawImage(logo, { x: margin, y: logoY, width: logoWidth, height: logoHeight });
+      y = logoY - 28;
     }
   } catch {
     y -= 8;
