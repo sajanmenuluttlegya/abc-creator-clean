@@ -72,6 +72,11 @@ export function OutputPanel({
   const handleDownload = async (format: string) => {
     if (!format || !output || isDownloading) return;
 
+    if (format === "pdf") {
+      setDownloadError("PDF download is temporarily disabled while we rebuild it safely. Please use DOCX or Text file for now.");
+      return;
+    }
+
     setIsDownloading(true);
     setDownloadError("");
 
@@ -137,9 +142,6 @@ export function OutputPanel({
             >
               <option value="" className="bg-black text-white">
                 Download
-              </option>
-              <option value="pdf" className="bg-black text-white">
-                PDF
               </option>
               <option value="docx" className="bg-black text-white">
                 DOCX
