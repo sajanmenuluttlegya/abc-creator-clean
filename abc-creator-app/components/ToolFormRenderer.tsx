@@ -129,7 +129,7 @@ Get more credits: /pricing`
   };
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] lg:items-start">
+    <div className="grid gap-8 lg:grid-cols-[minmax(280px,0.68fr)_minmax(0,1.32fr)] xl:grid-cols-[minmax(300px,0.58fr)_minmax(0,1.42fr)] lg:items-start">
       <div className="space-y-6">
         <div>
           <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -258,7 +258,7 @@ Get more credits: /pricing`
             </li>
             <li className="flex gap-4">
               <span className="min-w-6 font-semibold text-purple-400">4.</span>
-              <span>Copy the current result when it is ready.</span>
+              <span>Copy or download the current result when it is ready.</span>
             </li>
           </ol>
         </div>
@@ -289,6 +289,7 @@ Get more credits: /pricing`
           isLoading={isLoading}
           output={output}
           recommendedNextActions={tool.nextActions}
+          downloadFileBaseName={`${tool.slug}-output`}
         />
         {canGenerateImages ? (
           <ImageGenerationPanel
