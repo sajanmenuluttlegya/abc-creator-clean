@@ -14,7 +14,7 @@ export const IMAGE_GENERATION_TOOL_SLUGS = [
 ] as const;
 
 const BASE_TOOL_CREDITS: Record<string, number> = {
-  "blog-topic-ideas": 3,
+  "blog-topic-ideas": 2,
   "blog-outline": 5,
   "blog-content": 8,
   "pro-image-brief-for-blog": 5,
@@ -24,10 +24,11 @@ const BASE_TOOL_CREDITS: Record<string, number> = {
 };
 
 const BLOG_TOPIC_IDEA_COUNT_CREDITS: Array<[string, number]> = [
-  ["50 ideas", 28],
-  ["30 ideas", 14],
-  ["20 ideas", 8],
-  ["10 ideas", 3],
+  ["50 ideas", 30],
+  ["30 ideas", 16],
+  ["20 ideas", 10],
+  ["10 ideas", 5],
+  ["5 ideas", 2],
 ];
 
 const BLOG_OUTLINE_WORD_COUNT_CREDITS: Array<[string, number]> = [
@@ -100,7 +101,7 @@ export function calculateToolCreditCost(
 ): number {
   switch (toolSlug) {
     case "blog-topic-ideas":
-      return matchCredit(inputs.idea_count, BLOG_TOPIC_IDEA_COUNT_CREDITS, 3);
+      return matchCredit(inputs.idea_count, BLOG_TOPIC_IDEA_COUNT_CREDITS, 2);
 
     case "blog-outline":
       return matchCredit(inputs.word_count, BLOG_OUTLINE_WORD_COUNT_CREDITS, 5);
@@ -162,7 +163,7 @@ export function getToolCreditEstimate(
 }
 
 export function getToolCreditLabel(toolSlug: string) {
-  if (toolSlug === "blog-topic-ideas") return "From 3 credits";
+  if (toolSlug === "blog-topic-ideas") return "From 2 credits";
   if (toolSlug === "blog-outline") return "From 5 credits";
   if (toolSlug === "blog-content") return "From 8 credits";
   if (toolSlug === "pro-image-brief-for-blog") return "From 5 credits";
