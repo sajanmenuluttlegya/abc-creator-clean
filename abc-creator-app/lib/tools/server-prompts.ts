@@ -60,15 +60,39 @@ export const serverPrompts: Record<string, ServerPrompt> = {
     requiredInputs: [
       { id: "outline", label: "Outline", required: true, minLength: 20, maxLength: 9000 },
       { id: "title", label: "Title", required: true, minLength: 4, maxLength: 220 },
-      { id: "keywords", label: "Keywords", required: true, minLength: 2, maxLength: 1500 },
+      { id: "keywords", label: "SEO Keywords", required: true, minLength: 2, maxLength: 1500 },
       { id: "tone", label: "Tone", required: true, minLength: 2, maxLength: 80 },
+      { id: "voice", label: "Voice", required: true, minLength: 2, maxLength: 120 },
       { id: "audience", label: "Audience", required: true, minLength: 2, maxLength: 120 },
       { id: "word_count", label: "Word count", required: true, minLength: 2, maxLength: 80 },
+      { id: "words_per_section", label: "Words per section", required: true, minLength: 2, maxLength: 80 },
+      { id: "article_depth", label: "Article depth", required: true, minLength: 2, maxLength: 120 },
       { id: "language", label: "Language", required: true, minLength: 2, maxLength: 80 },
+      { id: "include_key_takeaways", label: "Include key takeaways", required: true, minLength: 2, maxLength: 8 },
+      { id: "include_list", label: "Include list section", required: true, minLength: 2, maxLength: 8 },
+      { id: "include_table", label: "Include table section", required: true, minLength: 2, maxLength: 8 },
+      { id: "include_faq", label: "Include FAQ section", required: true, minLength: 2, maxLength: 8 },
+      { id: "image_brief_mode", label: "Image briefs", required: true, minLength: 2, maxLength: 120 },
+      { id: "brand_or_context", label: "Brand / extra context", required: false, maxLength: 4000 },
     ],
-    system: `You are ABC Creator's specialist for Blog Workflow and Blog Content.${commonGenerationRules}`,
+    system: `You are ABC Creator's premium Blog Content specialist. Create polished, publication-ready long-form blog articles from the user's approved outline and settings.
+
+${commonGenerationRules}
+
+Blog Content Premium rules:
+- Treat the user's outline as the source structure. Preserve the intended H2/H3 flow unless it clearly needs minor polish.
+- Respect voice, tone, audience, language, target word count, words per section, and article depth.
+- Use SEO keywords naturally. Do not keyword-stuff.
+- If the user asks for key takeaways, include them near the top after the introduction.
+- If the user asks for a list section, include one useful numbered or bulleted list in the most relevant section.
+- If the user asks for a table section, include one clean Markdown table where it adds value.
+- If the user asks for FAQs, include concise FAQs near the end.
+- If image briefs are requested, create text-only image placement briefs, prompts, alt text, and captions. Do not claim images were generated.
+- Do not include audio options or audio generation suggestions.
+- Do not claim live Google search, realtime information, competitor insights, charts, graphs, SEO scores, or keyword volumes unless the user supplied the data.
+- If a graph would help but no data is supplied, suggest the graph concept as an optional editorial asset and clearly mark it as a suggestion, not generated data.`,
     outputGuide:
-      "Turn the supplied outline into a complete blog article in Markdown. Include a polished H1, introduction, useful H2/H3 sections, natural examples, conclusion, FAQs, SEO title suggestion, meta description suggestion, and Verify Before Publishing notes. Do not claim plagiarism-free, AI-detector-safe, live SEO metrics, or real citations unless supplied by the user.",
+      "Return a premium Markdown blog article package. Structure it as: 1) SEO Title, 2) Meta Description, 3) Suggested URL Slug, 4) Full Blog Article with H1, intro hook, H2/H3 sections, natural examples, requested list/table/takeaways/FAQ sections, and conclusion, 5) Optional Image Briefs only if requested, with placement, prompt, alt text, and caption, 6) Final On-Page SEO Checklist, 7) Verify Before Publishing notes. Keep it professional and ready to copy. Do not say that images, graphs, live search, or competitor insights were generated.",
   },
   "pro-image-brief-for-blog": {
     creditCost: 5,
