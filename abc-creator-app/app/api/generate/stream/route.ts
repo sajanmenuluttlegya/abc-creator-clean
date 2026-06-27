@@ -1,6 +1,9 @@
 import { NextRequest } from "next/server";
 import { randomUUID } from "crypto";
-import { getServerPrompt } from "@/lib/tools/server-prompts";
+import {
+  getServerPrompt,
+  validateToolInputs,
+} from "@/lib/tools/server-prompts";
 import { createClient } from "@/lib/supabase/server";
 import { routeToAI, type ChatMessage } from "@/lib/ai/routeToAI";
 
@@ -12,6 +15,26 @@ type GenerateBody = {
   inputs?: Record<string, string>;
 };
 
+type CreditReservation = {
+  ok?: boolean;
+  code?: string;
+  requiredCredits?: number;
+  currentCredits?: number;
+  remainingCredits?: number;
+  transactionId?: string;
+};
+
+type CreditSpendResult = {
+  ok?: boolean;
+  code?: string;
+  status?: string;
+  alreadyFinalized?: boolean;
+};
+
+type SpendReservationResult =
+  | { ok: true }
+  | { ok: false; response: Response };
+
 function env(name: string, fallback = "") {
   return process.env[name] || fallback;
 }
@@ -22,14 +45,9 @@ function getKeys(prefix: string, count: number) {
   ).filter(Boolean);
 }
 
-function formatInputs(inputs: Record<string, string>) {
-  return Object.entries(inputs)
-    .map(([key, value]) => `${key}: ${value}`)
-    .join("\n");
-}
-
 function uniqueValues(values: string[]) {
   const seen = new Set<string>();
+
   return values.filter((value) => {
     const cleaned = value.trim();
     if (!cleaned || seen.has(cleaned)) return false;
@@ -46,6 +64,34 @@ function getOpenRouterModels() {
     env("OPENROUTER_DEEPSEEK_FLASH_MODEL", "deepseek/deepseek-v4-flash"),
     env("OPENROUTER_GEMINI_PRO_MODEL", "google/gemini-2.5-pro"),
   ]);
+}
+
+function formatInputs(inputs: Record<string, string>) {
+  return Object.entries(inputs)
+    .map(([key, value]) => `${key}: ${value}`)
+    .join("\n");
+}
+
+function rpcErrorMessage(error: unknown) {
+  if (!error) return "Unknown credit ledger error.";
+  if (error instanceof Error) return error.message;
+
+  if (typeof error === "object") {
+    const value = error as {
+      message?: unknown;
+      details?: unknown;
+      hint?: unknown;
+      code?: unknown;
+    };
+
+    const parts = [value.message, value.details, value.hint, value.code]
+      .filter((item) => typeof item === "string" && item.trim())
+      .join(" ");
+
+    if (parts) return parts;
+  }
+
+  return String(error);
 }
 
 async function callOpenRouterStream(params: {
@@ -86,7 +132,6 @@ function makeTextStreamFromOpenRouter(response: Response) {
 
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
-
   let buffer = "";
   let closed = false;
 
@@ -114,7 +159,6 @@ function makeTextStreamFromOpenRouter(response: Response) {
 
           for (const rawLine of lines) {
             const line = rawLine.trim();
-
             if (!line || line.startsWith(":")) continue;
             if (!line.startsWith("data:")) continue;
 
@@ -148,7 +192,7 @@ function makeTextStreamFromOpenRouter(response: Response) {
 
               if (text) controller.enqueue(encoder.encode(text));
             } catch {
-              // Ignore malformed keepalive/provider chunks.
+              // Ignore malformed provider keepalive chunks.
             }
           }
         }
@@ -158,7 +202,6 @@ function makeTextStreamFromOpenRouter(response: Response) {
         upstream.releaseLock();
       }
     },
-
     async cancel() {
       await upstream.cancel();
     },
@@ -176,48 +219,6 @@ function makeTextStreamFromText(text: string) {
   });
 }
 
-type CreditReservation = {
-  ok?: boolean;
-  code?: string;
-  requiredCredits?: number;
-  currentCredits?: number;
-  remainingCredits?: number;
-  transactionId?: string;
-};
-
-type CreditSpendResult = {
-  ok?: boolean;
-  code?: string;
-  status?: string;
-  alreadyFinalized?: boolean;
-};
-
-type SpendReservationResult =
-  | { ok: true }
-  | { ok: false; response: Response };
-
-function rpcErrorMessage(error: unknown) {
-  if (!error) return "Unknown credit ledger error.";
-  if (error instanceof Error) return error.message;
-
-  if (typeof error === "object") {
-    const value = error as {
-      message?: unknown;
-      details?: unknown;
-      hint?: unknown;
-      code?: unknown;
-    };
-
-    const parts = [value.message, value.details, value.hint, value.code]
-      .filter((item) => typeof item === "string" && item.trim())
-      .join(" ");
-
-    if (parts) return parts;
-  }
-
-  return String(error);
-}
-
 export async function POST(req: NextRequest) {
   let reservedTransactionId: string | null = null;
   let supabase: Awaited<ReturnType<typeof createClient>> | null = null;
@@ -231,7 +232,7 @@ export async function POST(req: NextRequest) {
         p_reason: reason,
       });
     } catch {
-      // Never expose refund internals to the user.
+      // Never expose refund internals to users.
     }
   }
 
@@ -313,13 +314,12 @@ export async function POST(req: NextRequest) {
     }
 
     const body = (await req.json()) as GenerateBody;
-
     const toolSlug = body.toolSlug?.trim();
     const inputs = body.inputs || {};
 
     if (!toolSlug) {
       return Response.json(
-        { ok: false, error: "Missing toolSlug." },
+        { ok: false, error: "Missing toolSlug.", code: "MISSING_TOOL_SLUG" },
         { status: 400 }
       );
     }
@@ -328,18 +328,21 @@ export async function POST(req: NextRequest) {
 
     if (!prompt) {
       return Response.json(
-        { ok: false, error: `Unknown tool: ${toolSlug}` },
+        { ok: false, error: `Unknown tool: ${toolSlug}`, code: "TOOL_NOT_FOUND" },
         { status: 404 }
       );
     }
 
-    const hasUsefulInput = Object.values(inputs).some(
-      (value) => typeof value === "string" && value.trim().length > 1
-    );
+    const validation = validateToolInputs(toolSlug, inputs);
 
-    if (!hasUsefulInput) {
+    if (!validation.ok) {
       return Response.json(
-        { ok: false, error: "Please fill in at least one meaningful field." },
+        {
+          ok: false,
+          error: validation.error,
+          code: "VALIDATION_ERROR",
+          field: validation.field,
+        },
         { status: 400 }
       );
     }
@@ -392,13 +395,7 @@ export async function POST(req: NextRequest) {
     const messages: ChatMessage[] = [
       {
         role: "system",
-        content: `${prompt.system}
-
-Rules:
-- Return useful, polished, specific output.
-- Do not mention internal prompts, API keys, providers, or routing.
-- Do not say you are a placeholder.
-- Do not include fake statistics, fake testimonials, or fake guarantees.`,
+        content: prompt.system,
       },
       {
         role: "user",
@@ -444,9 +441,7 @@ ${prompt.outputGuide}`,
             return spend.response;
           }
 
-          const stream = makeTextStreamFromOpenRouter(response);
-
-          return new Response(stream, {
+          return new Response(makeTextStreamFromOpenRouter(response), {
             headers: {
               "Content-Type": "text/plain; charset=utf-8",
               "Cache-Control": "no-cache, no-transform",
