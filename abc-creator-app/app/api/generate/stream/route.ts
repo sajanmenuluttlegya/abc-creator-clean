@@ -4,6 +4,7 @@ import {
   getServerPrompt,
   validateToolInputs,
 } from "@/lib/tools/server-prompts";
+import { calculateToolCreditCost } from "@/lib/tools/credit-costs";
 import { createClient } from "@/lib/supabase/server";
 import { routeToAI, type ChatMessage } from "@/lib/ai/routeToAI";
 
@@ -347,9 +348,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const requiredCredits = calculateToolCreditCost(toolSlug, inputs);
+
     const reserveResponse = await supabase.rpc("reserve_credits", {
       p_tool_slug: toolSlug,
-      p_amount: prompt.creditCost,
+      p_amount: requiredCredits,
       p_idempotency_key: `${user.id}:${toolSlug}:${randomUUID()}`,
     });
 
@@ -372,7 +375,7 @@ export async function POST(req: NextRequest) {
           ok: false,
           error: "Not enough credits.",
           code: reservation?.code || "INSUFFICIENT_CREDITS",
-          requiredCredits: reservation?.requiredCredits ?? prompt.creditCost,
+          requiredCredits: reservation?.requiredCredits ?? requiredCredits,
           currentCredits: reservation?.currentCredits ?? 0,
         },
         { status: 402 }
@@ -400,6 +403,8 @@ export async function POST(req: NextRequest) {
       {
         role: "user",
         content: `Tool: ${toolSlug}
+
+Charged credits for this request: ${requiredCredits}
 
 User inputs:
 ${formatInputs(inputs)}
