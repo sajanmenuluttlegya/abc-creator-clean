@@ -1,5 +1,23 @@
 export type OutputDownloadFormat = "txt" | "docx" | "pdf";
 
+type Html2PdfWorker = {
+  set: (options: Record<string, unknown>) => Html2PdfWorker;
+  from: (source: HTMLElement | string) => Html2PdfWorker;
+  save: () => Promise<void>;
+};
+
+type Html2PdfFactory = () => Html2PdfWorker;
+
+type HtmlDocxModule = {
+  asBlob: (
+    html: string,
+    options?: {
+      orientation?: "portrait" | "landscape";
+      margins?: Record<string, number>;
+    }
+  ) => Blob;
+};
+
 function sanitizeFileName(value: string) {
   return (value || "abc-creator-output")
     .toLowerCase()
@@ -224,9 +242,24 @@ function makeTemporaryExportNode(renderedHtml: string, title: string) {
   };
 }
 
+async function loadHtml2Pdf() {
+  const mod = (await import("html2pdf.js")) as unknown as {
+    default?: Html2PdfFactory;
+  } & Html2PdfFactory;
+
+  return mod.default || mod;
+}
+
+async function loadHtmlDocx() {
+  const mod = (await import("html-docx-js")) as unknown as {
+    default?: HtmlDocxModule;
+  } & HtmlDocxModule;
+
+  return mod.default || mod;
+}
+
 async function downloadPdf(renderedHtml: string, title: string, fileName: string) {
-  const html2pdfModule = await import("html2pdf.js");
-  const html2pdf = html2pdfModule.default;
+  const html2pdf = await loadHtml2Pdf();
   const exportNode = makeTemporaryExportNode(renderedHtml, title);
 
   try {
@@ -252,8 +285,7 @@ async function downloadPdf(renderedHtml: string, title: string, fileName: string
 }
 
 async function downloadDocx(renderedHtml: string, title: string, fileName: string) {
-  const htmlDocxModule = await import("html-docx-js");
-  const htmlDocx = htmlDocxModule.default;
+  const htmlDocx = await loadHtmlDocx();
   const html = buildPremiumHtml(renderedHtml, title);
   const blob = htmlDocx.asBlob(html, {
     orientation: "portrait",
