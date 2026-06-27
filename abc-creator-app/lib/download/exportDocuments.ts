@@ -1,14 +1,8 @@
 export type OutputDownloadFormat = "txt" | "docx" | "pdf";
 
-type Html2PdfWorker = {
-  set: (options: Record<string, unknown>) => Html2PdfWorker;
-  from: (source: HTMLElement | string) => Html2PdfWorker;
-  save: () => Promise<void>;
-};
-
-type Html2PdfFactory = () => Html2PdfWorker;
-
 const encoder = new TextEncoder();
+
+type WordStyle = "title" | "heading1" | "heading2" | "normal" | "list";
 
 function sanitizeFileName(value: string) {
   return (value || "abc-creator-output")
@@ -29,18 +23,8 @@ function markdownToPlainText(markdown: string) {
     .replace(/`([^`]+)`/g, "$1")
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1 ($2)")
     .replace(/^>\s?/gm, "")
+    .replace(/\r\n/g, "\n")
     .trim();
-}
-
-function downloadBlob(blob: Blob, fileName: string) {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 function htmlEscape(value: string) {
@@ -55,187 +39,31 @@ function xmlEscape(value: string) {
   return htmlEscape(value).replace(/'/g, "&apos;");
 }
 
-function getRenderedHtml(output: string, renderedElement?: HTMLElement | null) {
-  if (renderedElement?.innerHTML?.trim()) {
-    return renderedElement.innerHTML;
-  }
+function downloadBlob(blob: Blob, fileName: string) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  link.rel = "noopener";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 3000);
+}
 
+function getRenderedHtml(output: string, renderedElement?: HTMLElement | null) {
+  if (renderedElement?.innerHTML?.trim()) return renderedElement.innerHTML;
   return `<pre>${htmlEscape(output)}</pre>`;
 }
 
-function getExportStyles() {
-  return `
-    @page { margin: 18mm 16mm; }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      background: #ffffff;
-      color: #101116;
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
-      font-size: 11pt;
-      line-height: 1.62;
-    }
-    .abc-export-page {
-      width: 100%;
-      max-width: 980px;
-      margin: 0 auto;
-      background: #ffffff;
-      color: #101116;
-      padding: 34px 38px 42px;
-    }
-    .abc-export-header {
-      border-bottom: 1px solid #d8dbe6;
-      margin-bottom: 24px;
-      padding-bottom: 14px;
-    }
-    .abc-export-kicker {
-      color: #6d28d9;
-      font-size: 9pt;
-      font-weight: 800;
-      letter-spacing: 0.16em;
-      margin: 0 0 8px;
-      text-transform: uppercase;
-    }
-    .abc-export-title {
-      color: #101116;
-      font-size: 22pt;
-      font-weight: 850;
-      line-height: 1.15;
-      margin: 0;
-    }
-    .abc-export-content,
-    .abc-export-content * {
-      color: #101116 !important;
-      text-shadow: none !important;
-      box-shadow: none !important;
-    }
-    .abc-export-content h1,
-    .abc-export-content h2,
-    .abc-export-content h3,
-    .abc-export-content h4 {
-      color: #101116 !important;
-      page-break-after: avoid;
-      break-after: avoid-page;
-      line-height: 1.22;
-    }
-    .abc-export-content h1 { font-size: 24pt; margin: 0 0 16px; }
-    .abc-export-content h2 { font-size: 18pt; margin: 28px 0 12px; }
-    .abc-export-content h3 { font-size: 14pt; margin: 22px 0 10px; }
-    .abc-export-content p { margin: 0 0 12px; }
-    .abc-export-content a { color: #5b21b6 !important; text-decoration: underline; }
-    .abc-export-content strong { font-weight: 800; }
-    .abc-export-content ul,
-    .abc-export-content ol { margin: 0 0 14px 22px; padding: 0; }
-    .abc-export-content li { margin: 0 0 6px; padding-left: 2px; }
-    .abc-export-content blockquote {
-      border-left: 4px solid #7c3aed;
-      background: #f5f3ff;
-      margin: 18px 0;
-      padding: 12px 16px;
-    }
-    .abc-export-content code {
-      background: #f4f4f5;
-      border: 1px solid #e4e4e7;
-      border-radius: 5px;
-      color: #111827 !important;
-      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-      font-size: 9.5pt;
-      padding: 1px 5px;
-    }
-    .abc-export-content pre {
-      background: #fafafa;
-      border: 1px solid #e4e4e7;
-      border-radius: 12px;
-      overflow-wrap: anywhere;
-      padding: 14px;
-      white-space: pre-wrap;
-    }
-    .abc-export-content table {
-      border-collapse: collapse;
-      border-spacing: 0;
-      margin: 18px 0 22px;
-      page-break-inside: auto;
-      table-layout: fixed;
-      width: 100% !important;
-    }
-    .abc-export-content thead { display: table-header-group; }
-    .abc-export-content tr { break-inside: avoid-page; page-break-inside: avoid; }
-    .abc-export-content th,
-    .abc-export-content td {
-      border: 1px solid #d9dce7 !important;
-      padding: 8px 9px;
-      text-align: left;
-      vertical-align: top;
-      word-break: normal;
-      overflow-wrap: anywhere;
-    }
-    .abc-export-content th {
-      background: #f4f0ff !important;
-      color: #221044 !important;
-      font-weight: 800;
-    }
-    .abc-export-content td { background: #ffffff !important; }
-    .abc-export-content hr { border: 0; border-top: 1px solid #d8dbe6; margin: 24px 0; }
-    .abc-export-footer {
-      border-top: 1px solid #d8dbe6;
-      color: #667085;
-      font-size: 9pt;
-      margin-top: 28px;
-      padding-top: 12px;
-    }
-  `;
-}
+function getReadableLines(output: string, title: string) {
+  const plain = markdownToPlainText(output);
+  const lines = plain
+    .split("\n")
+    .map((line) => line.trimEnd())
+    .filter((line, index, all) => line.trim() || all[index - 1]?.trim());
 
-function buildPremiumHtml(renderedHtml: string, title: string) {
-  return `<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <title>${htmlEscape(title)}</title>
-  <style>${getExportStyles()}</style>
-</head>
-<body>
-  <main class="abc-export-page">
-    <header class="abc-export-header">
-      <p class="abc-export-kicker">ABC Creator Export</p>
-      <h1 class="abc-export-title">${htmlEscape(title)}</h1>
-    </header>
-    <section class="abc-export-content">${renderedHtml}</section>
-    <footer class="abc-export-footer">Generated on demand. No output was stored by ABC Creator.</footer>
-  </main>
-</body>
-</html>`;
-}
-
-function makeTemporaryExportNode(renderedHtml: string, title: string) {
-  const style = document.createElement("style");
-  style.textContent = getExportStyles();
-
-  const page = document.createElement("main");
-  page.className = "abc-export-page";
-  page.innerHTML = `
-    <header class="abc-export-header">
-      <p class="abc-export-kicker">ABC Creator Export</p>
-      <h1 class="abc-export-title">${htmlEscape(title)}</h1>
-    </header>
-    <section class="abc-export-content">${renderedHtml}</section>
-    <footer class="abc-export-footer">Generated on demand. No output was stored by ABC Creator.</footer>
-  `;
-
-  const host = document.createElement("div");
-  host.style.position = "fixed";
-  host.style.left = "-10000px";
-  host.style.top = "0";
-  host.style.width = "980px";
-  host.style.background = "#ffffff";
-  host.appendChild(style);
-  host.appendChild(page);
-  document.body.appendChild(host);
-
-  return {
-    node: page,
-    cleanup: () => host.remove(),
-  };
+  return [title, "", ...lines, "", "Generated on demand. No output was stored by ABC Creator."];
 }
 
 function createCrcTable() {
@@ -243,11 +71,9 @@ function createCrcTable() {
 
   for (let index = 0; index < 256; index++) {
     let current = index;
-
     for (let bit = 0; bit < 8; bit++) {
       current = current & 1 ? 0xedb88320 ^ (current >>> 1) : current >>> 1;
     }
-
     table[index] = current >>> 0;
   }
 
@@ -258,21 +84,15 @@ const crcTable = createCrcTable();
 
 function crc32(data: Uint8Array) {
   let crc = 0xffffffff;
-
-  for (const byte of data) {
-    crc = crcTable[(crc ^ byte) & 0xff] ^ (crc >>> 8);
-  }
-
+  for (const byte of data) crc = crcTable[(crc ^ byte) & 0xff] ^ (crc >>> 8);
   return (crc ^ 0xffffffff) >>> 0;
 }
 
 function getDosDateTime() {
   const now = new Date();
   const year = Math.max(now.getFullYear(), 1980);
-  const dosTime =
-    (now.getHours() << 11) | (now.getMinutes() << 5) | Math.floor(now.getSeconds() / 2);
+  const dosTime = (now.getHours() << 11) | (now.getMinutes() << 5) | Math.floor(now.getSeconds() / 2);
   const dosDate = ((year - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
-
   return { dosTime, dosDate };
 }
 
@@ -314,7 +134,6 @@ function createZip(files: Array<{ name: string; content: string }>) {
     localView.setUint16(26, nameBytes.length, true);
     localView.setUint16(28, 0, true);
     localHeader.set(nameBytes, 30);
-
     localParts.push(localHeader, data);
 
     const centralHeader = new Uint8Array(46 + nameBytes.length);
@@ -338,8 +157,8 @@ function createZip(files: Array<{ name: string; content: string }>) {
     centralView.setUint32(38, 0, true);
     centralView.setUint32(42, offset, true);
     centralHeader.set(nameBytes, 46);
-
     centralParts.push(centralHeader);
+
     offset += localHeader.length + data.length;
   }
 
@@ -360,16 +179,16 @@ function createZip(files: Array<{ name: string; content: string }>) {
 }
 
 function wordRun(text: string, bold = false) {
-  if (!text.trim()) return "";
-
-  return `<w:r>${bold ? "<w:rPr><w:b/></w:rPr>" : ""}<w:t xml:space="preserve">${xmlEscape(text)}</w:t></w:r>`;
+  const clean = text.trim();
+  if (!clean) return "";
+  return `<w:r>${bold ? "<w:rPr><w:b/></w:rPr>" : ""}<w:t xml:space="preserve">${xmlEscape(clean)}</w:t></w:r>`;
 }
 
-function wordParagraph(text: string, style: "title" | "heading1" | "heading2" | "normal" | "list" = "normal") {
+function wordParagraph(text: string, style: WordStyle = "normal") {
   const cleanText = text.replace(/\s+/g, " ").trim();
   if (!cleanText) return "";
 
-  const styleMap = {
+  const styleMap: Record<WordStyle, string> = {
     title: "Title",
     heading1: "Heading1",
     heading2: "Heading2",
@@ -377,8 +196,9 @@ function wordParagraph(text: string, style: "title" | "heading1" | "heading2" | 
     list: "Normal",
   };
   const indent = style === "list" ? '<w:ind w:left="720"/>' : "";
+  const isBold = style !== "normal" && style !== "list";
 
-  return `<w:p><w:pPr><w:pStyle w:val="${styleMap[style]}"/>${indent}</w:pPr>${wordRun(cleanText, style !== "normal" && style !== "list")}</w:p>`;
+  return `<w:p><w:pPr><w:pStyle w:val="${styleMap[style]}"/>${indent}</w:pPr>${wordRun(cleanText, isBold)}</w:p>`;
 }
 
 function textFromElement(element: Element) {
@@ -387,22 +207,18 @@ function textFromElement(element: Element) {
 
 function tableToWordXml(table: HTMLTableElement) {
   const rows = Array.from(table.querySelectorAll("tr"));
-
   if (!rows.length) return "";
 
   const tableRows = rows
     .map((row) => {
-      const cells = Array.from(row.children).filter((cell) =>
-        ["TD", "TH"].includes(cell.tagName)
-      );
-
+      const cells = Array.from(row.children).filter((cell) => ["TD", "TH"].includes(cell.tagName));
       const tableCells = cells
         .map((cell) => {
           const isHeader = cell.tagName === "TH";
-          return `<w:tc><w:tcPr><w:tcW w:w="2400" w:type="dxa"/><w:tcBorders><w:top w:val="single" w:sz="4" w:color="D9DCE7"/><w:left w:val="single" w:sz="4" w:color="D9DCE7"/><w:bottom w:val="single" w:sz="4" w:color="D9DCE7"/><w:right w:val="single" w:sz="4" w:color="D9DCE7"/></w:tcBorders>${isHeader ? '<w:shd w:fill="F4F0FF"/>' : ""}</w:tcPr><w:p>${wordRun(textFromElement(cell), isHeader)}</w:p></w:tc>`;
+          const shade = isHeader ? '<w:shd w:fill="F4F0FF"/>' : "";
+          return `<w:tc><w:tcPr><w:tcW w:w="2400" w:type="dxa"/><w:tcBorders><w:top w:val="single" w:sz="4" w:color="D9DCE7"/><w:left w:val="single" w:sz="4" w:color="D9DCE7"/><w:bottom w:val="single" w:sz="4" w:color="D9DCE7"/><w:right w:val="single" w:sz="4" w:color="D9DCE7"/></w:tcBorders>${shade}</w:tcPr><w:p>${wordRun(textFromElement(cell), isHeader)}</w:p></w:tc>`;
         })
         .join("");
-
       return `<w:tr>${tableCells}</w:tr>`;
     })
     .join("");
@@ -424,13 +240,9 @@ function renderedHtmlToWordBody(renderedHtml: string, title: string) {
     }
 
     if (element.tagName === "H1") parts.push(wordParagraph(textFromElement(element), "heading1"));
-    else if (element.tagName === "H2" || element.tagName === "H3") {
-      parts.push(wordParagraph(textFromElement(element), "heading2"));
-    } else if (element.tagName === "LI") {
-      parts.push(wordParagraph(`• ${textFromElement(element)}`, "list"));
-    } else {
-      parts.push(wordParagraph(textFromElement(element), "normal"));
-    }
+    else if (element.tagName === "H2" || element.tagName === "H3") parts.push(wordParagraph(textFromElement(element), "heading2"));
+    else if (element.tagName === "LI") parts.push(wordParagraph(`• ${textFromElement(element)}`, "list"));
+    else parts.push(wordParagraph(textFromElement(element), "normal"));
   });
 
   parts.push(wordParagraph("Generated on demand. No output was stored by ABC Creator.", "normal"));
@@ -444,53 +256,111 @@ function buildDocxBlob(renderedHtml: string, title: string) {
   const rels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`;
 
   return new Blob(
-    [
-      createZip([
-        { name: "[Content_Types].xml", content: contentTypes },
-        { name: "_rels/.rels", content: rels },
-        { name: "word/document.xml", content: documentXml },
-      ]),
-    ],
+    [createZip([{ name: "[Content_Types].xml", content: contentTypes }, { name: "_rels/.rels", content: rels }, { name: "word/document.xml", content: documentXml }])],
     { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" }
   );
 }
 
-async function loadHtml2Pdf() {
-  const mod = (await import("html2pdf.js")) as unknown as {
-    default?: Html2PdfFactory;
-  } & Html2PdfFactory;
-
-  return mod.default || mod;
+function normalizePdfText(value: string) {
+  return value
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/[\u201C\u201D]/g, '"')
+    .replace(/[\u2013\u2014]/g, "-")
+    .replace(/[\u2022]/g, "-")
+    .replace(/[\u00A0]/g, " ")
+    .replace(/[^\x09\x0A\x0D\x20-\xFF]/g, "?");
 }
 
-async function downloadPdf(renderedHtml: string, title: string, fileName: string) {
-  const html2pdf = await loadHtml2Pdf();
-  const exportNode = makeTemporaryExportNode(renderedHtml, title);
+function escapePdfString(value: string) {
+  return normalizePdfText(value).replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+}
 
-  try {
-    await html2pdf()
-      .set({
-        filename: fileName,
-        margin: [10, 10, 12, 10],
-        image: { type: "jpeg", quality: 0.98 },
-        html2canvas: {
-          scale: 2,
-          backgroundColor: "#ffffff",
-          useCORS: true,
-          letterRendering: true,
-        },
-        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-        pagebreak: { mode: ["css", "legacy"] },
-      })
-      .from(exportNode.node)
-      .save();
-  } finally {
-    exportNode.cleanup();
+function wrapText(line: string, maxChars: number) {
+  const clean = normalizePdfText(line).trimEnd();
+  if (!clean) return [""];
+
+  const wrapped: string[] = [];
+  let current = "";
+
+  for (const word of clean.split(/\s+/)) {
+    const candidate = current ? `${current} ${word}` : word;
+
+    if (candidate.length > maxChars && current) {
+      wrapped.push(current);
+      current = word;
+    } else if (candidate.length > maxChars) {
+      for (let index = 0; index < candidate.length; index += maxChars) wrapped.push(candidate.slice(index, index + maxChars));
+      current = "";
+    } else {
+      current = candidate;
+    }
   }
+
+  if (current) wrapped.push(current);
+  return wrapped;
 }
 
-function downloadDocx(renderedHtml: string, title: string, fileName: string) {
-  downloadBlob(buildDocxBlob(renderedHtml, title), fileName);
+function buildPdfBlob(output: string, title: string) {
+  const rawLines = getReadableLines(output, title);
+  const lines = rawLines.flatMap((line) => wrapText(line, 92));
+  const pages: string[][] = [];
+
+  for (let index = 0; index < Math.max(lines.length, 1); index += 48) {
+    pages.push(lines.slice(index, index + 48));
+  }
+
+  const objects: string[] = [];
+  objects[1] = "<< /Type /Catalog /Pages 2 0 R >>";
+  objects[3] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>";
+
+  const kids: string[] = [];
+  let nextObject = 4;
+
+  pages.forEach((pageLines, pageIndex) => {
+    const pageObject = nextObject++;
+    const contentObject = nextObject++;
+    kids.push(`${pageObject} 0 R`);
+
+    const contentLines = [
+      "BT",
+      "/F1 10 Tf",
+      "50 775 Td",
+      "14 TL",
+      ...pageLines.map((line, lineIndex) => {
+        const text = lineIndex === 0 && pageIndex === 0 ? escapePdfString(line) : escapePdfString(line);
+        return `(${text}) Tj T*`;
+      }),
+      "ET",
+    ];
+    const stream = contentLines.join("\n");
+
+    objects[pageObject] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents ${contentObject} 0 R >>`;
+    objects[contentObject] = `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`;
+  });
+
+  objects[2] = `<< /Type /Pages /Kids [${kids.join(" ")}] /Count ${pages.length} >>`;
+
+  let pdf = "%PDF-1.4\n%\u00E2\u00E3\u00CF\u00D3\n";
+  const offsets: number[] = [0];
+
+  for (let objectId = 1; objectId < objects.length; objectId++) {
+    offsets[objectId] = pdf.length;
+    pdf += `${objectId} 0 obj\n${objects[objectId]}\nendobj\n`;
+  }
+
+  const xrefOffset = pdf.length;
+  pdf += `xref\n0 ${objects.length}\n0000000000 65535 f \n`;
+
+  for (let objectId = 1; objectId < objects.length; objectId++) {
+    pdf += `${String(offsets[objectId]).padStart(10, "0")} 00000 n \n`;
+  }
+
+  pdf += `trailer\n<< /Size ${objects.length} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
+
+  const bytes = new Uint8Array(pdf.length);
+  for (let index = 0; index < pdf.length; index++) bytes[index] = pdf.charCodeAt(index) & 0xff;
+
+  return new Blob([bytes], { type: "application/pdf" });
 }
 
 export async function downloadOutput(
@@ -506,20 +376,17 @@ export async function downloadOutput(
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
 
+  await new Promise((resolve) => window.setTimeout(resolve, 0));
+
   if (format === "txt") {
-    downloadBlob(
-      new Blob([markdownToPlainText(output)], { type: "text/plain;charset=utf-8" }),
-      `${baseName}.txt`
-    );
+    downloadBlob(new Blob([markdownToPlainText(output)], { type: "text/plain;charset=utf-8" }), `${baseName}.txt`);
     return;
   }
-
-  const renderedHtml = getRenderedHtml(output, renderedElement);
 
   if (format === "docx") {
-    downloadDocx(renderedHtml, title, `${baseName}.docx`);
+    downloadBlob(buildDocxBlob(getRenderedHtml(output, renderedElement), title), `${baseName}.docx`);
     return;
   }
 
-  await downloadPdf(renderedHtml, title, `${baseName}.pdf`);
+  downloadBlob(buildPdfBlob(output, title), `${baseName}.pdf`);
 }
