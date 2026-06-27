@@ -158,17 +158,11 @@ function wrapLine(line: string, maxChars: number) {
 
 async function readLogoBytes() {
   const publicDir = path.join(process.cwd(), "public");
-  const candidates = [
-    path.join(publicDir, "abc-export-logo.png"),
-    path.join(publicDir, "abc-logo.png"),
-  ];
 
-  for (const filePath of candidates) {
-    try {
-      return await readFile(filePath);
-    } catch {
-      // Try the next logo source.
-    }
+  try {
+    return await readFile(path.join(publicDir, "abc-export-logo.png"));
+  } catch {
+    // Fall back only to the dedicated export logo asset, never the app logo.
   }
 
   try {
@@ -200,6 +194,11 @@ async function makePdf(output: string, baseName: string) {
 
   const ensure = (height: number) => {
     if (y - height < bottom) newPage();
+  };
+
+  const addVerticalSpace = (height: number) => {
+    ensure(height + 2);
+    y -= height;
   };
 
   const drawText = (text: string, size = 10, isBold = false, after = 4, indent = 0) => {
@@ -293,18 +292,18 @@ async function makePdf(output: string, baseName: string) {
       y -= rowHeight;
     });
 
-    y -= 12;
+    y -= 26;
   };
 
   try {
     const logoBytes = await readLogoBytes();
     if (logoBytes) {
       const logo = await pdf.embedPng(logoBytes);
-      const logoWidth = 76;
-      const logoHeight = (logo.height / logo.width) * logoWidth;
-      const logoY = pageSize[1] - logoHeight - 22;
+      const logoWidth = 94;
+      const logoHeight = 34;
+      const logoY = pageSize[1] - logoHeight - 24;
       page.drawImage(logo, { x: margin, y: logoY, width: logoWidth, height: logoHeight });
-      y = logoY - 24;
+      y = logoY - 16;
     }
   } catch {
     y -= 4;
@@ -316,12 +315,13 @@ async function makePdf(output: string, baseName: string) {
 
   parseBlocks(output).forEach((block) => {
     if (block.type === "heading") {
-      drawText(block.text, block.level === 1 ? 15 : block.level === 2 ? 13 : 11, true, 7);
+      addVerticalSpace(8);
+      drawText(block.text, block.level === 1 ? 15 : block.level === 2 ? 13 : 11, true, 10);
     } else if (block.type === "paragraph") {
-      drawText(block.text, 10, false, 5);
+      drawText(block.text, 10, false, 7);
     } else if (block.type === "list") {
-      block.items.forEach((item) => drawText(`• ${item}`, 10, false, 3, 12));
-      y -= 4;
+      block.items.forEach((item) => drawText(`• ${item}`, 10, false, 4, 12));
+      y -= 6;
     } else {
       drawTable(block.rows, block.header);
     }
