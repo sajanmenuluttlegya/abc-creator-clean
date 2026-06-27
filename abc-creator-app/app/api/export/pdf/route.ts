@@ -118,8 +118,12 @@ export async function POST(request: Request) {
     if (!output.trim()) return NextResponse.json({ error: "No output provided." }, { status: 400 });
 
     const pdfBytes = await makePdf(output, baseName);
+    const pdfBody = pdfBytes.buffer.slice(
+      pdfBytes.byteOffset,
+      pdfBytes.byteOffset + pdfBytes.byteLength
+    ) as ArrayBuffer;
 
-    return new NextResponse(pdfBytes, {
+    return new NextResponse(pdfBody, {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="${baseName}.pdf"`,
