@@ -50,6 +50,38 @@ const toneOptions = [
   "Witty",
 ];
 
+const voiceOptions = [
+  "Second person helpful guide",
+  "First person expert",
+  "Third person editorial",
+  "Brand voice",
+  "Neutral magazine style",
+  "Founder/operator voice",
+];
+
+const wordsPerSectionOptions = [
+  "Very short",
+  "Short",
+  "Medium",
+  "Long",
+  "Very long",
+  "2 paragraphs per section",
+];
+
+const articleDepthOptions = [
+  "Basic overview",
+  "Detailed practical guide",
+  "Expert-level deep dive",
+];
+
+const yesNoOptions = ["Yes", "No"];
+
+const imageBriefModeOptions = [
+  "No image briefs",
+  "Hero image brief only",
+  "Hero + section image briefs",
+];
+
 export const publicTools: Tool[] = [
   {
     id: "blog-topic-ideas",
@@ -155,7 +187,7 @@ export const publicTools: Tool[] = [
     id: "blog-content",
     slug: "blog-content",
     name: "Blog Content",
-    description: "Turn an approved outline into a complete blog article.",
+    description: "Turn an approved outline into a premium long-form blog article.",
     icon: "✍️",
     category: "Blog Workflow",
     displayCreditCost: 8,
@@ -178,7 +210,7 @@ export const publicTools: Tool[] = [
       },
       {
         id: "keywords",
-        label: "Keywords",
+        label: "SEO Keywords",
         type: "textarea",
         placeholder: "e.g., AI for small business, automation, productivity",
         required: true,
@@ -189,6 +221,13 @@ export const publicTools: Tool[] = [
         type: "select",
         required: true,
         options: toneOptions,
+      },
+      {
+        id: "voice",
+        label: "Voice",
+        type: "select",
+        required: true,
+        options: voiceOptions,
       },
       {
         id: "audience",
@@ -205,11 +244,67 @@ export const publicTools: Tool[] = [
         required: true,
       },
       {
+        id: "words_per_section",
+        label: "Words per Section",
+        type: "select",
+        required: true,
+        options: wordsPerSectionOptions,
+      },
+      {
+        id: "article_depth",
+        label: "Article Depth",
+        type: "select",
+        required: true,
+        options: articleDepthOptions,
+      },
+      {
         id: "language",
         label: "Language",
         type: "select",
         required: true,
         options: languageOptions,
+      },
+      {
+        id: "include_key_takeaways",
+        label: "Include Key Takeaways",
+        type: "select",
+        required: true,
+        options: yesNoOptions,
+      },
+      {
+        id: "include_list",
+        label: "Include List Section",
+        type: "select",
+        required: true,
+        options: yesNoOptions,
+      },
+      {
+        id: "include_table",
+        label: "Include Table Section",
+        type: "select",
+        required: true,
+        options: yesNoOptions,
+      },
+      {
+        id: "include_faq",
+        label: "Include FAQ Section",
+        type: "select",
+        required: true,
+        options: yesNoOptions,
+      },
+      {
+        id: "image_brief_mode",
+        label: "Image Briefs",
+        type: "select",
+        required: true,
+        options: imageBriefModeOptions,
+      },
+      {
+        id: "brand_or_context",
+        label: "Brand / Extra Context",
+        type: "textarea",
+        placeholder: "Optional: brand name, product, offer, examples, sources, facts, or notes to include.",
+        required: false,
       },
     ],
   },
