@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { RecommendedNextAction } from "@/lib/tools/public-tools";
@@ -24,6 +24,8 @@ export function OutputPanel({
   downloadFileBaseName = "abc-creator-output",
 }: OutputPanelProps) {
   const [copied, setCopied] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const exportContentRef = useRef<HTMLDivElement | null>(null);
   const hasOutput = Boolean(output.trim());
   const isStreamingVisible = isLoading && hasOutput;
   const isErrorOutput = /^(error:|not enough credits)/i.test(output.trim());
@@ -41,9 +43,21 @@ export function OutputPanel({
     }, 5000);
   };
 
-  const handleDownload = (format: string) => {
+  const handleDownload = async (format: string) => {
     if (!format || !output) return;
-    downloadOutput(format as OutputDownloadFormat, output, downloadFileBaseName);
+
+    setIsDownloading(true);
+
+    try {
+      await downloadOutput(
+        format as OutputDownloadFormat,
+        output,
+        downloadFileBaseName,
+        exportContentRef.current
+      );
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   return (
@@ -59,6 +73,10 @@ export function OutputPanel({
           ) : isLoading ? (
             <span className="rounded-full border border-purple-400/25 bg-purple-500/10 px-3 py-1 text-xs font-semibold text-purple-200">
               Generating...
+            </span>
+          ) : isDownloading ? (
+            <span className="rounded-full border border-blue-400/25 bg-blue-500/10 px-3 py-1 text-xs font-semibold text-blue-200">
+              Preparing download...
             </span>
           ) : null}
         </div>
@@ -76,11 +94,12 @@ export function OutputPanel({
             <select
               aria-label="Download output"
               defaultValue=""
+              disabled={isDownloading}
               onChange={(event) => {
-                handleDownload(event.target.value);
+                void handleDownload(event.target.value);
                 event.target.value = "";
               }}
-              className="cursor-pointer rounded-full border border-purple-400/30 bg-purple-500/10 px-4 py-2 text-sm font-semibold text-purple-100 transition hover:bg-purple-500/20"
+              className="cursor-pointer rounded-full border border-purple-400/30 bg-purple-500/10 px-4 py-2 text-sm font-semibold text-purple-100 transition hover:bg-purple-500/20 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <option value="" className="bg-black text-white">
                 Download
@@ -101,7 +120,7 @@ export function OutputPanel({
 
       {output ? (
         <>
-          <div className="creator-output-scroll max-h-[78vh] overflow-y-auto overflow-x-hidden rounded-2xl border border-purple-500/15 bg-black/70 p-6 text-gray-200">
+          <div ref={exportContentRef} className="creator-output-scroll max-h-[78vh] overflow-y-auto overflow-x-hidden rounded-2xl border border-purple-500/15 bg-black/70 p-6 text-gray-200">
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               components={{
