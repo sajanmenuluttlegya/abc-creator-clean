@@ -34,11 +34,11 @@ export function ToolCategorySidebar({ activeSlug }: ToolCategorySidebarProps) {
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className={`fixed left-4 top-28 z-40 rounded-full border border-purple-400/25 bg-black/70 px-4 py-2 text-sm font-semibold text-purple-100 shadow-xl shadow-purple-950/30 backdrop-blur-xl transition hover:bg-purple-500/15 ${
+        className={`fixed left-4 top-28 z-40 rounded-full border border-purple-400/30 bg-black/75 px-6 py-3 text-base font-bold text-purple-100 shadow-xl shadow-purple-950/30 backdrop-blur-xl transition hover:bg-purple-500/15 ${
           isOpen ? "pointer-events-none opacity-0" : "opacity-100"
         }`}
       >
-        Categories
+        Create New
       </button>
 
       <aside
