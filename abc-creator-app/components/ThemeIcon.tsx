@@ -56,20 +56,16 @@ export function ThemeIcon({ name, size = "md", className = "" }: ThemeIconProps)
     case "blog-topic":
       return (
         <IconShell name={name} size={size} className={className}>
-          <path {...commonStroke} d="M7 3.8h7.2L19 8.6v11.6H7a2 2 0 0 1-2-2V5.8a2 2 0 0 1 2-2Z" />
-          <path {...commonStroke} d="M14 4v5h5" opacity="0.7" />
-          <path {...commonStroke} d="M8.5 13h6.2M8.5 16h4" />
-          <path {...commonStroke} d="m16 14.5 2 2 2.8-3.4" />
+          <path {...commonStroke} d="M8 14.5c-1.35-1.15-2.15-2.75-2.15-4.55A6.15 6.15 0 0 1 12 3.8a6.15 6.15 0 0 1 6.15 6.15c0 1.8-.8 3.4-2.15 4.55-.85.72-1.3 1.35-1.42 2.45H9.42C9.3 15.85 8.85 15.22 8 14.5Z" />
+          <path {...commonStroke} d="M9.5 19h5M10 16.95h4" />
         </IconShell>
       );
     case "blog-outline":
       return (
         <IconShell name={name} size={size} className={className}>
-          <path {...commonStroke} d="M5 5.5h14M5 12h14M5 18.5h14" />
-          <path {...commonStroke} d="M8 8.5v7M12 8.5v7M16 8.5v7" opacity="0.55" />
-          <circle cx="5" cy="5.5" r="1.2" fill="currentColor" />
-          <circle cx="5" cy="12" r="1.2" fill="currentColor" />
-          <circle cx="5" cy="18.5" r="1.2" fill="currentColor" />
+          <path {...commonStroke} d="M5 6.5h14" />
+          <path {...commonStroke} d="M5 12h14" />
+          <path {...commonStroke} d="M5 17.5h14" />
         </IconShell>
       );
     case "blog-content":
@@ -93,7 +89,6 @@ export function ThemeIcon({ name, size = "md", className = "" }: ThemeIconProps)
         <IconShell name={name} size={size} className={className}>
           <circle {...commonStroke} cx="10.5" cy="10.5" r="5.7" />
           <path {...commonStroke} d="m15 15 5 5" />
-          <path {...commonStroke} d="M7.8 10.4h5.4M10.5 7.7v5.4" opacity="0.65" />
         </IconShell>
       );
     case "ad-copy":
