@@ -57,6 +57,13 @@ const toneOptions = [
   "Witty",
 ];
 
+const blogTopicIdeaCountOptions = [
+  "10 ideas",
+  "20 ideas",
+  "30 ideas",
+  "50 ideas",
+];
+
 const voiceOptions = [
   "Second person helpful guide",
   "First person expert",
@@ -128,7 +135,7 @@ export const publicTools: Tool[] = [
     description: "Generate SEO-aware blog topic ideas from a niche and keyword.",
     icon: "📝",
     category: "Blog Workflow",
-    displayCreditCost: 2,
+    displayCreditCost: 3,
     outputType: "text",
     aliases: ["ai-blog-topic-ideas", "blog-topic-ideas-generator", "blog-topic-ideas-tool"],
     nextActions: [
@@ -141,6 +148,7 @@ export const publicTools: Tool[] = [
     inputs: [
       { id: "niche", label: "Niche", type: "text", placeholder: "e.g., fitness for busy founders", required: true },
       { id: "keyword", label: "Keyword", type: "text", placeholder: "e.g., 20-minute workouts", required: true },
+      { id: "idea_count", label: "How Many Ideas?", type: "select", required: true, options: blogTopicIdeaCountOptions },
       { id: "audience", label: "Audience", type: "select", required: true, options: audienceOptions },
       { id: "language", label: "Language", type: "select", required: true, options: languageOptions },
       { id: "tone", label: "Tone", type: "select", required: true, options: toneOptions },
