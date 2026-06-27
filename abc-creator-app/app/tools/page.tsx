@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { ToolCategorySidebar } from "@/components/ToolCategorySidebar";
+import { ThemeIcon } from "@/components/ThemeIcon";
 import { publicTools } from "@/lib/tools/public-tools";
 import { getToolCreditLabel } from "@/lib/tools/credit-costs";
 
 export default function ToolsPage() {
-  // Group tools by category
   const categories = [...new Set(publicTools.map((tool) => tool.category))];
   const toolsByCategory: Record<string, typeof publicTools> = {};
 
@@ -18,7 +18,6 @@ export default function ToolsPage() {
     <main className="min-h-screen bg-black">
       <ToolCategorySidebar />
 
-      {/* Navigation */}
       <nav className="sticky top-0 z-50 bg-black/50 backdrop-blur-xl border-b border-purple-500/10">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5 hover:opacity-90 transition-opacity">
@@ -30,42 +29,29 @@ export default function ToolsPage() {
             <span className="text-2xl font-semibold text-white">Creator</span>
           </Link>
           <div className="flex gap-3">
-            <Link
-              href="/tools"
-              className="px-6 py-2 text-gray-300 hover:text-white transition-colors text-sm"
-            >
+            <Link href="/tools" className="px-6 py-2 text-gray-300 hover:text-white transition-colors text-sm">
               Tools
             </Link>
-            <Link
-              href="/pricing"
-              className="px-4 py-2 rounded-full border border-emerald-400/30 text-emerald-200 hover:bg-emerald-500/10 transition-colors text-sm font-medium"
-            >
+            <Link href="/pricing" className="px-4 py-2 rounded-full border border-emerald-400/30 text-emerald-200 hover:bg-emerald-500/10 transition-colors text-sm font-medium">
               Pricing
             </Link>
-            <Link
-              href="/dashboard"
-              className="px-6 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-full transition-all duration-200 text-sm font-medium"
-            >
+            <Link href="/dashboard" className="px-6 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-full transition-all duration-200 text-sm font-medium">
               Dashboard
             </Link>
           </div>
         </div>
       </nav>
 
-      {/* Main Content */}
       <section className="max-w-7xl mx-auto px-6 py-12 lg:pl-[330px] xl:pl-[340px]">
         <div className="mb-12">
           <h1 className="text-4xl font-bold text-white mb-2">AI Tools Library</h1>
-          <p className="text-gray-400">
-            Choose from our collection of AI-powered content generation tools
-          </p>
+          <p className="text-gray-400">Choose from our collection of content generation tools</p>
         </div>
 
-        {/* Tools by Category */}
         {Object.entries(toolsByCategory).map(([category, tools]) => (
           <div key={category} className="mb-12">
-            <h2 className="text-2xl font-semibold text-white mb-8 flex items-center gap-2">
-              <span className="text-2xl">📂</span>
+            <h2 className="text-2xl font-semibold text-white mb-8 flex items-center gap-3">
+              <ThemeIcon name="folder" size="sm" />
               {category}
             </h2>
 
@@ -77,7 +63,7 @@ export default function ToolsPage() {
                   className="group rounded-2xl bg-white/5 border border-purple-500/20 hover:border-purple-500/50 p-8 backdrop-blur-sm transition-all duration-200 hover:bg-white/10 hover:shadow-lg hover:shadow-purple-500/10"
                 >
                   <div className="flex items-start justify-between mb-4">
-                    <span className="text-5xl">{tool.icon}</span>
+                    <ThemeIcon name={tool.icon} size="xl" />
                     <span className="px-3 py-1 text-xs bg-purple-500/30 text-purple-200 rounded-full font-medium">
                       {category}
                     </span>
@@ -93,7 +79,7 @@ export default function ToolsPage() {
 
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-sm font-medium text-purple-400 transition-colors group-hover:text-purple-300">
-                      Get Started →
+                      Get Started
                     </span>
                     <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-200">
                       {getToolCreditLabel(tool.slug)}
@@ -105,15 +91,9 @@ export default function ToolsPage() {
           </div>
         ))}
 
-        {/* Coming Soon Section */}
         <div className="mt-16 p-8 rounded-2xl bg-white/5 border border-purple-500/20 text-center">
-          <p className="text-gray-300 mb-6 text-lg">
-            More tools coming soon! Stay tuned for updates.
-          </p>
-          <Link
-            href="/"
-            className="inline-block px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-full transition-all duration-200 font-medium shadow-lg shadow-purple-500/20 hover:shadow-purple-500/40"
-          >
+          <p className="text-gray-300 mb-6 text-lg">More tools coming soon! Stay tuned for updates.</p>
+          <Link href="/" className="inline-block px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-full transition-all duration-200 font-medium shadow-lg shadow-purple-500/20 hover:shadow-purple-500/40">
             Back to Home
           </Link>
         </div>
