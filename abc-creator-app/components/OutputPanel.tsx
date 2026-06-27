@@ -25,6 +25,7 @@ export function OutputPanel({
 }: OutputPanelProps) {
   const [copied, setCopied] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState("");
   const exportContentRef = useRef<HTMLDivElement | null>(null);
   const hasOutput = Boolean(output.trim());
   const isStreamingVisible = isLoading && hasOutput;
@@ -32,21 +33,47 @@ export function OutputPanel({
   const showNextActions =
     hasOutput && !isLoading && !isErrorOutput && recommendedNextActions.length > 0;
 
+  const fallbackCopy = () => {
+    const textarea = document.createElement("textarea");
+    textarea.value = output;
+    textarea.setAttribute("readonly", "true");
+    textarea.style.position = "fixed";
+    textarea.style.left = "-9999px";
+    document.body.appendChild(textarea);
+    textarea.select();
+    const copiedFallback = document.execCommand("copy");
+    textarea.remove();
+
+    if (!copiedFallback) throw new Error("Clipboard copy failed.");
+  };
+
   const copyOutput = async () => {
     if (!output) return;
 
-    await navigator.clipboard.writeText(output);
-    setCopied(true);
+    try {
+      if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(output);
+      else fallbackCopy();
 
-    window.setTimeout(() => {
-      setCopied(false);
-    }, 5000);
+      setCopied(true);
+      setDownloadError("");
+      window.setTimeout(() => setCopied(false), 5000);
+    } catch {
+      try {
+        fallbackCopy();
+        setCopied(true);
+        setDownloadError("");
+        window.setTimeout(() => setCopied(false), 5000);
+      } catch {
+        setDownloadError("Copy failed. Please select the output text manually and copy it.");
+      }
+    }
   };
 
   const handleDownload = async (format: string) => {
-    if (!format || !output) return;
+    if (!format || !output || isDownloading) return;
 
     setIsDownloading(true);
+    setDownloadError("");
 
     try {
       await downloadOutput(
@@ -54,6 +81,12 @@ export function OutputPanel({
         output,
         downloadFileBaseName,
         exportContentRef.current
+      );
+    } catch (error) {
+      setDownloadError(
+        error instanceof Error
+          ? `Download failed: ${error.message}`
+          : "Download failed. Please try again."
       );
     } finally {
       setIsDownloading(false);
@@ -63,7 +96,7 @@ export function OutputPanel({
   return (
     <div className="rounded-3xl border border-purple-500/25 bg-black/45 p-8 shadow-2xl shadow-purple-950/25 backdrop-blur-2xl">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <h2 className="text-2xl font-bold text-white">Output</h2>
 
           {isStreamingVisible ? (
@@ -96,8 +129,9 @@ export function OutputPanel({
               defaultValue=""
               disabled={isDownloading}
               onChange={(event) => {
-                void handleDownload(event.target.value);
-                event.target.value = "";
+                const format = event.currentTarget.value;
+                event.currentTarget.value = "";
+                void handleDownload(format);
               }}
               className="cursor-pointer rounded-full border border-purple-400/30 bg-purple-500/10 px-4 py-2 text-sm font-semibold text-purple-100 transition hover:bg-purple-500/20 disabled:cursor-not-allowed disabled:opacity-60"
             >
@@ -117,6 +151,12 @@ export function OutputPanel({
           </div>
         ) : null}
       </div>
+
+      {downloadError ? (
+        <div className="mb-5 rounded-2xl border border-red-400/25 bg-red-500/10 px-4 py-3 text-sm text-red-100">
+          {downloadError}
+        </div>
+      ) : null}
 
       {output ? (
         <>
