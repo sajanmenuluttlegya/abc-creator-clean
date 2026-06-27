@@ -17,6 +17,18 @@ interface OutputPanelProps {
   downloadFileBaseName?: string;
 }
 
+function downloadBlob(blob: Blob, fileName: string) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  link.rel = "noopener";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 3000);
+}
+
 export function OutputPanel({
   isLoading,
   output,
@@ -69,24 +81,38 @@ export function OutputPanel({
     }
   };
 
+  const downloadPdfFromServer = async () => {
+    const response = await fetch("/api/export/pdf", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ output, fileBaseName: downloadFileBaseName }),
+    });
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => null);
+      throw new Error(data?.details || data?.error || "PDF download failed.");
+    }
+
+    downloadBlob(await response.blob(), `${downloadFileBaseName}.pdf`);
+  };
+
   const handleDownload = async (format: string) => {
     if (!format || !output || isDownloading) return;
-
-    if (format === "pdf") {
-      setDownloadError("PDF download is temporarily disabled while we rebuild it safely. Please use DOCX or Text file for now.");
-      return;
-    }
 
     setIsDownloading(true);
     setDownloadError("");
 
     try {
-      await downloadOutput(
-        format as OutputDownloadFormat,
-        output,
-        downloadFileBaseName,
-        exportContentRef.current
-      );
+      if (format === "pdf") {
+        await downloadPdfFromServer();
+      } else {
+        await downloadOutput(
+          format as OutputDownloadFormat,
+          output,
+          downloadFileBaseName,
+          exportContentRef.current
+        );
+      }
     } catch (error) {
       setDownloadError(
         error instanceof Error
@@ -142,6 +168,9 @@ export function OutputPanel({
             >
               <option value="" className="bg-black text-white">
                 Download
+              </option>
+              <option value="pdf" className="bg-black text-white">
+                PDF
               </option>
               <option value="docx" className="bg-black text-white">
                 DOCX
