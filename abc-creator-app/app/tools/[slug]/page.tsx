@@ -109,7 +109,7 @@ export default function DynamicToolPage() {
               {tool.category}
             </span>
             <span className="inline-flex items-center gap-1.5 px-4 py-1 text-xs bg-blue-500/20 text-blue-300 rounded-full font-medium">
-              <ThemeIcon name="bolt" size="xs" className="h-5 w-5 rounded-full border-blue-300/20 bg-blue-500/10 shadow-none" />
+              <ThemeIcon name="bolt" size="xs" />
               Fast
             </span>
           </div>
