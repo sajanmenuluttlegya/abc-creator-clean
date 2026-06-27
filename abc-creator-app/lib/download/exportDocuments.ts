@@ -1,6 +1,5 @@
 export type OutputDownloadFormat = "txt" | "docx" | "pdf";
 
-type WordStyle = "title" | "heading1" | "heading2" | "normal" | "list";
 type ExportBlock =
   | { type: "heading"; level: 1 | 2 | 3; text: string }
   | { type: "paragraph"; text: string }
@@ -148,15 +147,11 @@ function parseRenderedBlocks(renderedHtml: string, fallbackOutput: string) {
 
 function createCrcTable() {
   const table = new Uint32Array(256);
-
   for (let index = 0; index < 256; index++) {
     let current = index;
-    for (let bit = 0; bit < 8; bit++) {
-      current = current & 1 ? 0xedb88320 ^ (current >>> 1) : current >>> 1;
-    }
+    for (let bit = 0; bit < 8; bit++) current = current & 1 ? 0xedb88320 ^ (current >>> 1) : current >>> 1;
     table[index] = current >>> 0;
   }
-
   return table;
 }
 
@@ -180,12 +175,10 @@ function concatArrays(parts: Uint8Array[]) {
   const total = parts.reduce((sum, part) => sum + part.length, 0);
   const merged = new Uint8Array(total);
   let offset = 0;
-
   for (const part of parts) {
     merged.set(part, offset);
     offset += part.length;
   }
-
   return merged;
 }
 
@@ -212,29 +205,20 @@ function createZip(files: Array<{ name: string; content: string }>) {
     localView.setUint32(18, data.length, true);
     localView.setUint32(22, data.length, true);
     localView.setUint16(26, nameBytes.length, true);
-    localView.setUint16(28, 0, true);
     localHeader.set(nameBytes, 30);
     localParts.push(localHeader, data);
 
     const centralHeader = new Uint8Array(46 + nameBytes.length);
     const centralView = new DataView(centralHeader.buffer);
-
     centralView.setUint32(0, 0x02014b50, true);
     centralView.setUint16(4, 20, true);
     centralView.setUint16(6, 20, true);
-    centralView.setUint16(8, 0, true);
-    centralView.setUint16(10, 0, true);
     centralView.setUint16(12, dosTime, true);
     centralView.setUint16(14, dosDate, true);
     centralView.setUint32(16, crc, true);
     centralView.setUint32(20, data.length, true);
     centralView.setUint32(24, data.length, true);
     centralView.setUint16(28, nameBytes.length, true);
-    centralView.setUint16(30, 0, true);
-    centralView.setUint16(32, 0, true);
-    centralView.setUint16(34, 0, true);
-    centralView.setUint16(36, 0, true);
-    centralView.setUint32(38, 0, true);
     centralView.setUint32(42, offset, true);
     centralHeader.set(nameBytes, 46);
     centralParts.push(centralHeader);
@@ -244,16 +228,11 @@ function createZip(files: Array<{ name: string; content: string }>) {
   const centralDirectory = concatArrays(centralParts);
   const endRecord = new Uint8Array(22);
   const endView = new DataView(endRecord.buffer);
-
   endView.setUint32(0, 0x06054b50, true);
-  endView.setUint16(4, 0, true);
-  endView.setUint16(6, 0, true);
   endView.setUint16(8, files.length, true);
   endView.setUint16(10, files.length, true);
   endView.setUint32(12, centralDirectory.length, true);
   endView.setUint32(16, offset, true);
-  endView.setUint16(20, 0, true);
-
   return concatArrays([...localParts, centralDirectory, endRecord]);
 }
 
@@ -263,26 +242,17 @@ function wordRun(text: string, bold = false) {
   return `<w:r>${bold ? "<w:rPr><w:b/></w:rPr>" : ""}<w:t xml:space="preserve">${xmlEscape(clean)}</w:t></w:r>`;
 }
 
-function wordParagraph(text: string, style: WordStyle = "normal") {
+function wordParagraph(text: string, kind: "title" | "heading" | "normal" | "list" = "normal") {
   const cleanText = text.replace(/\s+/g, " ").trim();
   if (!cleanText) return "";
-
-  const styleMap: Record<WordStyle, string> = {
-    title: "Title",
-    heading1: "Heading1",
-    heading2: "Heading2",
-    normal: "Normal",
-    list: "Normal",
-  };
-  const indent = style === "list" ? '<w:ind w:left="720"/>' : "";
-  const isBold = style !== "normal" && style !== "list";
-
-  return `<w:p><w:pPr><w:pStyle w:val="${styleMap[style]}"/>${indent}</w:pPr>${wordRun(cleanText, isBold)}</w:p>`;
+  const size = kind === "title" ? 44 : kind === "heading" ? 30 : 22;
+  const bold = kind === "title" || kind === "heading";
+  const indent = kind === "list" ? '<w:ind w:left="720"/>' : "";
+  return `<w:p><w:pPr>${indent}</w:pPr><w:r><w:rPr>${bold ? "<w:b/>" : ""}<w:sz w:val="${size}"/><w:color w:val="101116"/></w:rPr><w:t xml:space="preserve">${xmlEscape(cleanText)}</w:t></w:r></w:p>`;
 }
 
 function tableToWordXml(rows: string[][], header: boolean) {
   if (!rows.length) return "";
-
   const tableRows = rows
     .map((row, rowIndex) => {
       const tableCells = row
@@ -295,44 +265,26 @@ function tableToWordXml(rows: string[][], header: boolean) {
       return `<w:tr>${tableCells}</w:tr>`;
     })
     .join("");
-
   return `<w:tbl><w:tblPr><w:tblW w:w="10000" w:type="dxa"/><w:tblBorders><w:top w:val="single" w:sz="4" w:color="D9DCE7"/><w:left w:val="single" w:sz="4" w:color="D9DCE7"/><w:bottom w:val="single" w:sz="4" w:color="D9DCE7"/><w:right w:val="single" w:sz="4" w:color="D9DCE7"/><w:insideH w:val="single" w:sz="4" w:color="D9DCE7"/><w:insideV w:val="single" w:sz="4" w:color="D9DCE7"/></w:tblBorders></w:tblPr>${tableRows}</w:tbl>`;
 }
 
-function renderedBlocksToWordBody(blocks: ExportBlock[], title: string) {
+function blocksToWordBody(blocks: ExportBlock[], title: string) {
   const parts = [wordParagraph(title, "title")];
-
   blocks.forEach((block) => {
-    if (block.type === "heading") {
-      parts.push(wordParagraph(block.text, block.level === 1 ? "heading1" : "heading2"));
-    } else if (block.type === "paragraph") {
-      parts.push(wordParagraph(block.text, "normal"));
-    } else if (block.type === "list") {
-      block.items.forEach((item) => parts.push(wordParagraph(`• ${item}`, "list")));
-    } else {
-      parts.push(tableToWordXml(block.rows, block.header));
-    }
+    if (block.type === "heading") parts.push(wordParagraph(block.text, "heading"));
+    else if (block.type === "paragraph") parts.push(wordParagraph(block.text));
+    else if (block.type === "list") block.items.forEach((item) => parts.push(wordParagraph(`• ${item}`, "list")));
+    else parts.push(tableToWordXml(block.rows, block.header));
   });
-
   return parts.join("");
 }
 
 function buildDocxBlob(blocks: ExportBlock[], title: string) {
-  const body = renderedBlocksToWordBody(blocks, title);
-  const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:styles><w:style w:type="paragraph" w:styleId="Normal"><w:name w:val="Normal"/><w:rPr><w:sz w:val="22"/><w:color w:val="101116"/></w:rPr></w:style><w:style w:type="paragraph" w:styleId="Title"><w:name w:val="Title"/><w:rPr><w:b/><w:sz w:val="44"/><w:color w:val="101116"/></w:rPr></w:style><w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="Heading 1"/><w:rPr><w:b/><w:sz w:val="36"/><w:color w:val="101116"/></w:rPr></w:style><w:style w:type="paragraph" w:styleId="Heading2"><w:name w:val="Heading 2"/><w:rPr><w:b/><w:sz w:val="28"/><w:color w:val="101116"/></w:rPr></w:style></w:styles><w:body>${body}<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="720" w:right="720" w:bottom="720" w:left="720"/></w:sectPr></w:body></w:document>`;
+  const body = blocksToWordBody(blocks, title);
+  const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${body}<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="720" w:right="720" w:bottom="720" w:left="720"/></w:sectPr></w:body></w:document>`;
   const contentTypes = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>`;
   const rels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`;
-
-  return new Blob(
-    [
-      createZip([
-        { name: "[Content_Types].xml", content: contentTypes },
-        { name: "_rels/.rels", content: rels },
-        { name: "word/document.xml", content: documentXml },
-      ]),
-    ],
-    { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" }
-  );
+  return new Blob([createZip([{ name: "[Content_Types].xml", content: contentTypes }, { name: "_rels/.rels", content: rels }, { name: "word/document.xml", content: documentXml }])], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
 }
 
 function normalizePdfText(value: string) {
@@ -348,24 +300,18 @@ function normalizePdfText(value: string) {
 function wrapPdfText(text: string, maxChars: number) {
   const clean = normalizePdfText(text).replace(/\s+/g, " ").trim();
   if (!clean) return [""];
-
   const lines: string[] = [];
   let current = "";
-
   clean.split(/\s+/).forEach((word) => {
     const candidate = current ? `${current} ${word}` : word;
-
     if (candidate.length > maxChars && current) {
       lines.push(current);
       current = word;
     } else if (candidate.length > maxChars) {
       for (let index = 0; index < candidate.length; index += maxChars) lines.push(candidate.slice(index, index + maxChars));
       current = "";
-    } else {
-      current = candidate;
-    }
+    } else current = candidate;
   });
-
   if (current) lines.push(current);
   return lines;
 }
@@ -381,118 +327,72 @@ async function buildPdfBlob(blocks: ExportBlock[], title: string) {
   const contentWidth = pageSize[0] - margin * 2;
   let page = pdfDoc.addPage(pageSize);
   let y = pageSize[1] - 46;
+  const black = rgb(0.05, 0.05, 0.06);
+  const border = rgb(0.82, 0.84, 0.89);
 
   const addPage = () => {
     page = pdfDoc.addPage(pageSize);
     y = pageSize[1] - 46;
   };
-
   const ensureSpace = (height: number) => {
     if (y - height < bottomLimit) addPage();
   };
-
   const drawText = (text: string, options: { size?: number; bold?: boolean; indent?: number; before?: number; after?: number } = {}) => {
     const size = options.size ?? 10;
     const indent = options.indent ?? 0;
     const lineHeight = Math.max(size + 3, 12);
     const maxChars = Math.max(22, Math.floor((contentWidth - indent) / (size * 0.52)));
     const lines = wrapPdfText(text, maxChars);
-    const height = (options.before ?? 0) + lines.length * lineHeight + (options.after ?? 0);
-
-    ensureSpace(height);
+    ensureSpace((options.before ?? 0) + lines.length * lineHeight + (options.after ?? 0));
     y -= options.before ?? 0;
     lines.forEach((line) => {
-      page.drawText(line, {
-        x: margin + indent,
-        y,
-        size,
-        font: options.bold ? boldFont : regularFont,
-        color: rgb(0.05, 0.05, 0.06),
-      });
+      page.drawText(line, { x: margin + indent, y, size, font: options.bold ? boldFont : regularFont, color: black });
       y -= lineHeight;
     });
     y -= options.after ?? 0;
   };
-
   const drawRule = () => {
     ensureSpace(16);
-    page.drawLine({
-      start: { x: margin, y },
-      end: { x: pageSize[0] - margin, y },
-      thickness: 0.6,
-      color: rgb(0.82, 0.84, 0.89),
-    });
+    page.drawLine({ start: { x: margin, y }, end: { x: pageSize[0] - margin, y }, thickness: 0.6, color: border });
     y -= 16;
   };
-
   const drawTable = (rows: string[][], header: boolean) => {
     if (!rows.length) return;
-
     const columnCount = Math.max(...rows.map((row) => row.length));
-    const baseWidths = columnCount === 7
-      ? [34, 112, 86, 76, 86, 58, 96]
-      : Array.from({ length: columnCount }, () => contentWidth / columnCount);
+    const baseWidths = columnCount === 7 ? [34, 112, 86, 76, 86, 58, 96] : Array.from({ length: columnCount }, () => contentWidth / columnCount);
     const widthTotal = baseWidths.reduce((sum, width) => sum + width, 0);
     const widths = baseWidths.map((width) => (width / widthTotal) * contentWidth);
-
     y -= 4;
-
     rows.forEach((row, rowIndex) => {
       const isHeader = header && rowIndex === 0;
       const size = isHeader ? 7.4 : 7.2;
       const lineHeight = 9.5;
-      const wrappedCells = widths.map((width, columnIndex) => {
-        const maxChars = Math.max(7, Math.floor((width - 8) / (size * 0.52)));
-        return wrapPdfText(row[columnIndex] ?? "", maxChars);
-      });
+      const wrappedCells = widths.map((width, columnIndex) => wrapPdfText(row[columnIndex] ?? "", Math.max(7, Math.floor((width - 8) / (size * 0.52)))));
       const rowHeight = Math.max(22, Math.max(...wrappedCells.map((lines) => lines.length)) * lineHeight + 10);
-
       ensureSpace(rowHeight + 8);
       let x = margin;
       const top = y;
       const bottomY = top - rowHeight;
-
       wrappedCells.forEach((lines, columnIndex) => {
         const width = widths[columnIndex];
-        page.drawRectangle({
-          x,
-          y: bottomY,
-          width,
-          height: rowHeight,
-          borderWidth: 0.6,
-          borderColor: rgb(0.82, 0.84, 0.89),
-          color: isHeader ? rgb(0.96, 0.94, 1) : rgb(1, 1, 1),
-        });
+        page.drawRectangle({ x, y: bottomY, width, height: rowHeight, borderWidth: 0.6, borderColor: border, color: isHeader ? rgb(0.96, 0.94, 1) : rgb(1, 1, 1) });
         lines.forEach((line, lineIndex) => {
-          page.drawText(line, {
-            x: x + 4,
-            y: top - 12 - lineIndex * lineHeight,
-            size,
-            font: isHeader ? boldFont : regularFont,
-            color: rgb(0.05, 0.05, 0.06),
-          });
+          page.drawText(line, { x: x + 4, y: top - 12 - lineIndex * lineHeight, size, font: isHeader ? boldFont : regularFont, color: black });
         });
         x += width;
       });
       y -= rowHeight;
     });
-
     y -= 12;
   };
 
   try {
     const response = await fetch("/abc-logo.png");
     if (response.ok) {
-      const logoBytes = await response.arrayBuffer();
-      const logo = await pdfDoc.embedPng(logoBytes);
+      const logo = await pdfDoc.embedPng(await response.arrayBuffer());
       const logoWidth = 86;
       const logoHeight = (logo.height / logo.width) * logoWidth;
-      page.drawImage(logo, {
-        x: margin,
-        y: pageSize[1] - logoHeight - 18,
-        width: logoWidth,
-        height: logoHeight,
-      });
+      page.drawImage(logo, { x: margin, y: pageSize[1] - logoHeight - 18, width: logoWidth, height: logoHeight });
       y -= logoHeight + 20;
     }
   } catch {
@@ -502,27 +402,16 @@ async function buildPdfBlob(blocks: ExportBlock[], title: string) {
   drawText("ABC Creator Export", { size: 8, bold: true, after: 6 });
   drawText(title, { size: 18, bold: true, after: 8 });
   drawRule();
-
   blocks.forEach((block) => {
-    if (block.type === "heading") {
-      drawText(block.text, {
-        size: block.level === 1 ? 16 : block.level === 2 ? 13 : 11,
-        bold: true,
-        before: 6,
-        after: 6,
-      });
-    } else if (block.type === "paragraph") {
-      drawText(block.text, { size: 10, after: 5 });
-    } else if (block.type === "list") {
-      block.items.forEach((item) => drawText(`• ${item}`, { size: 10, indent: 12, after: 3 }));
-      y -= 2;
-    } else {
-      drawTable(block.rows, block.header);
-    }
+    if (block.type === "heading") drawText(block.text, { size: block.level === 1 ? 16 : block.level === 2 ? 13 : 11, bold: true, before: 6, after: 6 });
+    else if (block.type === "paragraph") drawText(block.text, { size: 10, after: 5 });
+    else if (block.type === "list") block.items.forEach((item) => drawText(`• ${item}`, { size: 10, indent: 12, after: 3 }));
+    else drawTable(block.rows, block.header);
   });
 
   const pdfBytes = await pdfDoc.save();
-  return new Blob([pdfBytes], { type: "application/pdf" });
+  const pdfBuffer = pdfBytes.buffer.slice(pdfBytes.byteOffset, pdfBytes.byteOffset + pdfBytes.byteLength) as ArrayBuffer;
+  return new Blob([pdfBuffer], { type: "application/pdf" });
 }
 
 export async function downloadOutput(
@@ -533,7 +422,6 @@ export async function downloadOutput(
 ) {
   const baseName = sanitizeFileName(fileBaseName);
   const title = titleFromBaseName(baseName);
-
   await new Promise((resolve) => window.setTimeout(resolve, 0));
 
   if (format === "txt") {
@@ -542,7 +430,6 @@ export async function downloadOutput(
   }
 
   const blocks = parseRenderedBlocks(getRenderedHtml(output, renderedElement), output);
-
   if (format === "docx") {
     downloadBlob(buildDocxBlob(blocks, title), `${baseName}.docx`);
     return;
