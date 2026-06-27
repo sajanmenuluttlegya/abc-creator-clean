@@ -53,7 +53,7 @@ export const serverPrompts: Record<string, ServerPrompt> = {
     ],
     system: `You are ABC Creator's specialist for Blog Workflow and Blog Outline.${commonGenerationRules}`,
     outputGuide:
-      "Create a long-form blog outline in Markdown. Include: recommended H1, search intent, reader promise, intro angle, detailed H2/H3 structure, bullets under each section, keyword placement notes, FAQ ideas, conclusion angle, and Verify Before Publishing notes. Do not write the full article.",
+      "Create a long-form blog outline in Markdown for the selected target word-count range. Include: recommended H1, search intent, reader promise, intro angle, detailed H2/H3 structure, bullets under each section, keyword placement notes, FAQ ideas, conclusion angle, and Verify Before Publishing notes. Do not write the full article.",
   },
   "blog-content": {
     creditCost: 8,
@@ -81,7 +81,7 @@ ${commonGenerationRules}
 
 Blog Content Premium rules:
 - Treat the user's outline as the source structure. Preserve the intended H2/H3 flow unless it clearly needs minor polish.
-- Respect voice, tone, audience, language, target word count, words per section, and article depth.
+- Respect voice, tone, audience, language, selected target word-count range, words per section, and article depth.
 - Use SEO keywords naturally. Do not keyword-stuff.
 - If the user asks for key takeaways, include them near the top after the introduction.
 - If the user asks for a list section, include one useful numbered or bulleted list in the most relevant section.
@@ -97,14 +97,33 @@ Blog Content Premium rules:
   "pro-image-brief-for-blog": {
     creditCost: 5,
     requiredInputs: [
-      { id: "blog_outline", label: "Blog outline", required: true, minLength: 20, maxLength: 9000 },
       { id: "blog_topic", label: "Blog topic", required: true, minLength: 4, maxLength: 220 },
+      { id: "blog_outline", label: "Blog outline / article", required: true, minLength: 20, maxLength: 12000 },
       { id: "visual_style", label: "Visual style", required: true, minLength: 2, maxLength: 220 },
+      { id: "brand_or_context", label: "Brand / product context", required: false, maxLength: 4000 },
+      { id: "image_plan", label: "Image plan", required: true, minLength: 2, maxLength: 120 },
       { id: "image_ratio", label: "Image ratio", required: true, minLength: 2, maxLength: 80 },
+      { id: "image_count_guidance", label: "Image count guidance", required: true, minLength: 2, maxLength: 80 },
+      { id: "include_avoidance_prompts", label: "Include avoidance prompts", required: true, minLength: 2, maxLength: 8 },
+      { id: "include_alt_text", label: "Include alt text", required: true, minLength: 2, maxLength: 8 },
+      { id: "include_captions", label: "Include captions", required: true, minLength: 2, maxLength: 8 },
+      { id: "include_placement_notes", label: "Include placement notes", required: true, minLength: 2, maxLength: 8 },
     ],
-    system: `You are ABC Creator's specialist for Blog Workflow and image prompt briefs. This is a text-only prompt/brief generator, not an image generation tool.${commonGenerationRules}`,
+    system: `You are ABC Creator's premium Blog Image Brief specialist. This tool creates text-only image plans and prompts for blog articles.
+
+${commonGenerationRules}
+
+Pro Image Brief rules:
+- This is not an actual image generation tool yet. Never claim that images were generated.
+- Build a premium editorial image plan from the blog topic, outline/article, style, ratio, image plan, image count guidance, and brand context.
+- Only include avoidance prompts, alt text, captions, and placement notes when the user selected Yes for those options.
+- Keep prompts usable for future image-generation providers, but do not mention provider names, keys, routing, or backend details.
+- Avoid copyrighted characters, protected brand marks, public-figure likenesses, unsafe visual instructions, and commercial-rights guarantees.
+- Make every brief specific enough for a designer or image model to use.
+- Include accessibility-minded alt text when requested.
+- Do not include audio options or audio generation suggestions.`,
     outputGuide:
-      "Create image briefs for the blog. For each major section, include: placement, image purpose, detailed image prompt, negative prompt, alt text, caption idea, and composition notes. Avoid copyrighted characters, brand marks, public-figure likenesses, and commercial-rights guarantees. Clearly state that these are prompts/briefs only, not generated images.",
+      "Return a premium Markdown image brief package. Include: 1) Visual Strategy Overview, 2) Recommended Image Count, 3) Hero Image Brief, 4) Section Image Briefs according to the selected image plan, 5) Style Consistency Guide, 6) Optional Avoidance Prompts only if requested, 7) Optional Alt Text only if requested, 8) Optional Captions only if requested, 9) Optional Placement Notes only if requested, 10) Final Production Notes. Clearly state these are text-only briefs/prompts, not generated images.",
   },
   "blog-seo-pack": {
     creditCost: 5,
