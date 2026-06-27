@@ -5,22 +5,30 @@ import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { RecommendedNextAction } from "@/lib/tools/public-tools";
+import {
+  downloadOutput,
+  type OutputDownloadFormat,
+} from "@/lib/download/exportDocuments";
 
 interface OutputPanelProps {
   isLoading: boolean;
   output: string;
   recommendedNextActions?: RecommendedNextAction[];
+  downloadFileBaseName?: string;
 }
 
 export function OutputPanel({
   isLoading,
   output,
   recommendedNextActions = [],
+  downloadFileBaseName = "abc-creator-output",
 }: OutputPanelProps) {
   const [copied, setCopied] = useState(false);
   const hasOutput = Boolean(output.trim());
   const isStreamingVisible = isLoading && hasOutput;
-  const showNextActions = hasOutput && !isLoading && recommendedNextActions.length > 0;
+  const isErrorOutput = /^(error:|not enough credits)/i.test(output.trim());
+  const showNextActions =
+    hasOutput && !isLoading && !isErrorOutput && recommendedNextActions.length > 0;
 
   const copyOutput = async () => {
     if (!output) return;
@@ -33,9 +41,14 @@ export function OutputPanel({
     }, 5000);
   };
 
+  const handleDownload = (format: string) => {
+    if (!format || !output) return;
+    downloadOutput(format as OutputDownloadFormat, output, downloadFileBaseName);
+  };
+
   return (
     <div className="rounded-3xl border border-purple-500/25 bg-black/45 p-8 shadow-2xl shadow-purple-950/25 backdrop-blur-2xl">
-      <div className="mb-6 flex items-center justify-between gap-4">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <h2 className="text-2xl font-bold text-white">Output</h2>
 
@@ -51,19 +64,44 @@ export function OutputPanel({
         </div>
 
         {output ? (
-          <button
-            type="button"
-            onClick={copyOutput}
-            className="rounded-full border border-purple-400/30 bg-purple-500/10 px-4 py-2 text-sm font-semibold text-purple-100 transition hover:bg-purple-500/20"
-          >
-            {copied ? "Copied!" : "Copy"}
-          </button>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={copyOutput}
+              className="rounded-full border border-purple-400/30 bg-purple-500/10 px-4 py-2 text-sm font-semibold text-purple-100 transition hover:bg-purple-500/20"
+            >
+              {copied ? "Copied!" : "Copy"}
+            </button>
+
+            <select
+              aria-label="Download output"
+              defaultValue=""
+              onChange={(event) => {
+                handleDownload(event.target.value);
+                event.target.value = "";
+              }}
+              className="cursor-pointer rounded-full border border-purple-400/30 bg-purple-500/10 px-4 py-2 text-sm font-semibold text-purple-100 transition hover:bg-purple-500/20"
+            >
+              <option value="" className="bg-black text-white">
+                Download
+              </option>
+              <option value="pdf" className="bg-black text-white">
+                PDF
+              </option>
+              <option value="docx" className="bg-black text-white">
+                DOCX
+              </option>
+              <option value="txt" className="bg-black text-white">
+                Text file
+              </option>
+            </select>
+          </div>
         ) : null}
       </div>
 
       {output ? (
         <>
-          <div className="creator-output-scroll max-h-[72vh] overflow-y-auto overflow-x-hidden rounded-2xl border border-purple-500/15 bg-black/70 p-6 text-gray-200">
+          <div className="creator-output-scroll max-h-[78vh] overflow-y-auto overflow-x-hidden rounded-2xl border border-purple-500/15 bg-black/70 p-6 text-gray-200">
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               components={{
@@ -136,7 +174,7 @@ export function OutputPanel({
                 ),
                 table: ({ children }) => (
                   <div className="my-5 overflow-x-auto rounded-2xl border border-purple-500/20">
-                    <table className="w-full border-collapse text-sm">
+                    <table className="w-full min-w-[720px] border-collapse text-sm">
                       {children}
                     </table>
                   </div>
@@ -192,7 +230,7 @@ export function OutputPanel({
         </div>
       ) : (
         <div className="rounded-2xl border border-purple-500/15 bg-black/70 p-6 text-gray-400">
-          Your generated result will appear here. Text tools can be copied from this panel.
+          Your generated result will appear here. Text tools can be copied or downloaded from this panel.
         </div>
       )}
     </div>
