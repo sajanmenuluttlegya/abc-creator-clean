@@ -278,7 +278,11 @@ Get more credits: /pricing`
       </div>
 
       <div className="lg:sticky lg:top-28">
-        <OutputPanel isLoading={isLoading} output={output} />
+        <OutputPanel
+          isLoading={isLoading}
+          output={output}
+          recommendedNextActions={tool.nextActions}
+        />
       </div>
     </div>
   );
