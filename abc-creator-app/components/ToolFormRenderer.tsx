@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { OutputPanel } from "./OutputPanel";
 import { ImageGenerationPanel } from "./ImageGenerationPanel";
+import { ThemeIcon } from "./ThemeIcon";
 import type { Tool } from "@/lib/tools/public-tools";
 import {
   getToolCreditEstimate,
@@ -55,13 +56,8 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
     try {
       const res = await fetch("/api/generate/stream", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          toolSlug: tool.slug,
-          inputs: formData,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ toolSlug: tool.slug, inputs: formData }),
       });
 
       if (!res.ok) {
@@ -85,11 +81,7 @@ Get more credits: /pricing`
             return;
           }
 
-          setOutput(
-            `Error:\n${data.error || "Generation failed."}\n\n${
-              data.details || ""
-            }`
-          );
+          setOutput(`Error:\n${data.error || "Generation failed."}\n\n${data.details || ""}`);
         } catch {
           setOutput(`Error:\n${text || "Generation failed."}`);
         }
@@ -104,16 +96,11 @@ Get more credits: /pricing`
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
-
       let finalOutput = "";
 
       while (true) {
         const { value, done } = await reader.read();
-
-        if (done) {
-          break;
-        }
-
+        if (done) break;
         const chunk = decoder.decode(value, { stream: true });
         finalOutput = await revealChunk(finalOutput, chunk);
       }
@@ -133,29 +120,18 @@ Get more credits: /pricing`
       <div className="space-y-6">
         <div>
           <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h2 className="text-xl font-semibold text-white">
-              Create Your Content
-            </h2>
+            <h2 className="text-xl font-semibold text-white">Create Your Content</h2>
             <span className="inline-flex w-fit items-center rounded-full border border-emerald-400/25 bg-emerald-400/10 px-4 py-1.5 text-xs font-semibold text-emerald-200">
               {creditEstimate.label}
             </span>
           </div>
 
-          <form
-            onSubmit={handleSubmit}
-            className="rounded-2xl border border-purple-500/20 bg-white/5 p-8 backdrop-blur-sm transition-all duration-200 hover:border-purple-500/40"
-          >
+          <form onSubmit={handleSubmit} className="rounded-2xl border border-purple-500/20 bg-white/5 p-8 backdrop-blur-sm transition-all duration-200 hover:border-purple-500/40">
             <div className="space-y-6">
               {tool.inputs.map((input) => (
                 <div key={input.id} className="space-y-3">
-                  <label
-                    htmlFor={input.id}
-                    className="block text-sm font-semibold text-white"
-                  >
-                    {input.label}
-                    {input.required && (
-                      <span className="ml-1 text-pink-400">*</span>
-                    )}
+                  <label htmlFor={input.id} className="block text-sm font-semibold text-white">
+                    {input.label}{input.required && <span className="ml-1 text-pink-400">*</span>}
                   </label>
 
                   {input.type === "textarea" ? (
@@ -175,17 +151,9 @@ Get more credits: /pricing`
                       required={input.required}
                       className="w-full cursor-pointer appearance-none rounded-xl border border-purple-500/20 bg-white/5 px-4 py-3 text-white transition-all duration-200 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-purple-500"
                     >
-                      <option value="" className="bg-black text-white">
-                        Select an option
-                      </option>
+                      <option value="" className="bg-black text-white">Select an option</option>
                       {input.options?.map((option) => (
-                        <option
-                          key={option}
-                          value={option}
-                          className="bg-black text-white"
-                        >
-                          {option}
-                        </option>
+                        <option key={option} value={option} className="bg-black text-white">{option}</option>
                       ))}
                     </select>
                   ) : (
@@ -203,69 +171,36 @@ Get more credits: /pricing`
               ))}
             </div>
 
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="mt-8 flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-3 font-semibold text-white shadow-lg shadow-purple-500/20 transition-all duration-200 hover:from-indigo-700 hover:to-purple-700 hover:shadow-purple-500/40 disabled:from-indigo-600/50 disabled:to-purple-600/50"
-            >
+            <button type="submit" disabled={isLoading} className="mt-8 flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-3 font-semibold text-white shadow-lg shadow-purple-500/20 transition-all duration-200 hover:from-indigo-700 hover:to-purple-700 hover:shadow-purple-500/40 disabled:from-indigo-600/50 disabled:to-purple-600/50">
               {isLoading ? (
                 <>
-                  <svg
-                    className="h-4 w-4 animate-spin"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    />
-                  </svg>
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
                   Generating...
                 </>
               ) : (
-                <>✨ Generate — {creditCost} credits</>
+                <>
+                  <ThemeIcon name="spark" size="xs" className="h-5 w-5 rounded-full border-white/10 bg-white/10 shadow-none" />
+                  Generate — {creditCost} credits
+                </>
               )}
             </button>
           </form>
         </div>
 
         <div className="rounded-2xl border border-purple-500/20 bg-white/5 p-7 backdrop-blur-sm transition-all duration-200 hover:border-purple-500/40">
-          <h3 className="mb-5 text-lg font-semibold text-white">
-            How it works
-          </h3>
+          <h3 className="mb-5 text-lg font-semibold text-white">How it works</h3>
           <ol className="space-y-4 text-sm leading-relaxed text-gray-400">
-            <li className="flex gap-4">
-              <span className="min-w-6 font-semibold text-purple-400">1.</span>
-              <span>Fill in the form with clear details.</span>
-            </li>
-            <li className="flex gap-4">
-              <span className="min-w-6 font-semibold text-purple-400">2.</span>
-              <span>Click Generate to reserve the shown credits and create content with AI.</span>
-            </li>
-            <li className="flex gap-4">
-              <span className="min-w-6 font-semibold text-purple-400">3.</span>
-              <span>Watch the result appear live on the right side.</span>
-            </li>
-            <li className="flex gap-4">
-              <span className="min-w-6 font-semibold text-purple-400">4.</span>
-              <span>Copy or download the current result when it is ready.</span>
-            </li>
+            <li className="flex gap-4"><span className="min-w-6 font-semibold text-purple-400">1.</span><span>Fill in the form with clear details.</span></li>
+            <li className="flex gap-4"><span className="min-w-6 font-semibold text-purple-400">2.</span><span>Click Generate to reserve the shown credits and create content with AI.</span></li>
+            <li className="flex gap-4"><span className="min-w-6 font-semibold text-purple-400">3.</span><span>Watch the result appear live on the right side.</span></li>
+            <li className="flex gap-4"><span className="min-w-6 font-semibold text-purple-400">4.</span><span>Copy or download the current result when it is ready.</span></li>
           </ol>
         </div>
 
         <div className="rounded-2xl border border-blue-500/30 bg-blue-500/10 p-7 backdrop-blur-sm">
-          <h3 className="mb-4 text-lg font-semibold text-blue-300">
-            💡 Pro Tips
+          <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-blue-300">
+            <ThemeIcon name="idea" size="xs" className="h-6 w-6 rounded-full border-blue-300/20 bg-blue-500/10 shadow-none" />
+            Pro Tips
           </h3>
           <ul className="space-y-3 text-sm leading-relaxed text-blue-200">
             <li>• Be specific in your inputs for better results.</li>
@@ -275,29 +210,17 @@ Get more credits: /pricing`
         </div>
 
         <div className="rounded-2xl border border-purple-500/20 bg-purple-500/10 p-7 backdrop-blur-sm">
-          <h3 className="mb-3 text-lg font-semibold text-purple-200">
-            ⚡ Live AI Generation
+          <h3 className="mb-3 flex items-center gap-2 text-lg font-semibold text-purple-200">
+            <ThemeIcon name="bolt" size="xs" className="h-6 w-6 rounded-full border-purple-300/20 bg-purple-500/10 shadow-none" />
+            Live AI Generation
           </h3>
-          <p className="text-sm leading-relaxed text-purple-100/80">
-            Creator streams text output into this page. Review factual claims before publishing.
-          </p>
+          <p className="text-sm leading-relaxed text-purple-100/80">Creator streams text output into this page. Review factual claims before publishing.</p>
         </div>
       </div>
 
       <div className="space-y-6 lg:sticky lg:top-28">
-        <OutputPanel
-          isLoading={isLoading}
-          output={output}
-          recommendedNextActions={tool.nextActions}
-          downloadFileBaseName={`${tool.slug}-output`}
-        />
-        {canGenerateImages ? (
-          <ImageGenerationPanel
-            toolSlug={tool.slug}
-            inputs={formData}
-            sourceText={output}
-          />
-        ) : null}
+        <OutputPanel isLoading={isLoading} output={output} recommendedNextActions={tool.nextActions} downloadFileBaseName={`${tool.slug}-output`} />
+        {canGenerateImages ? <ImageGenerationPanel toolSlug={tool.slug} inputs={formData} sourceText={output} /> : null}
       </div>
     </div>
   );
