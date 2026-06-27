@@ -520,6 +520,7 @@ export async function POST(request: Request) {
         break;
 
       case "invoice.paid":
+      case "invoice.payment_succeeded":
         await handlePaidInvoice(
           supabase,
           stripe,
@@ -527,7 +528,6 @@ export async function POST(request: Request) {
         );
         break;
 
-      case "invoice.payment_succeeded":
       case "invoice.payment_failed":
         await handleInvoiceSubscriptionSync(
           supabase,
@@ -567,6 +567,7 @@ export async function POST(request: Request) {
       {
         error: "Stripe webhook processing failed.",
         code: "STRIPE_WEBHOOK_PROCESSING_FAILED",
+        details: getErrorMessage(error),
       },
       { status: 500 }
     );
