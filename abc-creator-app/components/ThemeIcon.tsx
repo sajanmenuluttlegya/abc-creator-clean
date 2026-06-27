@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 type ThemeIconProps = {
   name: string;
   size?: "xs" | "sm" | "md" | "lg" | "xl";
@@ -16,7 +18,7 @@ function IconShell({
   children,
   size = "md",
   className = "",
-}: ThemeIconProps & { children: React.ReactNode }) {
+}: ThemeIconProps & { children: ReactNode }) {
   return (
     <span
       className={`inline-flex shrink-0 items-center justify-center rounded-2xl border border-purple-400/25 bg-gradient-to-br from-purple-500/20 via-black/30 to-indigo-500/20 text-purple-100 shadow-lg shadow-purple-950/25 ${
