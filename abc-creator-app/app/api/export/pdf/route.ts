@@ -59,7 +59,7 @@ function isTableSeparator(line: string) {
   return /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(line);
 }
 
-function parseBlocks(markdown: string) {
+function parseBlocks(markdown: string): PdfBlock[] {
   const lines = markdown.replace(/\r\n/g, "\n").split("\n");
   const blocks: PdfBlock[] = [];
   let paragraph: string[] = [];
