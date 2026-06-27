@@ -10,6 +10,7 @@ export interface Tool {
   name: string;
   description: string;
   icon: string;
+  detailEmoji: string;
   category: string;
   displayCreditCost: number;
   outputType?: "text";
@@ -135,6 +136,7 @@ export const publicTools: Tool[] = [
     name: "Blog Topic Ideas",
     description: "Generate SEO-aware blog topic ideas from a niche and keyword.",
     icon: "blog-topic",
+    detailEmoji: "💡",
     category: "Blog Workflow",
     displayCreditCost: 2,
     outputType: "text",
@@ -161,6 +163,7 @@ export const publicTools: Tool[] = [
     name: "Blog Outline",
     description: "Create a structured long-form blog outline with H2/H3 sections and FAQs.",
     icon: "blog-outline",
+    detailEmoji: "🧭",
     category: "Blog Workflow",
     displayCreditCost: 5,
     outputType: "text",
@@ -186,6 +189,7 @@ export const publicTools: Tool[] = [
     name: "Blog Content",
     description: "Turn an approved outline into a premium long-form blog article.",
     icon: "blog-content",
+    detailEmoji: "✍️",
     category: "Blog Workflow",
     displayCreditCost: 8,
     outputType: "text",
@@ -227,6 +231,7 @@ export const publicTools: Tool[] = [
     name: "Pro Image Brief for Blog",
     description: "Plan premium blog visuals with prompts, alt text, captions, and placement notes.",
     icon: "image-brief",
+    detailEmoji: "🖼️",
     category: "Blog Workflow",
     displayCreditCost: 5,
     outputType: "text",
@@ -258,6 +263,7 @@ export const publicTools: Tool[] = [
     name: "Blog SEO Pack",
     description: "Generate SEO metadata, slug ideas, tags, excerpts, and FAQ schema drafts.",
     icon: "seo",
+    detailEmoji: "🔎",
     category: "Blog Workflow",
     displayCreditCost: 5,
     outputType: "text",
@@ -281,6 +287,7 @@ export const publicTools: Tool[] = [
     name: "Facebook Ad Copy",
     description: "Create compelling Facebook ad copy that drives clicks and conversions.",
     icon: "ad-copy",
+    detailEmoji: "📢",
     category: "Advertising Tools",
     displayCreditCost: 4,
     outputType: "text",
@@ -296,6 +303,7 @@ export const publicTools: Tool[] = [
     name: "Product Description",
     description: "Write SEO-optimized product descriptions that sell.",
     icon: "product",
+    detailEmoji: "🛍️",
     category: "E-Commerce Tools",
     displayCreditCost: 3,
     outputType: "text",
