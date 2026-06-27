@@ -68,11 +68,7 @@ function includes(value: string | undefined, token: string) {
   return (value || "").toLowerCase().includes(token.toLowerCase());
 }
 
-function matchCredit(
-  value: string | undefined,
-  table: Array<[string, number]>,
-  fallback: number
-) {
+function matchCredit(value: string | undefined, table: Array<[string, number]>, fallback: number) {
   const matched = table.find(([token]) => includes(value, token));
   return matched?.[1] ?? fallback;
 }
@@ -82,37 +78,23 @@ function yes(value: string | undefined) {
 }
 
 export function supportsImageGeneration(toolSlug: string) {
-  return IMAGE_GENERATION_TOOL_SLUGS.includes(
-    toolSlug as (typeof IMAGE_GENERATION_TOOL_SLUGS)[number]
-  );
+  return IMAGE_GENERATION_TOOL_SLUGS.includes(toolSlug as (typeof IMAGE_GENERATION_TOOL_SLUGS)[number]);
 }
 
 export function calculateImageGenerationCredits(imageCount: number) {
-  const safeCount = Number.isFinite(imageCount)
-    ? Math.min(Math.max(Math.floor(imageCount), 1), 7)
-    : 1;
-
+  const safeCount = Number.isFinite(imageCount) ? Math.min(Math.max(Math.floor(imageCount), 1), 7) : 1;
   return safeCount * IMAGE_CREDITS_PER_IMAGE;
 }
 
-export function calculateToolCreditCost(
-  toolSlug: string,
-  inputs: ToolInputs = {}
-): number {
+export function calculateToolCreditCost(toolSlug: string, inputs: ToolInputs = {}): number {
   switch (toolSlug) {
     case "blog-topic-ideas":
       return matchCredit(inputs.idea_count, BLOG_TOPIC_IDEA_COUNT_CREDITS, 2);
-
     case "blog-outline":
       return matchCredit(inputs.word_count, BLOG_OUTLINE_WORD_COUNT_CREDITS, 5);
-
     case "blog-content": {
       let credits = matchCredit(inputs.word_count, BLOG_CONTENT_WORD_COUNT_CREDITS, 8);
-      credits = Math.max(
-        credits,
-        matchCredit(inputs.words_per_section, BLOG_CONTENT_SECTION_FLOORS, 8)
-      );
-
+      credits = Math.max(credits, matchCredit(inputs.words_per_section, BLOG_CONTENT_SECTION_FLOORS, 8));
       if (includes(inputs.article_depth, "Detailed")) credits += 4;
       if (includes(inputs.article_depth, "Expert")) credits += 10;
       if (yes(inputs.include_table)) credits += 4;
@@ -121,44 +103,31 @@ export function calculateToolCreditCost(
       if (yes(inputs.include_faq)) credits += 3;
       if (includes(inputs.image_brief_mode, "Hero image brief only")) credits += 3;
       if (includes(inputs.image_brief_mode, "Hero + section image briefs")) credits += 8;
-
       return credits;
     }
-
     case "pro-image-brief-for-blog": {
       let credits = matchCredit(inputs.image_count_guidance, IMAGE_BRIEF_COUNT_CREDITS, 5);
-
       if (includes(inputs.image_plan, "every major section")) credits += 6;
       if (includes(inputs.image_plan, "Custom editorial")) credits += 5;
       if (yes(inputs.include_avoidance_prompts)) credits += 2;
       if (yes(inputs.include_alt_text)) credits += 2;
       if (yes(inputs.include_captions)) credits += 2;
       if (yes(inputs.include_placement_notes)) credits += 2;
-
       return Math.max(credits, 5);
     }
-
     default:
       return BASE_TOOL_CREDITS[toolSlug] ?? 1;
   }
 }
 
-export function getToolCreditEstimate(
-  toolSlug: string,
-  inputs: ToolInputs = {}
-): CreditEstimate {
+export function getToolCreditEstimate(toolSlug: string, inputs: ToolInputs = {}): CreditEstimate {
   const credits = calculateToolCreditCost(toolSlug, inputs);
-  const isDynamic = [
-    "blog-topic-ideas",
-    "blog-outline",
-    "blog-content",
-    "pro-image-brief-for-blog",
-  ].includes(toolSlug);
+  const isDynamic = ["blog-topic-ideas", "blog-outline", "blog-content", "pro-image-brief-for-blog"].includes(toolSlug);
 
   return {
     credits,
     isDynamic,
-    label: isDynamic ? `Estimated ${credits} credits` : `${credits} credits`,
+    label: `${credits} credits`,
   };
 }
 
@@ -167,6 +136,5 @@ export function getToolCreditLabel(toolSlug: string) {
   if (toolSlug === "blog-outline") return "From 5 credits";
   if (toolSlug === "blog-content") return "From 8 credits";
   if (toolSlug === "pro-image-brief-for-blog") return "From 5 credits";
-
   return `${BASE_TOOL_CREDITS[toolSlug] ?? 1} credits`;
 }
