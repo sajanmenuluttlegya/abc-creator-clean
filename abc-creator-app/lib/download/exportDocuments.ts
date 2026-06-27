@@ -238,7 +238,6 @@ function createZip(files: Array<{ name: string; content: string }>) {
     centralView.setUint32(42, offset, true);
     centralHeader.set(nameBytes, 46);
     centralParts.push(centralHeader);
-
     offset += localHeader.length + data.length;
   }
 
@@ -315,7 +314,6 @@ function renderedBlocksToWordBody(blocks: ExportBlock[], title: string) {
     }
   });
 
-  parts.push(wordParagraph("Generated on demand. No output was stored by ABC Creator.", "normal"));
   return parts.join("");
 }
 
@@ -347,223 +345,184 @@ function normalizePdfText(value: string) {
     .replace(/[^\x09\x0A\x0D\x20-\xFF]/g, "?");
 }
 
-function escapePdfString(value: string) {
-  return normalizePdfText(value).replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
-}
-
-function wrapText(line: string, maxChars: number) {
-  const clean = normalizePdfText(line).replace(/\s+/g, " ").trim();
+function wrapPdfText(text: string, maxChars: number) {
+  const clean = normalizePdfText(text).replace(/\s+/g, " ").trim();
   if (!clean) return [""];
 
-  const wrapped: string[] = [];
+  const lines: string[] = [];
   let current = "";
 
   clean.split(/\s+/).forEach((word) => {
     const candidate = current ? `${current} ${word}` : word;
 
     if (candidate.length > maxChars && current) {
-      wrapped.push(current);
+      lines.push(current);
       current = word;
     } else if (candidate.length > maxChars) {
-      for (let index = 0; index < candidate.length; index += maxChars) wrapped.push(candidate.slice(index, index + maxChars));
+      for (let index = 0; index < candidate.length; index += maxChars) lines.push(candidate.slice(index, index + maxChars));
       current = "";
     } else {
       current = candidate;
     }
   });
 
-  if (current) wrapped.push(current);
-  return wrapped;
+  if (current) lines.push(current);
+  return lines;
 }
 
-class PdfDocument {
-  private readonly pageWidth = 612;
-  private readonly pageHeight = 792;
-  private readonly margin = 46;
-  private readonly bottom = 52;
-  private readonly contentWidth = this.pageWidth - this.margin * 2;
-  private y = this.pageHeight - 52;
-  private pages: string[][] = [];
-  private current: string[] = [];
+async function buildPdfBlob(blocks: ExportBlock[], title: string) {
+  const { PDFDocument, StandardFonts, rgb } = await import("pdf-lib");
+  const pdfDoc = await PDFDocument.create();
+  const regularFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const pageSize: [number, number] = [612, 792];
+  const margin = 46;
+  const bottomLimit = 52;
+  const contentWidth = pageSize[0] - margin * 2;
+  let page = pdfDoc.addPage(pageSize);
+  let y = pageSize[1] - 46;
 
-  constructor() {
-    this.newPage();
-  }
+  const addPage = () => {
+    page = pdfDoc.addPage(pageSize);
+    y = pageSize[1] - 46;
+  };
 
-  private n(value: number) {
-    return Number(value.toFixed(2));
-  }
+  const ensureSpace = (height: number) => {
+    if (y - height < bottomLimit) addPage();
+  };
 
-  private newPage() {
-    this.current = [];
-    this.pages.push(this.current);
-    this.y = this.pageHeight - 52;
-  }
-
-  private ensureSpace(height: number) {
-    if (this.y - height < this.bottom) this.newPage();
-  }
-
-  private fontName(bold = false) {
-    return bold ? "F2" : "F1";
-  }
-
-  private textCommand(lines: string[], x: number, y: number, size: number, leading: number, bold = false) {
-    const safeLines = lines.length ? lines : [""];
-    this.current.push("BT");
-    this.current.push(`/${this.fontName(bold)} ${size} Tf`);
-    this.current.push(`${this.n(x)} ${this.n(y)} Td`);
-    this.current.push(`${leading} TL`);
-    safeLines.forEach((line, index) => {
-      if (index === 0) this.current.push(`(${escapePdfString(line)}) Tj`);
-      else this.current.push(`T* (${escapePdfString(line)}) Tj`);
-    });
-    this.current.push("ET");
-  }
-
-  addText(text: string, options: { size?: number; bold?: boolean; indent?: number; before?: number; after?: number } = {}) {
+  const drawText = (text: string, options: { size?: number; bold?: boolean; indent?: number; before?: number; after?: number } = {}) => {
     const size = options.size ?? 10;
-    const leading = Math.max(size + 3, 12);
-    const x = this.margin + (options.indent ?? 0);
-    const maxChars = Math.max(22, Math.floor((this.contentWidth - (options.indent ?? 0)) / (size * 0.52)));
-    const lines = wrapText(text, maxChars);
-    const height = (options.before ?? 0) + lines.length * leading + (options.after ?? 0);
+    const indent = options.indent ?? 0;
+    const lineHeight = Math.max(size + 3, 12);
+    const maxChars = Math.max(22, Math.floor((contentWidth - indent) / (size * 0.52)));
+    const lines = wrapPdfText(text, maxChars);
+    const height = (options.before ?? 0) + lines.length * lineHeight + (options.after ?? 0);
 
-    this.ensureSpace(height);
-    this.y -= options.before ?? 0;
-    this.textCommand(lines, x, this.y, size, leading, options.bold);
-    this.y -= lines.length * leading + (options.after ?? 0);
-  }
+    ensureSpace(height);
+    y -= options.before ?? 0;
+    lines.forEach((line) => {
+      page.drawText(line, {
+        x: margin + indent,
+        y,
+        size,
+        font: options.bold ? boldFont : regularFont,
+        color: rgb(0.05, 0.05, 0.06),
+      });
+      y -= lineHeight;
+    });
+    y -= options.after ?? 0;
+  };
 
-  addRule() {
-    this.ensureSpace(18);
-    this.current.push("0.82 0.84 0.89 RG");
-    this.current.push(`0.6 w ${this.margin} ${this.n(this.y)} m ${this.pageWidth - this.margin} ${this.n(this.y)} l S`);
-    this.y -= 18;
-  }
+  const drawRule = () => {
+    ensureSpace(16);
+    page.drawLine({
+      start: { x: margin, y },
+      end: { x: pageSize[0] - margin, y },
+      thickness: 0.6,
+      color: rgb(0.82, 0.84, 0.89),
+    });
+    y -= 16;
+  };
 
-  private drawRect(x: number, y: number, width: number, height: number, fill: boolean) {
-    if (fill) this.current.push("0.96 0.94 1 rg");
-    this.current.push("0.82 0.84 0.89 RG");
-    this.current.push(`0.6 w ${this.n(x)} ${this.n(y)} ${this.n(width)} ${this.n(height)} re ${fill ? "B" : "S"}`);
-    this.current.push("0 0 0 rg");
-  }
-
-  addTable(rows: string[][], header: boolean) {
+  const drawTable = (rows: string[][], header: boolean) => {
     if (!rows.length) return;
 
     const columnCount = Math.max(...rows.map((row) => row.length));
     const baseWidths = columnCount === 7
       ? [34, 112, 86, 76, 86, 58, 96]
-      : Array.from({ length: columnCount }, () => this.contentWidth / columnCount);
+      : Array.from({ length: columnCount }, () => contentWidth / columnCount);
     const widthTotal = baseWidths.reduce((sum, width) => sum + width, 0);
-    const widths = baseWidths.map((width) => (width / widthTotal) * this.contentWidth);
+    const widths = baseWidths.map((width) => (width / widthTotal) * contentWidth);
 
-    this.y -= 4;
+    y -= 4;
 
     rows.forEach((row, rowIndex) => {
       const isHeader = header && rowIndex === 0;
       const size = isHeader ? 7.4 : 7.2;
-      const leading = 9.5;
+      const lineHeight = 9.5;
       const wrappedCells = widths.map((width, columnIndex) => {
-        const text = row[columnIndex] ?? "";
         const maxChars = Math.max(7, Math.floor((width - 8) / (size * 0.52)));
-        return wrapText(text, maxChars);
+        return wrapPdfText(row[columnIndex] ?? "", maxChars);
       });
-      const rowHeight = Math.max(22, Math.max(...wrappedCells.map((lines) => lines.length)) * leading + 10);
+      const rowHeight = Math.max(22, Math.max(...wrappedCells.map((lines) => lines.length)) * lineHeight + 10);
 
-      this.ensureSpace(rowHeight + 6);
-
-      let x = this.margin;
-      const yTop = this.y;
-      const yBottom = yTop - rowHeight;
+      ensureSpace(rowHeight + 8);
+      let x = margin;
+      const top = y;
+      const bottomY = top - rowHeight;
 
       wrappedCells.forEach((lines, columnIndex) => {
         const width = widths[columnIndex];
-        this.drawRect(x, yBottom, width, rowHeight, isHeader);
-        this.textCommand(lines, x + 4, yTop - 12, size, leading, isHeader);
+        page.drawRectangle({
+          x,
+          y: bottomY,
+          width,
+          height: rowHeight,
+          borderWidth: 0.6,
+          borderColor: rgb(0.82, 0.84, 0.89),
+          color: isHeader ? rgb(0.96, 0.94, 1) : rgb(1, 1, 1),
+        });
+        lines.forEach((line, lineIndex) => {
+          page.drawText(line, {
+            x: x + 4,
+            y: top - 12 - lineIndex * lineHeight,
+            size,
+            font: isHeader ? boldFont : regularFont,
+            color: rgb(0.05, 0.05, 0.06),
+          });
+        });
         x += width;
       });
-
-      this.y -= rowHeight;
+      y -= rowHeight;
     });
 
-    this.y -= 12;
+    y -= 12;
+  };
+
+  try {
+    const response = await fetch("/abc-logo.png");
+    if (response.ok) {
+      const logoBytes = await response.arrayBuffer();
+      const logo = await pdfDoc.embedPng(logoBytes);
+      const logoWidth = 86;
+      const logoHeight = (logo.height / logo.width) * logoWidth;
+      page.drawImage(logo, {
+        x: margin,
+        y: pageSize[1] - logoHeight - 18,
+        width: logoWidth,
+        height: logoHeight,
+      });
+      y -= logoHeight + 20;
+    }
+  } catch {
+    y -= 8;
   }
 
-  build() {
-    const objects: string[] = [];
-    objects[1] = "<< /Type /Catalog /Pages 2 0 R >>";
-    objects[3] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>";
-    objects[4] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>";
-
-    const kids: string[] = [];
-    let nextObject = 5;
-
-    this.pages.forEach((commands) => {
-      const pageObject = nextObject++;
-      const contentObject = nextObject++;
-      kids.push(`${pageObject} 0 R`);
-      const stream = commands.join("\n");
-
-      objects[pageObject] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${this.pageWidth} ${this.pageHeight}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${contentObject} 0 R >>`;
-      objects[contentObject] = `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`;
-    });
-
-    objects[2] = `<< /Type /Pages /Kids [${kids.join(" ")}] /Count ${this.pages.length} >>`;
-
-    let pdf = "%PDF-1.4\n%\u00E2\u00E3\u00CF\u00D3\n";
-    const offsets: number[] = [0];
-
-    for (let objectId = 1; objectId < objects.length; objectId++) {
-      offsets[objectId] = pdf.length;
-      pdf += `${objectId} 0 obj\n${objects[objectId]}\nendobj\n`;
-    }
-
-    const xrefOffset = pdf.length;
-    pdf += `xref\n0 ${objects.length}\n0000000000 65535 f \n`;
-
-    for (let objectId = 1; objectId < objects.length; objectId++) {
-      pdf += `${String(offsets[objectId]).padStart(10, "0")} 00000 n \n`;
-    }
-
-    pdf += `trailer\n<< /Size ${objects.length} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
-
-    const bytes = new Uint8Array(pdf.length);
-    for (let index = 0; index < pdf.length; index++) bytes[index] = pdf.charCodeAt(index) & 0xff;
-    return new Blob([bytes], { type: "application/pdf" });
-  }
-}
-
-function buildPdfBlob(blocks: ExportBlock[], title: string) {
-  const pdf = new PdfDocument();
-
-  pdf.addText("ABC Creator Export", { size: 8, bold: true, after: 6 });
-  pdf.addText(title, { size: 18, bold: true, after: 8 });
-  pdf.addRule();
+  drawText("ABC Creator Export", { size: 8, bold: true, after: 6 });
+  drawText(title, { size: 18, bold: true, after: 8 });
+  drawRule();
 
   blocks.forEach((block) => {
     if (block.type === "heading") {
-      pdf.addText(block.text, {
+      drawText(block.text, {
         size: block.level === 1 ? 16 : block.level === 2 ? 13 : 11,
         bold: true,
         before: 6,
         after: 6,
       });
     } else if (block.type === "paragraph") {
-      pdf.addText(block.text, { size: 10, after: 5 });
+      drawText(block.text, { size: 10, after: 5 });
     } else if (block.type === "list") {
-      block.items.forEach((item) => pdf.addText(`• ${item}`, { size: 10, indent: 12, after: 3 }));
-      pdf.addText("", { size: 4, after: 2 });
+      block.items.forEach((item) => drawText(`• ${item}`, { size: 10, indent: 12, after: 3 }));
+      y -= 2;
     } else {
-      pdf.addTable(block.rows, block.header);
+      drawTable(block.rows, block.header);
     }
   });
 
-  pdf.addRule();
-  pdf.addText("Generated on demand. No output was stored by ABC Creator.", { size: 8, after: 0 });
-
-  return pdf.build();
+  const pdfBytes = await pdfDoc.save();
+  return new Blob([pdfBytes], { type: "application/pdf" });
 }
 
 export async function downloadOutput(
@@ -589,5 +548,5 @@ export async function downloadOutput(
     return;
   }
 
-  downloadBlob(buildPdfBlob(blocks, title), `${baseName}.pdf`);
+  downloadBlob(await buildPdfBlob(blocks, title), `${baseName}.pdf`);
 }
