@@ -109,7 +109,13 @@ function collectBlocks(parent: Element, blocks: ExportBlock[] = []) {
 
     if (tag === "H1" || tag === "H2" || tag === "H3") {
       const text = textFromElement(element);
-      if (text) blocks.push({ type: "heading", level: tag === "H1" ? 1 : tag === "H2" ? 2 : 3, text });
+      if (text) {
+        blocks.push({
+          type: "heading",
+          level: tag === "H1" ? 1 : tag === "H2" ? 2 : 3,
+          text,
+        });
+      }
       return;
     }
 
@@ -120,7 +126,9 @@ function collectBlocks(parent: Element, blocks: ExportBlock[] = []) {
     }
 
     if (tag === "UL" || tag === "OL") {
-      const items = Array.from(element.querySelectorAll("li")).map(textFromElement).filter(Boolean);
+      const items = Array.from(element.querySelectorAll("li"))
+        .map(textFromElement)
+        .filter(Boolean);
       if (items.length) blocks.push({ type: "list", items });
       return;
     }
@@ -147,11 +155,17 @@ function parseRenderedBlocks(renderedHtml: string, fallbackOutput: string) {
 
 function createCrcTable() {
   const table = new Uint32Array(256);
+
   for (let index = 0; index < 256; index++) {
     let current = index;
-    for (let bit = 0; bit < 8; bit++) current = current & 1 ? 0xedb88320 ^ (current >>> 1) : current >>> 1;
+
+    for (let bit = 0; bit < 8; bit++) {
+      current = current & 1 ? 0xedb88320 ^ (current >>> 1) : current >>> 1;
+    }
+
     table[index] = current >>> 0;
   }
+
   return table;
 }
 
@@ -159,15 +173,23 @@ const crcTable = createCrcTable();
 
 function crc32(data: Uint8Array) {
   let crc = 0xffffffff;
-  for (const byte of data) crc = crcTable[(crc ^ byte) & 0xff] ^ (crc >>> 8);
+
+  for (const byte of data) {
+    crc = crcTable[(crc ^ byte) & 0xff] ^ (crc >>> 8);
+  }
+
   return (crc ^ 0xffffffff) >>> 0;
 }
 
 function getDosDateTime() {
   const now = new Date();
   const year = Math.max(now.getFullYear(), 1980);
-  const dosTime = (now.getHours() << 11) | (now.getMinutes() << 5) | Math.floor(now.getSeconds() / 2);
+  const dosTime =
+    (now.getHours() << 11) |
+    (now.getMinutes() << 5) |
+    Math.floor(now.getSeconds() / 2);
   const dosDate = ((year - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+
   return { dosTime, dosDate };
 }
 
@@ -175,10 +197,12 @@ function concatArrays(parts: Uint8Array[]) {
   const total = parts.reduce((sum, part) => sum + part.length, 0);
   const merged = new Uint8Array(total);
   let offset = 0;
+
   for (const part of parts) {
     merged.set(part, offset);
     offset += part.length;
   }
+
   return merged;
 }
 
@@ -386,16 +410,30 @@ async function buildPdfBlob(blocks: ExportBlock[], title: string) {
     });
     y -= 12;
   };
+  const drawLogo = async (logoInput: string | ArrayBuffer) => {
+    const logo = await pdfDoc.embedPng(logoInput);
+    const logoWidth = 76;
+    const logoHeight = (logo.height / logo.width) * logoWidth;
+    const logoY = pageSize[1] - logoHeight - 24;
+    page.drawImage(logo, { x: margin, y: logoY, width: logoWidth, height: logoHeight });
+    y = logoY - 28;
+  };
 
   try {
-    const response = await fetch("/abc-export-logo.png", { cache: "force-cache" });
-    if (response.ok) {
-      const logo = await pdfDoc.embedPng(await response.arrayBuffer());
-      const logoWidth = 76;
-      const logoHeight = (logo.height / logo.width) * logoWidth;
-      const logoY = pageSize[1] - logoHeight - 24;
-      page.drawImage(logo, { x: margin, y: logoY, width: logoWidth, height: logoHeight });
-      y = logoY - 28;
+    const base64Response = await fetch("/abc-export-logo.base64.txt", { cache: "force-cache" });
+    if (base64Response.ok) {
+      const logoBase64 = (await base64Response.text()).trim();
+      if (logoBase64) {
+        await drawLogo(logoBase64);
+      }
+    } else {
+      const pngResponse = await fetch("/abc-export-logo.png", { cache: "force-cache" });
+      if (pngResponse.ok) {
+        await drawLogo(await pngResponse.arrayBuffer());
+      } else {
+        const appLogoResponse = await fetch("/abc-logo.png", { cache: "force-cache" });
+        if (appLogoResponse.ok) await drawLogo(await appLogoResponse.arrayBuffer());
+      }
     }
   } catch {
     y -= 8;
