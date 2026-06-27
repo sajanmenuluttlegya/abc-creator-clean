@@ -179,7 +179,7 @@ Get more credits: /pricing`
                 </>
               ) : (
                 <>
-                  <ThemeIcon name="spark" size="xs" className="h-5 w-5 rounded-full border-white/10 bg-white/10 shadow-none" />
+                  <ThemeIcon name="spark" size="xs" />
                   Generate — {creditCost} credits
                 </>
               )}
@@ -199,7 +199,7 @@ Get more credits: /pricing`
 
         <div className="rounded-2xl border border-blue-500/30 bg-blue-500/10 p-7 backdrop-blur-sm">
           <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-blue-300">
-            <ThemeIcon name="idea" size="xs" className="h-6 w-6 rounded-full border-blue-300/20 bg-blue-500/10 shadow-none" />
+            <ThemeIcon name="idea" size="xs" />
             Pro Tips
           </h3>
           <ul className="space-y-3 text-sm leading-relaxed text-blue-200">
@@ -211,7 +211,7 @@ Get more credits: /pricing`
 
         <div className="rounded-2xl border border-purple-500/20 bg-purple-500/10 p-7 backdrop-blur-sm">
           <h3 className="mb-3 flex items-center gap-2 text-lg font-semibold text-purple-200">
-            <ThemeIcon name="bolt" size="xs" className="h-6 w-6 rounded-full border-purple-300/20 bg-purple-500/10 shadow-none" />
+            <ThemeIcon name="bolt" size="xs" />
             Live AI Generation
           </h3>
           <p className="text-sm leading-relaxed text-purple-100/80">Creator streams text output into this page. Review factual claims before publishing.</p>
