@@ -11,7 +11,7 @@ const sizeClasses = {
   sm: "h-5 w-5",
   md: "h-7 w-7",
   lg: "h-10 w-10",
-  xl: "h-14 w-14",
+  xl: "h-12 w-12",
 };
 
 function IconShell({
@@ -21,9 +21,7 @@ function IconShell({
 }: ThemeIconProps & { children: ReactNode }) {
   return (
     <span
-      className={`inline-flex shrink-0 items-center justify-center rounded-2xl border border-purple-400/25 bg-gradient-to-br from-purple-500/20 via-black/30 to-indigo-500/20 text-purple-100 shadow-lg shadow-purple-950/25 ${
-        size === "xl" ? "h-16 w-16" : size === "lg" ? "h-12 w-12" : "h-9 w-9"
-      } ${className}`}
+      className={`inline-flex shrink-0 items-center justify-center bg-transparent text-purple-100 ${className}`}
       aria-hidden="true"
     >
       <svg
@@ -41,7 +39,7 @@ function IconShell({
 const stroke = "currentColor";
 const commonStroke = {
   stroke,
-  strokeWidth: 1.8,
+  strokeWidth: 1.7,
   strokeLinecap: "round" as const,
   strokeLinejoin: "round" as const,
 };
@@ -69,9 +67,9 @@ export function ThemeIcon({ name, size = "md", className = "" }: ThemeIconProps)
         <IconShell name={name} size={size} className={className}>
           <path {...commonStroke} d="M5 5.5h14M5 12h14M5 18.5h14" />
           <path {...commonStroke} d="M8 8.5v7M12 8.5v7M16 8.5v7" opacity="0.55" />
-          <circle cx="5" cy="5.5" r="1.4" fill="currentColor" />
-          <circle cx="5" cy="12" r="1.4" fill="currentColor" />
-          <circle cx="5" cy="18.5" r="1.4" fill="currentColor" />
+          <circle cx="5" cy="5.5" r="1.2" fill="currentColor" />
+          <circle cx="5" cy="12" r="1.2" fill="currentColor" />
+          <circle cx="5" cy="18.5" r="1.2" fill="currentColor" />
         </IconShell>
       );
     case "blog-content":
@@ -87,7 +85,7 @@ export function ThemeIcon({ name, size = "md", className = "" }: ThemeIconProps)
         <IconShell name={name} size={size} className={className}>
           <rect {...commonStroke} x="4" y="5" width="16" height="14" rx="2" />
           <path {...commonStroke} d="m5.5 16 4.2-4.2 3.2 3.2 2-2 3.6 3.8" />
-          <circle cx="15.8" cy="9" r="1.5" fill="currentColor" />
+          <circle cx="15.8" cy="9" r="1.3" fill="currentColor" />
         </IconShell>
       );
     case "seo":
