@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { OutputPanel } from "./OutputPanel";
 import type { Tool } from "@/lib/tools/public-tools";
+import { getToolCreditEstimate } from "@/lib/tools/credit-costs";
 
 interface ToolFormRendererProps {
   tool: Tool;
@@ -16,7 +17,8 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [output, setOutput] = useState<string>("");
-  const creditCost = tool.displayCreditCost;
+  const creditEstimate = getToolCreditEstimate(tool.slug, formData);
+  const creditCost = creditEstimate.credits;
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -70,7 +72,7 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
             setOutput(
 `Not enough credits
 
-This tool needs ${requiredCredits} credits per generation.
+This request needs ${requiredCredits} credits.
 You currently have ${currentCredits} credit${currentCredits === 1 ? "" : "s"}.
 
 Get more credits: /pricing`
@@ -130,7 +132,7 @@ Get more credits: /pricing`
               Create Your Content
             </h2>
             <span className="inline-flex w-fit items-center rounded-full border border-emerald-400/25 bg-emerald-400/10 px-4 py-1.5 text-xs font-semibold text-emerald-200">
-              {creditCost} credits per generation
+              {creditEstimate.label}
             </span>
           </div>
 
@@ -243,7 +245,7 @@ Get more credits: /pricing`
             </li>
             <li className="flex gap-4">
               <span className="min-w-6 font-semibold text-purple-400">2.</span>
-              <span>Click Generate to spend {creditCost} credits and create content with AI.</span>
+              <span>Click Generate to reserve the shown credits and create content with AI.</span>
             </li>
             <li className="flex gap-4">
               <span className="min-w-6 font-semibold text-purple-400">3.</span>
@@ -262,7 +264,7 @@ Get more credits: /pricing`
           </h3>
           <ul className="space-y-3 text-sm leading-relaxed text-blue-200">
             <li>• Be specific in your inputs for better results.</li>
-            <li>• Try different tones to find what works best.</li>
+            <li>• Longer or more complex outputs can cost more credits.</li>
             <li>• Run another generation when testing a different angle.</li>
           </ul>
         </div>
