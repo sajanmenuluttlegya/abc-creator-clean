@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMemo, useState } from "react";
 import { publicTools } from "@/lib/tools/public-tools";
+import { getToolCreditLabel } from "@/lib/tools/credit-costs";
 
 interface ToolCategorySidebarProps {
   activeSlug?: string;
@@ -112,7 +113,7 @@ export function ToolCategorySidebar({ activeSlug }: ToolCategorySidebarProps) {
                           >
                             <span className="block truncate">{tool.name}</span>
                             <span className="mt-0.5 block text-xs font-medium text-gray-500">
-                              {tool.displayCreditCost} credits
+                              {getToolCreditLabel(tool.slug)}
                             </span>
                           </Link>
                         );
