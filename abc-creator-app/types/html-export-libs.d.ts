@@ -8,24 +8,3 @@ declare module "html2pdf.js" {
   function html2pdf(): Html2PdfWorker;
   export default html2pdf;
 }
-
-declare module "html-docx-js" {
-  type DocxOptions = {
-    orientation?: "portrait" | "landscape";
-    margins?: {
-      top?: number;
-      right?: number;
-      bottom?: number;
-      left?: number;
-      header?: number;
-      footer?: number;
-      gutter?: number;
-    };
-  };
-
-  const htmlDocx: {
-    asBlob: (html: string, options?: DocxOptions) => Blob;
-  };
-
-  export default htmlDocx;
-}
