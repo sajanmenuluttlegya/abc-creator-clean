@@ -22,7 +22,7 @@ type ProviderImage = Omit<GeneratedImage, "index">;
 type ImageProviderResult = {
   provider: string;
   model: string;
-  images: ProviderImage[];
+  images: GeneratedImage[];
 };
 
 function env(name: string, fallback = "") {
