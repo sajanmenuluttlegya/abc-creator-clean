@@ -199,7 +199,7 @@ Get more credits: /pricing`
 
         <div className="rounded-2xl border border-blue-500/30 bg-blue-500/10 p-7 backdrop-blur-sm">
           <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-blue-300">
-            <ThemeIcon name="idea" size="xs" className="drop-shadow-[0_0_10px_rgba(251,191,36,0.55)]" />
+            <ThemeIcon name="idea" size="xs" className="text-amber-300 drop-shadow-[0_0_10px_rgba(251,191,36,0.65)]" />
             Pro Tips
           </h3>
           <ul className="space-y-3 text-sm leading-relaxed text-blue-200">
