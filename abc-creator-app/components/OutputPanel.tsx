@@ -38,7 +38,6 @@ export function OutputPanel({
   const [copied, setCopied] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState("");
-  const [isDownloadMenuOpen, setIsDownloadMenuOpen] = useState(false);
   const exportContentRef = useRef<HTMLDivElement | null>(null);
   const hasOutput = Boolean(output.trim());
   const isStreamingVisible = isLoading && hasOutput;
@@ -83,27 +82,40 @@ export function OutputPanel({
   };
 
   const downloadPdfFromServer = async () => {
-    const response = await fetch("/api/export/pdf", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ output, fileBaseName: downloadFileBaseName }),
-    });
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 30000);
 
-    if (!response.ok) {
-      const data = await response.json().catch(() => null);
-      throw new Error(data?.details || data?.error || "PDF download failed.");
+    try {
+      const response = await fetch("/api/export/pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ output, fileBaseName: downloadFileBaseName }),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        throw new Error(data?.details || data?.error || "PDF download failed.");
+      }
+
+      const blob = await response.blob();
+      if (!blob.size) throw new Error("PDF export returned an empty file.");
+
+      downloadBlob(blob, `${downloadFileBaseName}.pdf`);
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        throw new Error("PDF export timed out. Please try again with a shorter output or use DOCX/Text file.");
+      }
+
+      throw error;
+    } finally {
+      window.clearTimeout(timeout);
     }
-
-    const blob = await response.blob();
-    if (!blob.size) throw new Error("PDF export returned an empty file.");
-
-    downloadBlob(blob, `${downloadFileBaseName}.pdf`);
   };
 
   const handleDownload = async (format: OutputDownloadFormat) => {
     if (!format || !output || isDownloading) return;
 
-    setIsDownloadMenuOpen(false);
     setIsDownloading(true);
     setDownloadError("");
 
@@ -160,42 +172,30 @@ export function OutputPanel({
               {copied ? "Copied!" : "Copy"}
             </button>
 
-            <div className="relative">
-              <button
-                type="button"
-                disabled={isDownloading}
-                onClick={() => setIsDownloadMenuOpen((current) => !current)}
-                className="rounded-full border border-purple-400/30 bg-purple-500/10 px-4 py-2 text-sm font-semibold text-purple-100 transition hover:bg-purple-500/20 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                Download ▾
-              </button>
-
-              {isDownloadMenuOpen ? (
-                <div className="absolute right-0 z-50 mt-2 w-44 overflow-hidden rounded-2xl border border-purple-400/25 bg-black/95 p-2 shadow-2xl shadow-purple-950/40 backdrop-blur-xl">
-                  <button
-                    type="button"
-                    onClick={() => void handleDownload("pdf")}
-                    className="block w-full rounded-xl px-3 py-2 text-left text-sm font-semibold text-purple-100 transition hover:bg-purple-500/20"
-                  >
-                    PDF
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void handleDownload("docx")}
-                    className="block w-full rounded-xl px-3 py-2 text-left text-sm font-semibold text-purple-100 transition hover:bg-purple-500/20"
-                  >
-                    DOCX
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void handleDownload("txt")}
-                    className="block w-full rounded-xl px-3 py-2 text-left text-sm font-semibold text-purple-100 transition hover:bg-purple-500/20"
-                  >
-                    Text file
-                  </button>
-                </div>
-              ) : null}
-            </div>
+            <select
+              aria-label="Download output"
+              defaultValue=""
+              disabled={isDownloading}
+              onChange={(event) => {
+                const format = event.currentTarget.value as OutputDownloadFormat | "";
+                event.currentTarget.value = "";
+                if (format) void handleDownload(format);
+              }}
+              className="cursor-pointer rounded-full border border-purple-400/30 bg-purple-500/10 px-4 py-2 text-sm font-semibold text-purple-100 transition hover:bg-purple-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <option value="" className="bg-black text-white">
+                Download
+              </option>
+              <option value="pdf" className="bg-black text-white">
+                PDF
+              </option>
+              <option value="docx" className="bg-black text-white">
+                DOCX
+              </option>
+              <option value="txt" className="bg-black text-white">
+                Text file
+              </option>
+            </select>
           </div>
         ) : null}
       </div>
