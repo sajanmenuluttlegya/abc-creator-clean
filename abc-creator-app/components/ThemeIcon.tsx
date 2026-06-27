@@ -44,6 +44,10 @@ const commonStroke = {
   strokeLinejoin: "round" as const,
 };
 
+function withClass(defaultClass: string, className: string) {
+  return `${defaultClass} ${className}`.trim();
+}
+
 export function ThemeIcon({ name, size = "md", className = "" }: ThemeIconProps) {
   switch (name) {
     case "folder":
@@ -55,7 +59,7 @@ export function ThemeIcon({ name, size = "md", className = "" }: ThemeIconProps)
       );
     case "blog-topic":
       return (
-        <IconShell name={name} size={size} className={className}>
+        <IconShell name={name} size={size} className={withClass("text-amber-300", className)}>
           <path {...commonStroke} d="M8 14.5c-1.35-1.15-2.15-2.75-2.15-4.55A6.15 6.15 0 0 1 12 3.8a6.15 6.15 0 0 1 6.15 6.15c0 1.8-.8 3.4-2.15 4.55-.85.72-1.3 1.35-1.42 2.45H9.42C9.3 15.85 8.85 15.22 8 14.5Z" />
           <path {...commonStroke} d="M9.5 19h5M10 16.95h4" />
         </IconShell>
@@ -121,7 +125,7 @@ export function ThemeIcon({ name, size = "md", className = "" }: ThemeIconProps)
       );
     case "idea":
       return (
-        <IconShell name={name} size={size} className={className}>
+        <IconShell name={name} size={size} className={withClass("text-amber-300", className)}>
           <path {...commonStroke} d="M8 14.5c-1.4-1.2-2.2-2.8-2.2-4.6A6.2 6.2 0 0 1 12 3.7a6.2 6.2 0 0 1 6.2 6.2c0 1.8-.8 3.4-2.2 4.6-.8.7-1.3 1.4-1.4 2.5H9.4c-.1-1.1-.6-1.8-1.4-2.5Z" />
           <path {...commonStroke} d="M9.5 20h5M10 17h4" />
         </IconShell>
