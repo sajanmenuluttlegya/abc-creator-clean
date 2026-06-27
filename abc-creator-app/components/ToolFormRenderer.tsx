@@ -2,8 +2,12 @@
 
 import React, { useState } from "react";
 import { OutputPanel } from "./OutputPanel";
+import { ImageGenerationPanel } from "./ImageGenerationPanel";
 import type { Tool } from "@/lib/tools/public-tools";
-import { getToolCreditEstimate } from "@/lib/tools/credit-costs";
+import {
+  getToolCreditEstimate,
+  supportsImageGeneration,
+} from "@/lib/tools/credit-costs";
 
 interface ToolFormRendererProps {
   tool: Tool;
@@ -19,6 +23,7 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
   const [output, setOutput] = useState<string>("");
   const creditEstimate = getToolCreditEstimate(tool.slug, formData);
   const creditCost = creditEstimate.credits;
+  const canGenerateImages = supportsImageGeneration(tool.slug) && Boolean(output.trim()) && !isLoading;
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -279,12 +284,19 @@ Get more credits: /pricing`
         </div>
       </div>
 
-      <div className="lg:sticky lg:top-28">
+      <div className="space-y-6 lg:sticky lg:top-28">
         <OutputPanel
           isLoading={isLoading}
           output={output}
           recommendedNextActions={tool.nextActions}
         />
+        {canGenerateImages ? (
+          <ImageGenerationPanel
+            toolSlug={tool.slug}
+            inputs={formData}
+            sourceText={output}
+          />
+        ) : null}
       </div>
     </div>
   );
