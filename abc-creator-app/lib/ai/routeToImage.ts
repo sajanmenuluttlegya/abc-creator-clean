@@ -116,9 +116,7 @@ function getCloudflareImageConfigs(): CloudflareImageConfig[] {
     const accountId = env(accountIdName).trim();
     const apiToken = env(apiTokenName).trim();
 
-    if (accountId && apiToken) {
-      configs.push({ accountId, apiToken, label });
-    }
+    if (accountId && apiToken) configs.push({ accountId, apiToken, label });
   };
 
   addConfig("CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN", "cloudflare-default");
@@ -165,8 +163,8 @@ function getAiHordeClientAgent() {
 }
 
 function getAiHordeTimeoutMs() {
-  const value = Number(env("AI_HORDE_TIMEOUT_MS") || "45000");
-  if (!Number.isFinite(value)) return 45000;
+  const value = Number(env("AI_HORDE_TIMEOUT_MS") || "55000");
+  if (!Number.isFinite(value)) return 55000;
   return Math.min(Math.max(Math.floor(value), 15000), 120000);
 }
 
@@ -176,8 +174,28 @@ function getAiHordePollIntervalMs() {
   return Math.min(Math.max(Math.floor(value), 1500), 10000);
 }
 
+function getPollinationsTimeoutMs() {
+  const value = Number(env("POLLINATIONS_TIMEOUT_MS") || "45000");
+  if (!Number.isFinite(value)) return 45000;
+  return Math.min(Math.max(Math.floor(value), 10000), 90000);
+}
+
+function getPollinationsRetryCount() {
+  const value = Number(env("POLLINATIONS_RETRIES") || "2");
+  if (!Number.isFinite(value)) return 2;
+  return Math.min(Math.max(Math.floor(value), 0), 4);
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function isCloudflareRetryableStatus(status: number) {
   return status === 408 || status === 425 || status === 500 || status === 502 || status === 503 || status === 504;
+}
+
+function isPollinationsRetryableStatus(status: number) {
+  return status === 408 || status === 425 || status === 429 || status === 500 || status === 502 || status === 503 || status === 504;
 }
 
 function isAbortOrNetworkError(error: unknown) {
@@ -204,7 +222,7 @@ async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: numbe
 
 function safeTruncate(value: string | undefined, maxLength: number) {
   const text = (value || "").trim();
-  return text.length > maxLength ? `${text.slice(0, maxLength)}...` : text;
+  return text.length > maxLength ? `${text.slice(0, maxLength - 3)}...` : text;
 }
 
 function normalizeAspectRatio(value: string | undefined) {
@@ -288,13 +306,8 @@ function findBase64Image(value: unknown): { data: string; mimeType: string } | n
         ? record.mimeType
         : "image/jpeg";
 
-  if (typeof record.b64_json === "string" && record.b64_json.length > 200) {
-    return { data: record.b64_json, mimeType };
-  }
-
-  if (typeof record.data === "string" && record.data.length > 200) {
-    return { data: record.data, mimeType };
-  }
+  if (typeof record.b64_json === "string" && record.b64_json.length > 200) return { data: record.b64_json, mimeType };
+  if (typeof record.data === "string" && record.data.length > 200) return { data: record.data, mimeType };
 
   if (record.output_image) {
     const found = findBase64Image(record.output_image);
@@ -334,11 +347,13 @@ async function responseErrorDetails(response: Response) {
 function buildImagePrompt(request: ImageGenerationRequest, imageIndex: number) {
   const ratio = normalizeAspectRatio(request.aspectRatio);
   const inputs = request.inputs || {};
-  const userPrompt = safeTruncate(request.prompt, 1800);
-  const sourceText = safeTruncate(request.sourceText, 5000);
-  const title = inputs.title || inputs.blog_topic || inputs.blog_title || "blog article";
-  const visualStyle = inputs.visual_style || inputs.image_brief_mode || "premium editorial blog visual";
-  const brandContext = safeTruncate(inputs.brand_or_context, 1000);
+  const userPrompt = safeTruncate(request.prompt, 1200);
+  const sourceText = safeTruncate(request.sourceText, 700);
+  const title = safeTruncate(inputs.title || inputs.blog_topic || inputs.blog_title || "blog article", 180);
+  const visualStyle = safeTruncate(inputs.visual_style || inputs.image_brief_mode || "premium editorial blog visual", 120);
+  const visualMode = safeTruncate(inputs.visual_mode || "Auto-smart", 80);
+  const chartPreference = safeTruncate(inputs.chart_preference || "Auto", 100);
+  const brandContext = safeTruncate(inputs.brand_or_context, 350);
 
   return `Create one premium blog image.
 
@@ -347,18 +362,23 @@ Image number: ${imageIndex}
 Blog/topic: ${title}
 Aspect ratio: ${ratio}
 Visual style: ${visualStyle}
+Visual mode: ${visualMode}
+Graph/chart preference: ${chartPreference}
 Brand/context: ${brandContext || "not supplied"}
-User image prompt: ${userPrompt || "Use the source text/image brief below."}
 
-Source article or image brief:
-${sourceText}
+User image prompt:
+${userPrompt || "Use the source text/image brief below."}
+
+Relevant source text:
+${sourceText || "not supplied"}
 
 Production rules:
-- Create a polished, professional, publish-ready blog image for this exact placement in the article.
-- Prefer clean composition, strong visual hierarchy, and premium editorial quality.
+- Create a polished, professional, publish-ready blog image for this exact article placement.
+- Prefer colorful premium charts, graphs, market dashboards, data visualizations, and readable infographic-style visuals over plain box diagrams.
+- Avoid cramped flowchart boxes, tiny labels, whiteboard diagrams, rough sketches, and generic stock imagery.
 - Match the requested aspect ratio: ${ratio}.
 - Do not include watermarks, fake logos, protected brand marks, copyrighted characters, or public-figure likenesses.
-- Avoid tiny unreadable text. If text is needed, keep it minimal and highly legible.
+- Keep any labels minimal, large, and readable.
 - Output the image only.`;
 }
 
@@ -369,6 +389,7 @@ async function callOneCloudflareWorkersImageConfig(
   const model = getCloudflareImageModel();
   const timeoutMs = getCloudflareTimeoutMs();
   const url = `https://api.cloudflare.com/client/v4/accounts/${config.accountId}/ai/run/${model}`;
+  const shortPrompt = safeTruncate(prompt, 1900);
 
   const response = await fetchWithTimeout(
     url,
@@ -379,7 +400,7 @@ async function callOneCloudflareWorkersImageConfig(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        prompt,
+        prompt: shortPrompt,
         steps: 4,
         seed: Math.floor(Math.random() * 2147483647),
       }),
@@ -391,10 +412,7 @@ async function callOneCloudflareWorkersImageConfig(
     const details = await responseErrorDetails(response);
     const message = `Cloudflare Workers AI ${config.label} ${model} HTTP ${response.status}${details ? `: ${details}` : ""}`;
 
-    if (isCloudflareRetryableStatus(response.status)) {
-      throw new Error(`RETRYABLE_CLOUDFLARE_ERROR: ${message}`);
-    }
-
+    if (isCloudflareRetryableStatus(response.status)) throw new Error(`RETRYABLE_CLOUDFLARE_ERROR: ${message}`);
     throw new Error(message);
   }
 
@@ -413,9 +431,7 @@ async function callOneCloudflareWorkersImageConfig(
 
   const json = await response.json() as {
     success?: boolean;
-    result?: {
-      image?: string;
-    };
+    result?: { image?: string };
     errors?: Array<{ message?: string }>;
   };
 
@@ -423,9 +439,7 @@ async function callOneCloudflareWorkersImageConfig(
 
   if (!image || image.length < 200) {
     const errorText = json.errors?.map((error) => error.message).filter(Boolean).join(" | ");
-    throw new Error(
-      `Cloudflare Workers AI ${config.label} ${model} response did not include image data.${errorText ? ` ${errorText}` : ""}`
-    );
+    throw new Error(`Cloudflare Workers AI ${config.label} ${model} response did not include image data.${errorText ? ` ${errorText}` : ""}`);
   }
 
   return {
@@ -436,9 +450,7 @@ async function callOneCloudflareWorkersImageConfig(
   };
 }
 
-async function callCloudflareWorkersImage(
-  prompt: string
-): Promise<ProviderImage | null> {
+async function callCloudflareWorkersImage(prompt: string): Promise<ProviderImage | null> {
   const configs = getCloudflareImageConfigs();
   if (!configs.length) return null;
 
@@ -451,10 +463,7 @@ async function callCloudflareWorkersImage(
       const message = error instanceof Error ? error.message : String(error);
       errors.push(message);
 
-      if (message.startsWith("RETRYABLE_CLOUDFLARE_ERROR") || isAbortOrNetworkError(error)) {
-        continue;
-      }
-
+      if (message.startsWith("RETRYABLE_CLOUDFLARE_ERROR") || isAbortOrNetworkError(error)) continue;
       throw error;
     }
   }
@@ -471,48 +480,74 @@ async function callPollinationsImage(
 
   const { width, height } = clampPollinationsSize(aspectRatio);
   const model = firstEnv(["POLLINATIONS_IMAGE_MODEL", "POLLINATIONS_MODEL"]) || "flux";
-  const shortPrompt = safeTruncate(prompt, 1400);
+  const shortPrompt = safeTruncate(prompt, 1100);
+  const retries = getPollinationsRetryCount();
+  const timeoutMs = getPollinationsTimeoutMs();
+  const errors: string[] = [];
 
-  const url = new URL(`https://image.pollinations.ai/prompt/${encodeURIComponent(shortPrompt)}`);
-  url.searchParams.set("width", String(width));
-  url.searchParams.set("height", String(height));
-  url.searchParams.set("model", model);
-  url.searchParams.set("nologo", "true");
-  url.searchParams.set("safe", "true");
-  url.searchParams.set("private", "true");
-  url.searchParams.set("seed", String(Math.floor(Math.random() * 2147483647)));
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    const url = new URL(`https://image.pollinations.ai/prompt/${encodeURIComponent(shortPrompt)}`);
+    url.searchParams.set("width", String(width));
+    url.searchParams.set("height", String(height));
+    url.searchParams.set("model", model);
+    url.searchParams.set("nologo", "true");
+    url.searchParams.set("safe", "true");
+    url.searchParams.set("private", "true");
+    url.searchParams.set("seed", String(Math.floor(Math.random() * 2147483647)));
 
-  const response = await fetch(url.toString(), {
-    method: "GET",
-    headers: {
-      Accept: "image/png,image/jpeg,image/webp,*/*",
-    },
-  });
+    try {
+      const response = await fetchWithTimeout(
+        url.toString(),
+        {
+          method: "GET",
+          headers: { Accept: "image/png,image/jpeg,image/webp,*/*" },
+        },
+        timeoutMs
+      );
 
-  if (!response.ok) {
-    const details = await responseErrorDetails(response);
-    throw new Error(`Pollinations ${model} HTTP ${response.status}${details ? `: ${details}` : ""}`);
+      if (!response.ok) {
+        const details = await responseErrorDetails(response);
+        const message = `Pollinations ${model} HTTP ${response.status}${details ? `: ${details}` : ""}`;
+        errors.push(message);
+
+        if (attempt < retries && isPollinationsRetryableStatus(response.status)) {
+          await sleep(2500 + attempt * 2500);
+          continue;
+        }
+
+        throw new Error(message);
+      }
+
+      const contentType = response.headers.get("content-type") || "image/jpeg";
+
+      if (!contentType.startsWith("image/")) {
+        const details = await response.text();
+        throw new Error(`Pollinations ${model} did not return an image.${details ? ` ${details.slice(0, 500)}` : ""}`);
+      }
+
+      const buffer = Buffer.from(await response.arrayBuffer());
+      if (buffer.length < 200) throw new Error(`Pollinations ${model} returned an empty image.`);
+
+      return {
+        dataUrl: imageToDataUrl(buffer.toString("base64"), contentType),
+        mimeType: contentType,
+        provider: "pollinations",
+        model,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      errors.push(message);
+
+      if (attempt < retries && isAbortOrNetworkError(error)) {
+        await sleep(2500 + attempt * 2500);
+        continue;
+      }
+
+      throw new Error(errors.join(" | "));
+    }
   }
 
-  const contentType = response.headers.get("content-type") || "image/jpeg";
-
-  if (!contentType.startsWith("image/")) {
-    const details = await response.text();
-    throw new Error(`Pollinations ${model} did not return an image.${details ? ` ${details.slice(0, 500)}` : ""}`);
-  }
-
-  const buffer = Buffer.from(await response.arrayBuffer());
-
-  if (buffer.length < 200) {
-    throw new Error(`Pollinations ${model} returned an empty image.`);
-  }
-
-  return {
-    dataUrl: imageToDataUrl(buffer.toString("base64"), contentType),
-    mimeType: contentType,
-    provider: "pollinations",
-    model,
-  };
+  throw new Error(errors.join(" | ") || `Pollinations ${model} failed.`);
 }
 
 async function imageFromAiHordeGeneration(generation: AiHordeGeneration): Promise<ProviderImage> {
@@ -521,23 +556,13 @@ async function imageFromAiHordeGeneration(generation: AiHordeGeneration): Promis
 
   if (image.startsWith("data:")) {
     const mimeMatch = image.match(/^data:([^;,]+)[;,]/);
-    return {
-      dataUrl: image,
-      mimeType: mimeMatch?.[1] || "image/webp",
-      provider: "ai-horde",
-      model,
-    };
+    return { dataUrl: image, mimeType: mimeMatch?.[1] || "image/webp", provider: "ai-horde", model };
   }
 
   if (/^https?:\/\//i.test(image)) {
     const response = await fetchWithTimeout(
       image,
-      {
-        method: "GET",
-        headers: {
-          Accept: "image/png,image/jpeg,image/webp,*/*",
-        },
-      },
+      { method: "GET", headers: { Accept: "image/png,image/jpeg,image/webp,*/*" } },
       20000
     );
 
@@ -548,21 +573,10 @@ async function imageFromAiHordeGeneration(generation: AiHordeGeneration): Promis
 
     const contentType = response.headers.get("content-type") || "image/webp";
     const buffer = Buffer.from(await response.arrayBuffer());
-
-    return {
-      dataUrl: imageToDataUrl(buffer.toString("base64"), contentType),
-      mimeType: contentType,
-      provider: "ai-horde",
-      model,
-    };
+    return { dataUrl: imageToDataUrl(buffer.toString("base64"), contentType), mimeType: contentType, provider: "ai-horde", model };
   }
 
-  return {
-    dataUrl: imageToDataUrl(image, "image/webp"),
-    mimeType: "image/webp",
-    provider: "ai-horde",
-    model,
-  };
+  return { dataUrl: imageToDataUrl(image, "image/webp"), mimeType: "image/webp", provider: "ai-horde", model };
 }
 
 async function callAiHordeImage(
@@ -578,7 +592,7 @@ async function callAiHordeImage(
   const pollIntervalMs = getAiHordePollIntervalMs();
   const modelList = unique(csvEnv("AI_HORDE_MODELS"));
   const modelLabel = modelList.length ? modelList.join(",") : "auto";
-  const shortPrompt = safeTruncate(prompt, 1200);
+  const shortPrompt = safeTruncate(prompt, 1000);
   const headers = {
     apikey: getAiHordeApiKey(),
     "Client-Agent": getAiHordeClientAgent(),
@@ -605,11 +619,7 @@ async function callAiHordeImage(
 
   const submitResponse = await fetchWithTimeout(
     `${baseUrl}/api/v2/generate/async`,
-    {
-      method: "POST",
-      headers,
-      body: JSON.stringify(payload),
-    },
+    { method: "POST", headers, body: JSON.stringify(payload) },
     20000
   );
 
@@ -629,14 +639,11 @@ async function callAiHordeImage(
   const startedAt = Date.now();
 
   while (Date.now() - startedAt < timeoutMs) {
-    await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+    await sleep(pollIntervalMs);
 
     const statusResponse = await fetchWithTimeout(
       `${baseUrl}/api/v2/generate/status/${id}`,
-      {
-        method: "GET",
-        headers,
-      },
+      { method: "GET", headers },
       20000
     );
 
@@ -648,21 +655,10 @@ async function callAiHordeImage(
     const status = await statusResponse.json() as AiHordeStatusResponse;
     const generation = status.generations?.find((item) => item.img && !item.censored) || status.generations?.find((item) => item.img);
 
-    if (generation?.img) {
-      return imageFromAiHordeGeneration(generation);
-    }
-
-    if (status.faulted) {
-      throw new Error(`AI Horde generation faulted.${status.message ? ` ${status.message}` : ""}`);
-    }
-
-    if (status.is_possible === false) {
-      throw new Error(`AI Horde says this generation is not possible right now.${status.message ? ` ${status.message}` : ""}`);
-    }
-
-    if (status.done) {
-      throw new Error("AI Horde finished but returned no image.");
-    }
+    if (generation?.img) return imageFromAiHordeGeneration(generation);
+    if (status.faulted) throw new Error(`AI Horde generation faulted.${status.message ? ` ${status.message}` : ""}`);
+    if (status.is_possible === false) throw new Error(`AI Horde says this generation is not possible right now.${status.message ? ` ${status.message}` : ""}`);
+    if (status.done) throw new Error("AI Horde finished but returned no image.");
   }
 
   throw new Error(`AI Horde timed out after ${Math.round(timeoutMs / 1000)}s while waiting for ${modelLabel}.`);
@@ -678,11 +674,11 @@ async function callGeminiNativeImage(
 
   const models = getGeminiImageModels();
   const ratio = normalizeAspectRatio(aspectRatio);
+  const shortPrompt = safeTruncate(prompt, 2800);
   const sourceImagePart = dataUrlToGeminiImagePart(sourceImageDataUrl);
   const input = sourceImagePart
-    ? [{ type: "text", text: prompt }, sourceImagePart]
-    : [{ type: "text", text: prompt }];
-
+    ? [{ type: "text", text: shortPrompt }, sourceImagePart]
+    : [{ type: "text", text: shortPrompt }];
   const errors: string[] = [];
 
   for (const apiKey of keys) {
@@ -690,19 +686,11 @@ async function callGeminiNativeImage(
       try {
         const response = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
           method: "POST",
-          headers: {
-            "x-goog-api-key": apiKey,
-            "Content-Type": "application/json",
-          },
+          headers: { "x-goog-api-key": apiKey, "Content-Type": "application/json" },
           body: JSON.stringify({
             model,
             input,
-            response_format: {
-              type: "image",
-              mime_type: "image/jpeg",
-              aspect_ratio: ratio,
-              image_size: "1K",
-            },
+            response_format: { type: "image", mime_type: "image/jpeg", aspect_ratio: ratio, image_size: "1K" },
           }),
         });
 
@@ -714,18 +702,12 @@ async function callGeminiNativeImage(
 
         const json = await response.json();
         const found = findBase64Image(json);
-
         if (!found) {
           errors.push(`Gemini ${model} response did not include image data.`);
           continue;
         }
 
-        return {
-          dataUrl: imageToDataUrl(found.data, found.mimeType),
-          mimeType: found.mimeType,
-          provider: "gemini-native-image",
-          model,
-        };
+        return { dataUrl: imageToDataUrl(found.data, found.mimeType), mimeType: found.mimeType, provider: "gemini-native-image", model };
       } catch (error) {
         errors.push(`Gemini ${model}: ${error instanceof Error ? error.message : String(error)}`);
       }
@@ -745,23 +727,20 @@ async function callHuggingFaceOpenSourceImage(
 
   const model = firstEnv(["HF_IMAGE_MODEL", "HUGGINGFACE_IMAGE_MODEL"]) || "black-forest-labs/FLUX.1-schnell";
   const { width, height } = ratioToSize(aspectRatio);
+  const shortPrompt = safeTruncate(prompt, 1400);
 
-  const response = await fetch(`https://api-inference.huggingface.co/models/${model}`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      Accept: "image/png",
+  const response = await fetchWithTimeout(
+    `https://api-inference.huggingface.co/models/${model}`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", Accept: "image/png" },
+      body: JSON.stringify({
+        inputs: shortPrompt,
+        parameters: { width, height, num_inference_steps: 28 },
+      }),
     },
-    body: JSON.stringify({
-      inputs: prompt,
-      parameters: {
-        width,
-        height,
-        num_inference_steps: 28,
-      },
-    }),
-  });
+    45000
+  );
 
   if (!response.ok) {
     const details = await responseErrorDetails(response);
@@ -774,28 +753,14 @@ async function callHuggingFaceOpenSourceImage(
     const json = await response.json();
     const base64 = findBase64Image(json);
     if (!base64) throw new Error(`Hugging Face ${model} response did not include image data.`);
-
-    return {
-      dataUrl: imageToDataUrl(base64.data, base64.mimeType),
-      mimeType: base64.mimeType,
-      provider: "huggingface-open-source",
-      model,
-    };
+    return { dataUrl: imageToDataUrl(base64.data, base64.mimeType), mimeType: base64.mimeType, provider: "huggingface-open-source", model };
   }
 
   const buffer = Buffer.from(await response.arrayBuffer());
-
-  return {
-    dataUrl: imageToDataUrl(buffer.toString("base64"), contentType),
-    mimeType: contentType,
-    provider: "huggingface-open-source",
-    model,
-  };
+  return { dataUrl: imageToDataUrl(buffer.toString("base64"), contentType), mimeType: contentType, provider: "huggingface-open-source", model };
 }
 
-export async function routeToImage(
-  request: ImageGenerationRequest
-): Promise<ImageProviderResult> {
+export async function routeToImage(request: ImageGenerationRequest): Promise<ImageProviderResult> {
   const count = Math.min(Math.max(Math.floor(request.count || 1), 1), 7);
   const providerFailures: string[] = [];
 
@@ -815,25 +780,17 @@ export async function routeToImage(
         const prompt = buildImagePrompt(request, index);
         const image = await provider.call(prompt, request.aspectRatio, request.sourceImageDataUrl);
 
-        if (!image) {
-          throw new Error(`${provider.name} is not configured.`);
-        }
-
+        if (!image) throw new Error(`${provider.name} is not configured.`);
         images.push(image);
       }
 
       return {
         provider: images[0]?.provider || provider.name,
         model: images[0]?.model || "unknown",
-        images: images.map((image, index) => ({
-          ...image,
-          index: index + 1,
-        })),
+        images: images.map((image, index) => ({ ...image, index: index + 1 })),
       };
     } catch (error) {
-      providerFailures.push(
-        `${provider.name}: ${error instanceof Error ? error.message : String(error)}`
-      );
+      providerFailures.push(`${provider.name}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
