@@ -14,6 +14,22 @@ function htmlEscape(value: string) {
     .replace(/"/g, "&quot;");
 }
 
+const exportDiagramStyle = [
+  "margin:28px 0",
+  "overflow-x:auto",
+  "background:#ffffff",
+  "border:1px solid #e5e7eb",
+  "border-radius:18px",
+  "padding:16px",
+  "--abc-diagram-bg:#ffffff",
+  "--abc-diagram-panel:#ffffff",
+  "--abc-diagram-grid:rgba(100,116,139,0.18)",
+  "--abc-diagram-text:#0f172a",
+  "--abc-diagram-muted:#475569",
+  "--abc-diagram-border:rgba(99,102,241,0.24)",
+  "--abc-diagram-soft-fill:rgba(99,102,241,0.10)",
+].join(";");
+
 function cleanRenderedHtml(renderedElement?: HTMLElement | null, fallbackOutput = "") {
   if (!renderedElement?.innerHTML?.trim()) {
     return `<pre>${htmlEscape(fallbackOutput)}</pre>`;
@@ -33,20 +49,14 @@ function cleanRenderedHtml(renderedElement?: HTMLElement | null, fallbackOutput 
   });
 
   wrapper.querySelectorAll("[data-abc-diagram]").forEach((diagram) => {
-  diagram.removeAttribute("class");
-  diagram.setAttribute(
-    "style",
-    "margin:28px 0;overflow-x:auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:18px;padding:16px;--abc-diagram-bg:#ffffff;--abc-diagram-node-bg:#ffffff;--abc-diagram-main-node-bg:#f5f3ff;--abc-diagram-text:#111827;--abc-diagram-muted:#4b5563;--abc-diagram-border:#e5e7eb;--abc-diagram-node-stroke:#a78bfa;--abc-diagram-main-stroke:#7c3aed;"
-  );
-});
+    diagram.removeAttribute("class");
+    diagram.setAttribute("style", exportDiagramStyle);
+  });
 
-wrapper.querySelectorAll("svg").forEach((svg) => {
-  svg.removeAttribute("class");
-  svg.setAttribute(
-    "style",
-    "max-width:100%;height:auto;display:block;background:#ffffff;"
-  );
-});
+  wrapper.querySelectorAll("svg").forEach((svg) => {
+    svg.removeAttribute("class");
+    svg.setAttribute("style", "max-width:100%;height:auto;display:block;background:#ffffff;");
+  });
 
   wrapper.querySelectorAll("a").forEach((link) => {
     link.setAttribute("target", "_blank");
@@ -87,7 +97,7 @@ export function downloadHtmlOutput(
     blockquote { border-left: 4px solid #7c3aed; margin: 1.25rem 0; padding: 0.75rem 1rem; background: #f5f3ff; }
     img { max-width: 100%; height: auto; border-radius: 12px; margin: 18px 0; display: block; }
     svg { max-width: 100%; height: auto; display: block; background: #ffffff; }
-[data-abc-diagram] { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 18px; padding: 16px; margin: 28px 0; overflow-x: auto; --abc-diagram-bg:#ffffff; --abc-diagram-node-bg:#ffffff; --abc-diagram-main-node-bg:#f5f3ff; --abc-diagram-text:#111827; --abc-diagram-muted:#4b5563; --abc-diagram-border:#e5e7eb; --abc-diagram-node-stroke:#a78bfa; --abc-diagram-main-stroke:#7c3aed; }
+    [data-abc-diagram] { ${exportDiagramStyle}; }
   </style>
 </head>
 <body>
