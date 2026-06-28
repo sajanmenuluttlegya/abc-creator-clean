@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { OutputPanel } from "./OutputPanel";
 import { ImageGenerationPanel } from "./ImageGenerationPanel";
 import { ThemeIcon } from "./ThemeIcon";
+import { EditableBlogOutlinePanel } from "./EditableBlogOutlinePanel";
 import type { Tool } from "@/lib/tools/public-tools";
 import {
   getToolCreditEstimate,
@@ -13,6 +14,8 @@ import {
 interface ToolFormRendererProps {
   tool: Tool;
 }
+
+const BLOG_OUTLINE_HANDOFF_KEY = "abc_creator_blog_outline_handoff";
 
 function wait(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
@@ -24,7 +27,37 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
   const [output, setOutput] = useState<string>("");
   const creditEstimate = getToolCreditEstimate(tool.slug, formData);
   const creditCost = creditEstimate.credits;
-  const canGenerateImages = supportsImageGeneration(tool.slug) && Boolean(output.trim()) && !isLoading;
+  const isErrorOutput = /^(error:|not enough credits)/i.test(output.trim());
+  const showEditableOutline =
+    tool.slug === "blog-outline" && Boolean(output.trim()) && !isLoading && !isErrorOutput;
+  const canGenerateImages =
+    supportsImageGeneration(tool.slug) && Boolean(output.trim()) && !isLoading && !isErrorOutput;
+
+  useEffect(() => {
+    if (tool.slug !== "blog-content") return;
+
+    try {
+      const stored = window.sessionStorage.getItem(BLOG_OUTLINE_HANDOFF_KEY);
+      if (!stored) return;
+
+      const handoff = JSON.parse(stored) as {
+        outline?: string;
+        title?: string;
+        keywords?: string;
+      };
+
+      setFormData((current) => ({
+        ...current,
+        ...(handoff.outline && !current.outline ? { outline: handoff.outline } : {}),
+        ...(handoff.title && !current.title ? { title: handoff.title } : {}),
+        ...(handoff.keywords && !current.keywords ? { keywords: handoff.keywords } : {}),
+      }));
+
+      window.sessionStorage.removeItem(BLOG_OUTLINE_HANDOFF_KEY);
+    } catch {
+      window.sessionStorage.removeItem(BLOG_OUTLINE_HANDOFF_KEY);
+    }
+  }, [tool.slug]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -193,7 +226,7 @@ Get more credits: /pricing`
             <li className="flex gap-4"><span className="min-w-6 font-semibold text-purple-400">1.</span><span>Fill in the form with clear details.</span></li>
             <li className="flex gap-4"><span className="min-w-6 font-semibold text-purple-400">2.</span><span>Click Generate to reserve the shown credits and create content with AI.</span></li>
             <li className="flex gap-4"><span className="min-w-6 font-semibold text-purple-400">3.</span><span>Watch the result appear live on the right side.</span></li>
-            <li className="flex gap-4"><span className="min-w-6 font-semibold text-purple-400">4.</span><span>Copy or download the current result when it is ready.</span></li>
+            <li className="flex gap-4"><span className="min-w-6 font-semibold text-purple-400">4.</span><span>Copy, download, or continue with the current result when it is ready.</span></li>
           </ol>
         </div>
 
@@ -219,7 +252,11 @@ Get more credits: /pricing`
       </div>
 
       <div className="space-y-6 lg:sticky lg:top-28">
-        <OutputPanel isLoading={isLoading} output={output} recommendedNextActions={tool.nextActions} downloadFileBaseName={`${tool.slug}-output`} />
+        {showEditableOutline ? (
+          <EditableBlogOutlinePanel output={output} inputs={formData} />
+        ) : (
+          <OutputPanel isLoading={isLoading} output={output} recommendedNextActions={tool.nextActions} downloadFileBaseName={`${tool.slug}-output`} />
+        )}
         {canGenerateImages ? <ImageGenerationPanel toolSlug={tool.slug} inputs={formData} sourceText={output} /> : null}
       </div>
     </div>
