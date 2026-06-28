@@ -104,7 +104,14 @@ Blog Content Premium rules:
 - For ERDs, use entities when possible, with each entity containing name and fields. Add edges between entities when relationships matter.
 - Diagram JSON must not include comments, Markdown inside JSON, or trailing commas.
 - Diagrams may describe structures, relationships, pipelines, or qualitative flows, but must not invent exact numbers, live data, market share, search volume, analytics, or citations. If exact data is needed but not supplied, use qualitative labels or placeholder values and make the caption say verified data can replace placeholders.
-- If the selected Images option requests images, insert image prompts as inline Markdown blocks at the most relevant article positions. The hero image must appear near the top after the intro. Section images must appear between relevant blog sections, not grouped at the bottom.
+- Images are for premium illustrations only. Do not use image blocks for charts, dashboards, graphs, radial maps, sankeys, node maps, or flowcharts; those must be coded abc-diagram blocks instead.
+- If the selected Images option is "No images", output zero image blocks.
+- If the selected Images option is "Hero image only", output exactly one hero image block only when it genuinely supports the article; otherwise output no image block.
+- If the selected Images option is "Hero + section images", choose a rational number of image blocks based on article length and usefulness: usually 1 hero plus 1-2 section images, max 4 total for very long pillar articles. Never add images just to fill space.
+- Every image block must be directly relevant to the nearest section's exact topic. The Prompt must mention the section title/idea and the article topic. Avoid generic robots, astronauts, random skylines, mountains, fantasy scenes, or decorative stock art unless the section explicitly asks for them.
+- For finance, trading, markets, AI trading, or crash-prediction content, image prompts must stay grounded in relevant market context: trading desks, risk dashboards, volatility, market stress, circuit breakers, order books, candlestick/liquidity visuals as illustration elements, or analysts watching market regimes. Do not use unrelated robot-adventure visuals.
+- Never place two image blocks together. Never place an image block immediately before or after another image block. Never place an image block immediately before or after an abc-diagram block. Put at least one meaningful normal paragraph between any two visual blocks.
+- The hero image must appear near the top after the intro only when it supports the article. Section images must appear after a substantial relevant section, not before the reader has context, and never grouped at the bottom.
 - Each inline image block must use this exact structure so the page can attach a Generate Image button: "### Image 1: Hero Image" or "### Image 2: Section Image for <section title>", then "Placement:", "Prompt:", "Alt Text:", and "Caption:".
 - The image block is only the prompt/metadata. Do not claim the image was generated inside the article text.
 - Use diagram blocks and image blocks only when they are relevant and premium. Avoid filler visuals.
@@ -113,7 +120,7 @@ Blog Content Premium rules:
 - Do not include a separate bottom "Optional Image Briefs" section.
 - Do not claim live Google search, realtime information, competitor insights, charts, graphs, SEO scores, keyword volumes, or external citations unless the user supplied the data.`,
     outputGuide:
-      "Return only the usable Markdown blog article. Start with one H1 article title, then go directly into the introduction and article body. Make the article feel premium, researched, practical, and publication-ready. Add relevant abc-diagram fenced JSON blocks in the most useful article positions so the UI can render real inline visuals. Do not output visible Visual, Type, Placement, Purpose, What to show, Labels/Data needed, Alt Text, or Caption text for diagrams. If images are requested, also place Image blocks inline at the most relevant point using the exact Image structure. Do not include Meta Description, Suggested URL Slug, SEO Title, Full Blog Article heading, article package labels, Verify Before Publishing Notes, Final On-Page SEO Checklist, publisher notes, or any final SEO checklist.",
+      "Return only the usable Markdown blog article. Start with one H1 article title, then go directly into the introduction and article body. Make the article feel premium, researched, practical, and publication-ready. Add relevant abc-diagram fenced JSON blocks in the most useful article positions so the UI can render real inline coded visuals. Do not output visible Visual, Type, Placement, Purpose, What to show, Labels/Data needed, Alt Text, or Caption text for diagrams. If images are requested, place only rationally needed illustration Image blocks inline at relevant positions using the exact Image structure. Never put two image blocks together and never put an image directly beside another visual block. Do not include Meta Description, Suggested URL Slug, SEO Title, Full Blog Article heading, article package labels, Verify Before Publishing Notes, Final On-Page SEO Checklist, publisher notes, or any final SEO checklist.",
   },
   "pro-image-brief-for-blog": {
     creditCost: 5,
@@ -151,7 +158,7 @@ Pro Image Brief rules:
     requiredInputs: [
       { id: "blog_title", label: "Blog title", required: true, minLength: 4, maxLength: 220 },
       { id: "article_content", label: "Article content", required: true, minLength: 30, maxLength: 12000 },
-      { id: "keyword", label: "Keyword", required: true, minLength: 2, maxLength: 180 },
+      { id: "keyword", label: "Primary keyword", required: true, minLength: 2, maxLength: 180 },
     ],
     system: `You are ABC Creator's specialist for Blog Workflow and Blog SEO Pack.${commonGenerationRules}`,
     outputGuide:
