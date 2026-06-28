@@ -222,7 +222,22 @@ async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: numbe
 
 function safeTruncate(value: string | undefined, maxLength: number) {
   const text = (value || "").trim();
-  return text.length > maxLength ? `${text.slice(0, maxLength - 3)}...` : text;
+  return text.length > maxLength ? `${text.slice(0, Math.max(0, maxLength - 3))}...` : text;
+}
+
+function compactSentence(value: string | undefined, maxLength = 220) {
+  return safeTruncate((value || "").replace(/\s+/g, " ").trim(), maxLength);
+}
+
+function compactParagraphs(value: string | undefined, maxLength = 900) {
+  const text = (value || "")
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join(" | ");
+
+  return safeTruncate(text, maxLength);
 }
 
 function normalizeAspectRatio(value: string | undefined) {
@@ -347,39 +362,43 @@ async function responseErrorDetails(response: Response) {
 function buildImagePrompt(request: ImageGenerationRequest, imageIndex: number) {
   const ratio = normalizeAspectRatio(request.aspectRatio);
   const inputs = request.inputs || {};
-  const userPrompt = safeTruncate(request.prompt, 1200);
-  const sourceText = safeTruncate(request.sourceText, 700);
-  const title = safeTruncate(inputs.title || inputs.blog_topic || inputs.blog_title || "blog article", 180);
-  const visualStyle = safeTruncate(inputs.visual_style || inputs.image_brief_mode || "premium editorial blog visual", 120);
-  const visualMode = safeTruncate(inputs.visual_mode || "Auto-smart", 80);
-  const chartPreference = safeTruncate(inputs.chart_preference || "Auto", 100);
-  const brandContext = safeTruncate(inputs.brand_or_context, 350);
+  const title = compactSentence(inputs.title || inputs.blog_topic || inputs.blog_title || "blog article", 160);
+  const visualStyle = compactSentence(inputs.visual_style || inputs.image_brief_mode || "Auto premium editorial", 90);
+  const visualMode = compactSentence(inputs.visual_mode || "Auto-smart", 70);
+  const chartPreference = compactSentence(inputs.chart_preference || "Auto", 90);
+  const brandContext = compactSentence(inputs.brand_or_context || "not supplied", 220);
+  const userPrompt = compactParagraphs(request.prompt, 900);
+  const sourceText = compactParagraphs(request.sourceText, 450);
 
-  return `Create one premium blog image.
-
-Tool context: ${request.toolSlug}
-Image number: ${imageIndex}
-Blog/topic: ${title}
-Aspect ratio: ${ratio}
-Visual style: ${visualStyle}
-Visual mode: ${visualMode}
-Graph/chart preference: ${chartPreference}
-Brand/context: ${brandContext || "not supplied"}
-
-User image prompt:
-${userPrompt || "Use the source text/image brief below."}
-
-Relevant source text:
-${sourceText || "not supplied"}
-
-Production rules:
-- Create a polished, professional, publish-ready blog image for this exact article placement.
-- Prefer colorful premium charts, graphs, market dashboards, data visualizations, and readable infographic-style visuals over plain box diagrams.
-- Avoid cramped flowchart boxes, tiny labels, whiteboard diagrams, rough sketches, and generic stock imagery.
-- Match the requested aspect ratio: ${ratio}.
-- Do not include watermarks, fake logos, protected brand marks, copyrighted characters, or public-figure likenesses.
-- Keep any labels minimal, large, and readable.
-- Output the image only.`;
+  return [
+    "Create one premium blog image.",
+    "",
+    "Context",
+    `- Tool: ${request.toolSlug}`,
+    `- Image number: ${imageIndex}`,
+    `- Topic: ${title}`,
+    `- Aspect ratio: ${ratio}`,
+    `- Style: ${visualStyle}`,
+    `- Visual mode: ${visualMode}`,
+    `- Graph/chart preference: ${chartPreference}`,
+    `- Brand context: ${brandContext}`,
+    "",
+    "Image brief",
+    userPrompt || "Use the article context below.",
+    "",
+    "Article context",
+    sourceText || "not supplied",
+    "",
+    "Visual rules",
+    "- Premium, polished, clean, publish-ready.",
+    "- Prefer theme-aware charts, graphs, dashboards, data visualizations, circular/radial graphs, polygon/radar charts, sankey-style flows, network maps, and infographic compositions over plain box-flow illustrations.",
+    "- Use the strongest visual type for the section; avoid generic stock art.",
+    "- Avoid cramped boxes, tiny labels, low-information pipeline cards, and cheap illustration styles.",
+    "- Keep any text minimal, large, and readable.",
+    "- Must still look strong when exported onto a white background.",
+    "- No watermarks, fake logos, protected brand marks, copyrighted characters, or public-figure likenesses.",
+    "- Output image only.",
+  ].join("\n");
 }
 
 async function callOneCloudflareWorkersImageConfig(
