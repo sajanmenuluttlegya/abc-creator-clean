@@ -88,6 +88,11 @@ Blog Content Premium rules:
 - If the user asks for key takeaways, include them near the top after the introduction.
 - If the user asks for a list section, include one useful numbered or bulleted list in the most relevant section.
 - If the user asks for a table section, include one clean Markdown table where it adds value.
+- Decide the number of diagrams, graphs, trees, tables, and images dynamically based on relevance and article complexity. There is no fixed number.
+- Use zero visuals when none are needed, one or two when helpful, and several only when they materially improve clarity or professionalism.
+- Do not force diagrams, tables, graphs, trees, or images into every section.
+- Only include visuals where they improve understanding of workflows, relationships, hierarchies, taxonomies, comparisons, pipelines, decisions, or data flow.
+- The renderer shows only the visual itself, so do not rely on separate diagram titles, badges, captions, or labels outside normal article prose.
 - Add premium visual intelligence throughout the article. Where relevant, insert renderable diagram blocks that the page turns into actual inline visuals. Do not output visible Visual, Type, Placement, Purpose, What to show, Labels/Data needed, Alt Text, or Caption text for diagrams.
 - Choose the diagram type based on the topic, not randomly. Use lineage graphs for evolution/history, data lineage for data pipelines, knowledge graphs for entities and relationships, graph visualizations or node-link diagrams for connected systems, dependency graphs for dependencies, DAGs for one-way workflows, tree diagrams and hierarchy charts for parent-child structures, flowcharts for step-by-step processes, mind maps for idea expansion, concept maps for labeled relationships, ERDs for database/entity relationships, Sankey diagrams for flows of money/data/energy, taxonomies for classification, and ontologies for formal concept maps.
 - Place each diagram block immediately after the section where it helps the reader understand the article. Do not group diagrams at the bottom.

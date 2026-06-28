@@ -32,6 +32,22 @@ function cleanRenderedHtml(renderedElement?: HTMLElement | null, fallbackOutput 
     if (!image.getAttribute("alt")) image.setAttribute("alt", "Generated blog image");
   });
 
+  wrapper.querySelectorAll("[data-abc-diagram]").forEach((diagram) => {
+  diagram.removeAttribute("class");
+  diagram.setAttribute(
+    "style",
+    "margin:28px 0;overflow-x:auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:18px;padding:16px;"
+  );
+});
+
+wrapper.querySelectorAll("svg").forEach((svg) => {
+  svg.removeAttribute("class");
+  svg.setAttribute(
+    "style",
+    "max-width:100%;height:auto;display:block;background:#ffffff;"
+  );
+});
+
   wrapper.querySelectorAll("a").forEach((link) => {
     link.setAttribute("target", "_blank");
     link.setAttribute("rel", "noopener noreferrer");
@@ -59,7 +75,7 @@ export function downloadHtmlOutput(
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>${htmlEscape(title)}</title>
   <style>
-    body { font-family: Arial, Helvetica, sans-serif; line-height: 1.7; color: #111827; background: #ffffff; max-width: 860px; margin: 0 auto; padding: 40px 24px; }
+    body { font-family: Arial, Helvetica, sans-serif; line-height: 1.7; color: #111827; background: #ffffff; max-width: 980px; margin: 0 auto; padding: 40px 24px; }
     h1, h2, h3 { line-height: 1.25; color: #050505; }
     h1 { font-size: 2.2rem; margin: 0 0 1rem; }
     h2 { font-size: 1.55rem; margin-top: 2rem; }
@@ -70,6 +86,8 @@ export function downloadHtmlOutput(
     th { background: #f3f0ff; }
     blockquote { border-left: 4px solid #7c3aed; margin: 1.25rem 0; padding: 0.75rem 1rem; background: #f5f3ff; }
     img { max-width: 100%; height: auto; border-radius: 12px; margin: 18px 0; display: block; }
+    svg { max-width: 100%; height: auto; display: block; background: #ffffff; }
+[data-abc-diagram] { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 18px; padding: 16px; margin: 28px 0; overflow-x: auto; }
   </style>
 </head>
 <body>
