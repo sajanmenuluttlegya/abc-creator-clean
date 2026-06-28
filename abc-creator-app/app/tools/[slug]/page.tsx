@@ -6,19 +6,11 @@ import { ToolCategorySidebar } from "@/components/ToolCategorySidebar";
 import { ToolFormRenderer } from "@/components/ToolFormRenderer";
 import { ThemeIcon } from "@/components/ThemeIcon";
 import { getToolBySlug } from "@/lib/tools/public-tools";
-import { useEffect, useState } from "react";
 
 export default function DynamicToolPage() {
   const params = useParams();
   const slug = params?.slug as string;
-  const [tool, setTool] = useState(getToolBySlug(slug));
-
-  useEffect(() => {
-    if (slug) {
-      const foundTool = getToolBySlug(slug);
-      setTool(foundTool);
-    }
-  }, [slug]);
+  const tool = getToolBySlug(slug);
 
   if (!tool) {
     return (
