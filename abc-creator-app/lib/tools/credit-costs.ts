@@ -7,6 +7,7 @@ export type CreditEstimate = {
 };
 
 export const IMAGE_CREDITS_PER_IMAGE = 23;
+export const IMAGE_EDIT_CREDITS = 30;
 
 export const IMAGE_GENERATION_TOOL_SLUGS = [
   "blog-content",
@@ -86,6 +87,10 @@ export function calculateImageGenerationCredits(imageCount: number) {
   return safeCount * IMAGE_CREDITS_PER_IMAGE;
 }
 
+export function calculateImageEditCredits() {
+  return IMAGE_EDIT_CREDITS;
+}
+
 export function calculateToolCreditCost(toolSlug: string, inputs: ToolInputs = {}): number {
   switch (toolSlug) {
     case "blog-topic-ideas":
@@ -101,8 +106,8 @@ export function calculateToolCreditCost(toolSlug: string, inputs: ToolInputs = {
       if (yes(inputs.include_list)) credits += 3;
       if (yes(inputs.include_key_takeaways)) credits += 2;
       if (yes(inputs.include_faq)) credits += 3;
-      if (includes(inputs.image_brief_mode, "Hero image brief only")) credits += 3;
-      if (includes(inputs.image_brief_mode, "Hero + section image briefs")) credits += 8;
+      if (includes(inputs.image_brief_mode, "Hero image brief only") || includes(inputs.image_brief_mode, "Hero image only")) credits += 3;
+      if (includes(inputs.image_brief_mode, "Hero + section image briefs") || includes(inputs.image_brief_mode, "Hero + section images")) credits += 8;
       return credits;
     }
     case "pro-image-brief-for-blog": {
