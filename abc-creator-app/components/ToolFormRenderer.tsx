@@ -255,7 +255,14 @@ Get more credits: /pricing`
         {showEditableOutline ? (
           <EditableBlogOutlinePanel output={output} inputs={formData} />
         ) : (
-          <OutputPanel isLoading={isLoading} output={output} recommendedNextActions={tool.nextActions} downloadFileBaseName={`${tool.slug}-output`} />
+          <OutputPanel
+            isLoading={isLoading}
+            output={output}
+            recommendedNextActions={tool.nextActions}
+            downloadFileBaseName={`${tool.slug}-output`}
+            toolSlug={tool.slug}
+            inputs={formData}
+          />
         )}
         {canGenerateImages ? <ImageGenerationPanel toolSlug={tool.slug} inputs={formData} sourceText={output} /> : null}
       </div>
