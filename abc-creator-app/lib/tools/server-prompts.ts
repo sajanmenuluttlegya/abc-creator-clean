@@ -73,7 +73,7 @@ export const serverPrompts: Record<string, ServerPrompt> = {
       { id: "include_list", label: "Include list section", required: true, minLength: 2, maxLength: 8 },
       { id: "include_table", label: "Include table section", required: true, minLength: 2, maxLength: 8 },
       { id: "include_faq", label: "Include FAQ section", required: true, minLength: 2, maxLength: 8 },
-      { id: "image_brief_mode", label: "Image briefs", required: true, minLength: 2, maxLength: 120 },
+      { id: "image_brief_mode", label: "Images", required: true, minLength: 2, maxLength: 120 },
       { id: "brand_or_context", label: "Brand / extra context", required: false, maxLength: 4000 },
     ],
     system: `You are ABC Creator's premium Blog Content specialist. Create polished, publication-ready long-form blog articles from the user's approved outline and settings.
@@ -88,12 +88,16 @@ Blog Content Premium rules:
 - If the user asks for a list section, include one useful numbered or bulleted list in the most relevant section.
 - If the user asks for a table section, include one clean Markdown table where it adds value.
 - If the user asks for FAQs, include concise FAQs near the end.
-- If image briefs are requested, create text-only image placement briefs, prompts, alt text, and captions. Do not claim images were generated.
+- Do not include a "Verify Before Publishing Notes" section, "Verify before publishing" section, "Final On-Page SEO Checklist" section, SEO checklist, publisher notes, or final verification notes.
+- Do not include a separate bottom "Optional Image Briefs" section.
+- If images are requested, insert each image prompt as its own inline Markdown block at the most relevant article position, directly after the paragraph or H2/H3 section it belongs to. The hero image must appear near the top after the intro. Section images must appear between relevant blog sections, not grouped at the bottom.
+- Each inline image block must use this exact structure so the page can attach a Generate Image button: "### Image 1: Hero Image" or "### Image 2: Section Image for <section title>", then "Placement:", "Prompt:", "Alt Text:", and "Caption:".
+- The image block is only the prompt/metadata. Do not claim the image was generated inside the article text.
 - Do not include audio options or audio generation suggestions.
 - Do not claim live Google search, realtime information, competitor insights, charts, graphs, SEO scores, or keyword volumes unless the user supplied the data.
-- If a graph would help but no data is supplied, suggest the graph concept as an optional editorial asset and clearly mark it as a suggestion, not generated data.`,
+- If a graph would help but no data is supplied, mention it only as an image prompt inside a relevant inline Image block, not as generated data.`,
     outputGuide:
-      "Return a premium Markdown blog article package. Structure it as: 1) SEO Title, 2) Meta Description, 3) Suggested URL Slug, 4) Full Blog Article with H1, intro hook, H2/H3 sections, natural examples, requested list/table/takeaways/FAQ sections, and conclusion, 5) Optional Image Briefs only if requested, with placement, prompt, alt text, and caption, 6) Final On-Page SEO Checklist, 7) Verify Before Publishing notes. Keep it professional and ready to copy. Do not say that images, graphs, live search, or competitor insights were generated.",
+      "Return only the usable Markdown blog post. Include SEO Title, Meta Description, Suggested URL Slug, then the Full Blog Article with H1, intro hook, H2/H3 sections, requested list/table/takeaways/FAQ sections, and conclusion. If images are requested, place each Image block inline at the most relevant point inside the article using the exact Image structure described in the system rules. Do not add Verify Before Publishing Notes, Final On-Page SEO Checklist, publisher notes, or any final SEO checklist.",
   },
   "pro-image-brief-for-blog": {
     creditCost: 5,
@@ -115,7 +119,7 @@ Blog Content Premium rules:
 ${commonGenerationRules}
 
 Pro Image Brief rules:
-- The main generation output for this tool is a text-only image plan. Actual images, when enabled, are generated separately through the Generate Images panel after this output appears.
+- The main generation output for this tool is a text-only image plan. Actual images, when enabled, are generated separately through inline Generate Image buttons after this output appears.
 - Build a premium editorial image plan from the blog topic, outline/article, style, ratio, image plan, image count guidance, and brand context.
 - Only include avoidance prompts, alt text, captions, and placement notes when the user selected Yes for those options.
 - Keep prompts usable for future image-generation providers, but do not mention provider names, keys, routing, or backend details.
@@ -124,7 +128,7 @@ Pro Image Brief rules:
 - Include accessibility-minded alt text when requested.
 - Do not include audio options or audio generation suggestions.`,
     outputGuide:
-      "Return a premium Markdown image brief package. Include: 1) Visual Strategy Overview, 2) Recommended Image Count, 3) Hero Image Brief, 4) Section Image Briefs according to the selected image plan, 5) Style Consistency Guide, 6) Optional Avoidance Prompts only if requested, 7) Optional Alt Text only if requested, 8) Optional Captions only if requested, 9) Optional Placement Notes only if requested, 10) Final Production Notes. Clearly state these are text-only briefs/prompts; actual image generation is handled separately through the page's Generate Images panel when available.",
+      "Return a premium Markdown image prompt package. Include: 1) Visual Strategy Overview, 2) Recommended Image Count, 3) Hero Image Brief, 4) Section Image Briefs according to the selected image plan, 5) Style Consistency Guide, 6) Optional Avoidance Prompts only if requested, 7) Optional Alt Text only if requested, 8) Optional Captions only if requested, 9) Optional Placement Notes only if requested, 10) Final Production Notes. Clearly state these are text-only prompts; actual image generation is handled through inline Generate Image buttons when available.",
   },
   "blog-seo-pack": {
     creditCost: 5,
