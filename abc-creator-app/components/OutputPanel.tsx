@@ -108,6 +108,47 @@ const markdownComponents: Components = {
   ),
 };
 
+function isRemovedBlogSectionHeading(line: string) {
+  const normalized = line
+    .replace(/^#{1,6}\s*/, "")
+    .replace(/^\d+[.)]\s*/, "")
+    .replace(/[*_`]/g, "")
+    .replace(/:$/, "")
+    .trim()
+    .toLowerCase();
+
+  return (
+    normalized === "verify before publishing notes" ||
+    normalized === "verify before publishing" ||
+    normalized === "final on-page seo checklist" ||
+    normalized === "on-page seo checklist" ||
+    normalized === "final seo checklist" ||
+    normalized === "publisher notes"
+  );
+}
+
+function cleanOutputForDisplay(value: string) {
+  const lines = value.replace(/\r\n/g, "\n").split("\n");
+  const kept: string[] = [];
+  let skipping = false;
+
+  for (const line of lines) {
+    if (/^#{1,6}\s+/.test(line.trim()) && isRemovedBlogSectionHeading(line)) {
+      skipping = true;
+      continue;
+    }
+
+    if (skipping && /^#{1,3}\s+/.test(line.trim())) {
+      if (isRemovedBlogSectionHeading(line)) continue;
+      skipping = false;
+    }
+
+    if (!skipping) kept.push(line);
+  }
+
+  return kept.join("\n").replace(/\n{4,}/g, "\n\n\n").trim();
+}
+
 export function OutputPanel({
   isLoading,
   output,
@@ -120,16 +161,17 @@ export function OutputPanel({
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState("");
   const exportContentRef = useRef<HTMLDivElement | null>(null);
-  const hasOutput = Boolean(output.trim());
+  const displayOutput = useMemo(() => cleanOutputForDisplay(output), [output]);
+  const hasOutput = Boolean(displayOutput.trim());
   const isStreamingVisible = isLoading && hasOutput;
-  const isErrorOutput = /^(error:|not enough credits)/i.test(output.trim());
+  const isErrorOutput = /^(error:|not enough credits)/i.test(displayOutput.trim());
   const showNextActions =
     hasOutput && !isLoading && !isErrorOutput && recommendedNextActions.length > 0;
-  const outputSegments = useMemo(() => splitOutputIntoImageSegments(output), [output]);
+  const outputSegments = useMemo(() => splitOutputIntoImageSegments(displayOutput), [displayOutput]);
 
   const fallbackCopy = () => {
     const textarea = document.createElement("textarea");
-    textarea.value = output;
+    textarea.value = displayOutput;
     textarea.setAttribute("readonly", "true");
     textarea.style.position = "fixed";
     textarea.style.left = "-9999px";
@@ -142,10 +184,10 @@ export function OutputPanel({
   };
 
   const copyOutput = async () => {
-    if (!output) return;
+    if (!displayOutput) return;
 
     try {
-      if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(output);
+      if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(displayOutput);
       else fallbackCopy();
 
       setCopied(true);
@@ -178,7 +220,7 @@ export function OutputPanel({
 
     const outputField = document.createElement("textarea");
     outputField.name = "output";
-    outputField.value = output;
+    outputField.value = displayOutput;
     form.appendChild(outputField);
 
     const fileNameField = document.createElement("input");
@@ -195,14 +237,14 @@ export function OutputPanel({
   };
 
   const handleDownload = async (format: OutputPanelDownloadFormat) => {
-    if (!format || !output || isDownloading) return;
+    if (!format || !displayOutput || isDownloading) return;
 
     setIsDownloading(true);
     setDownloadError("");
 
     try {
       if (format === "html") {
-        downloadHtmlOutput(output, downloadFileBaseName, exportContentRef.current);
+        downloadHtmlOutput(displayOutput, downloadFileBaseName, exportContentRef.current);
         setIsDownloading(false);
         return;
       }
@@ -215,7 +257,7 @@ export function OutputPanel({
 
       await downloadOutput(
         format,
-        output,
+        displayOutput,
         downloadFileBaseName,
         exportContentRef.current
       );
@@ -251,7 +293,7 @@ export function OutputPanel({
           ) : null}
         </div>
 
-        {output ? (
+        {hasOutput ? (
           <div className="flex flex-wrap items-center gap-3">
             <button
               type="button"
@@ -298,7 +340,7 @@ export function OutputPanel({
         </div>
       ) : null}
 
-      {output ? (
+      {hasOutput ? (
         <>
           <div ref={exportContentRef} className="creator-output-scroll max-h-[78vh] overflow-y-auto overflow-x-hidden rounded-2xl border border-purple-500/15 bg-black/70 p-6 text-gray-200">
             {outputSegments.map((segment) =>
