@@ -11,12 +11,17 @@ import {
   type OutputDownloadFormat,
 } from "@/lib/download/exportDocuments";
 import { downloadHtmlOutput } from "@/lib/download/exportHtml";
+import { DiagramRenderer, parseDiagramSpec, type DiagramSpec } from "./diagrams/DiagramRenderer";
 import {
   InlineImageBlock,
   splitOutputIntoImageSegments,
 } from "./InlineImageBlocks";
 
 type OutputPanelDownloadFormat = OutputDownloadFormat | "html";
+
+type MarkdownDiagramSegment =
+  | { type: "markdown"; content: string; id: string }
+  | { type: "diagram"; id: string; spec: DiagramSpec | null };
 
 interface OutputPanelProps {
   isLoading: boolean;
@@ -147,6 +152,54 @@ function cleanOutputForDisplay(value: string) {
   }
 
   return kept.join("\n").replace(/\n{4,}/g, "\n\n\n").trim();
+}
+
+function splitMarkdownIntoDiagramSegments(markdown: string, prefix: string): MarkdownDiagramSegment[] {
+  const segments: MarkdownDiagramSegment[] = [];
+  const pattern = /```abc-diagram\s*([\s\S]*?)```/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  let index = 0;
+
+  while ((match = pattern.exec(markdown)) !== null) {
+    const before = markdown.slice(lastIndex, match.index).trim();
+    if (before) segments.push({ type: "markdown", content: before, id: `${prefix}-markdown-${index}` });
+
+    index += 1;
+    segments.push({ type: "diagram", id: `${prefix}-diagram-${index}`, spec: parseDiagramSpec(match[1]) });
+    lastIndex = match.index + match[0].length;
+  }
+
+  const after = markdown.slice(lastIndex).trim();
+  if (after) segments.push({ type: "markdown", content: after, id: `${prefix}-markdown-${index + 1}` });
+
+  return segments.length ? segments : [{ type: "markdown", content: markdown, id: `${prefix}-markdown-1` }];
+}
+
+function renderMarkdownWithDiagrams(markdown: string, prefix: string) {
+  return splitMarkdownIntoDiagramSegments(markdown, prefix).map((segment) => {
+    if (segment.type === "diagram") {
+      if (!segment.spec) {
+        return (
+          <div key={segment.id} className="my-5 rounded-2xl border border-red-400/25 bg-red-500/10 p-4 text-sm text-red-100">
+            Diagram could not be rendered because the structured diagram block was invalid.
+          </div>
+        );
+      }
+
+      return <DiagramRenderer key={segment.id} spec={segment.spec} />;
+    }
+
+    return (
+      <ReactMarkdown
+        key={segment.id}
+        remarkPlugins={[remarkGfm]}
+        components={markdownComponents}
+      >
+        {segment.content}
+      </ReactMarkdown>
+    );
+  });
 }
 
 export function OutputPanel({
@@ -354,13 +407,7 @@ export function OutputPanel({
                   inputs={inputs}
                 />
               ) : (
-                <ReactMarkdown
-                  key={segment.id}
-                  remarkPlugins={[remarkGfm]}
-                  components={markdownComponents}
-                >
-                  {segment.content}
-                </ReactMarkdown>
+                <div key={segment.id}>{renderMarkdownWithDiagrams(segment.content, segment.id)}</div>
               )
             )}
 
