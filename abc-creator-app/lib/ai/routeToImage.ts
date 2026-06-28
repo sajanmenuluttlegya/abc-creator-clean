@@ -64,9 +64,14 @@ function normalizeGeminiModelName(model: string) {
 }
 
 function getGeminiApiKeys() {
-  return unique([
+  const proKeys = unique([
     ...numberedEnv("GEMINI_PRO_API_KEY", 2),
     env("GEMINI_PRO_API_KEY"),
+  ]);
+
+  if (proKeys.length) return proKeys;
+
+  return unique([
     env("GEMINI_API_KEY"),
     ...numberedEnv("GEMINI_API_KEY", 5),
     env("GOOGLE_API_KEY"),
@@ -139,7 +144,7 @@ function findBase64Image(value: unknown): { data: string; mimeType: string } | n
       ? record.mime_type
       : typeof record.mimeType === "string"
         ? record.mimeType
-        : "image/png";
+        : "image/jpeg";
 
   if (typeof record.b64_json === "string" && record.b64_json.length > 200) {
     return { data: record.b64_json, mimeType };
@@ -246,7 +251,7 @@ async function callGeminiNativeImage(
             input,
             response_format: {
               type: "image",
-              mime_type: "image/png",
+              mime_type: "image/jpeg",
               aspect_ratio: ratio,
               image_size: "1K",
             },
