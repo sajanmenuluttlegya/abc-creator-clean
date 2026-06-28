@@ -14,6 +14,7 @@ export type ImageGenerationRequest = {
   count: number;
   toolSlug: string;
   sourceText?: string;
+  sourceImageDataUrl?: string;
   inputs?: Record<string, string>;
 };
 
@@ -24,6 +25,12 @@ type ImageProviderResult = {
   model: string;
   images: GeneratedImage[];
 };
+
+type ImageProviderCall = (
+  prompt: string,
+  aspectRatio: string,
+  sourceImageDataUrl?: string
+) => Promise<ProviderImage | null>;
 
 function env(name: string, fallback = "") {
   return process.env[name] || fallback;
@@ -36,6 +43,24 @@ function getKeys(prefix: string, count: number) {
 
   const unnumbered = env(prefix);
   return unnumbered ? [unnumbered, ...numbered] : numbered;
+}
+
+function unique(values: string[]) {
+  return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
+}
+
+function getGeminiImageModels() {
+  const configured = env("GEMINI_IMAGE_MODEL")
+    .split(",")
+    .map((model) => model.trim())
+    .filter(Boolean);
+
+  return unique([
+    ...configured,
+    "gemini-3.1-flash-image",
+    "gemini-2.5-flash-image",
+    "gemini-3-pro-image",
+  ]);
 }
 
 function safeTruncate(value: string | undefined, maxLength: number) {
@@ -71,6 +96,17 @@ function ratioToSize(aspectRatio: string) {
 function imageToDataUrl(data: string, mimeType = "image/png") {
   if (data.startsWith("data:")) return data;
   return `data:${mimeType};base64,${data}`;
+}
+
+function dataUrlToGeminiImagePart(dataUrl: string | undefined) {
+  if (!dataUrl?.startsWith("data:")) return null;
+  const match = dataUrl.match(/^data:([^;,]+);base64,(.+)$/);
+  if (!match) return null;
+  return {
+    type: "image",
+    mime_type: match[1] || "image/png",
+    data: match[2],
+  };
 }
 
 function findBase64Image(value: unknown): { data: string; mimeType: string } | null {
@@ -148,6 +184,16 @@ async function urlToDataUrl(url: string) {
   return imageToDataUrl(buffer.toString("base64"), contentType);
 }
 
+async function responseErrorDetails(response: Response) {
+  try {
+    const text = await response.text();
+    if (!text) return "";
+    return text.slice(0, 500);
+  } catch {
+    return "";
+  }
+}
+
 function buildImagePrompt(request: ImageGenerationRequest, imageIndex: number) {
   const ratio = normalizeAspectRatio(request.aspectRatio);
   const inputs = request.inputs || {};
@@ -171,61 +217,73 @@ Source article or image brief:
 ${sourceText}
 
 Production rules:
-- Create a polished, professional, publish-ready blog image.
+- Create a polished, professional, publish-ready blog image for this exact placement in the article.
 - Prefer clean composition, strong visual hierarchy, and premium editorial quality.
 - Do not include watermarks, fake logos, protected brand marks, copyrighted characters, or public-figure likenesses.
 - Avoid tiny unreadable text. If text is needed, keep it minimal and highly legible.
 - Output the image only.`;
 }
 
-async function callGeminiImage(prompt: string, aspectRatio: string): Promise<ProviderImage | null> {
+async function callGeminiImage(
+  prompt: string,
+  aspectRatio: string,
+  sourceImageDataUrl?: string
+): Promise<ProviderImage | null> {
   const keys = getKeys("GEMINI_API_KEY", 5);
   if (!keys.length) return null;
 
-  const model = env("GEMINI_IMAGE_MODEL", "gemini-3.1-flash-image");
   const ratio = normalizeAspectRatio(aspectRatio);
+  const models = getGeminiImageModels();
+  const sourceImagePart = dataUrlToGeminiImagePart(sourceImageDataUrl);
   const errors: string[] = [];
 
   for (const apiKey of keys) {
-    try {
-      const response = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
-        method: "POST",
-        headers: {
-          "x-goog-api-key": apiKey,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model,
-          input: [{ type: "text", text: prompt }],
-          response_format: {
-            type: "image",
-            mime_type: "image/png",
-            aspect_ratio: ratio,
+    for (const model of models) {
+      try {
+        const input = sourceImagePart
+          ? [{ type: "text", text: prompt }, sourceImagePart]
+          : [{ type: "text", text: prompt }];
+
+        const response = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
+          method: "POST",
+          headers: {
+            "x-goog-api-key": apiKey,
+            "Content-Type": "application/json",
           },
-        }),
-      });
+          body: JSON.stringify({
+            model,
+            input,
+            response_format: {
+              type: "image",
+              mime_type: "image/png",
+              aspect_ratio: ratio,
+            },
+          }),
+        });
 
-      if (!response.ok) {
-        errors.push(`Gemini HTTP ${response.status}`);
-        continue;
+        if (!response.ok) {
+          const details = await responseErrorDetails(response);
+          errors.push(`Gemini ${model} HTTP ${response.status}${details ? `: ${details}` : ""}`);
+          continue;
+        }
+
+        const json = await response.json();
+        const found = findBase64Image(json);
+
+        if (!found) {
+          errors.push(`Gemini ${model} response did not include image data.`);
+          continue;
+        }
+
+        return {
+          dataUrl: imageToDataUrl(found.data, found.mimeType),
+          mimeType: found.mimeType,
+          provider: "gemini",
+          model,
+        };
+      } catch (error) {
+        errors.push(`Gemini ${model}: ${error instanceof Error ? error.message : String(error)}`);
       }
-
-      const json = await response.json();
-      const found = findBase64Image(json);
-
-      if (!found) {
-        errors.push("Gemini response did not include image data.");
-        continue;
-      }
-
-      return {
-        dataUrl: imageToDataUrl(found.data, found.mimeType),
-        mimeType: found.mimeType,
-        provider: "gemini",
-        model,
-      };
-    } catch (error) {
-      errors.push(error instanceof Error ? error.message : String(error));
     }
   }
 
@@ -255,7 +313,8 @@ async function callFalImage(prompt: string, aspectRatio: string): Promise<Provid
   });
 
   if (!response.ok) {
-    throw new Error(`fal HTTP ${response.status}`);
+    const details = await responseErrorDetails(response);
+    throw new Error(`fal HTTP ${response.status}${details ? `: ${details}` : ""}`);
   }
 
   const json = await response.json();
@@ -314,7 +373,8 @@ async function callHuggingFaceImage(
   );
 
   if (!response.ok) {
-    throw new Error(`Hugging Face HTTP ${response.status}`);
+    const details = await responseErrorDetails(response);
+    throw new Error(`Hugging Face HTTP ${response.status}${details ? `: ${details}` : ""}`);
   }
 
   const contentType = response.headers.get("content-type") || "image/png";
@@ -348,7 +408,7 @@ export async function routeToImage(
   const count = Math.min(Math.max(Math.floor(request.count || 1), 1), 7);
   const providerFailures: string[] = [];
 
-  const providers = [
+  const providers: Array<{ name: string; call: ImageProviderCall }> = [
     { name: "gemini", call: callGeminiImage },
     { name: "fal", call: callFalImage },
     { name: "huggingface", call: callHuggingFaceImage },
@@ -360,7 +420,7 @@ export async function routeToImage(
 
       for (let index = 1; index <= count; index++) {
         const prompt = buildImagePrompt(request, index);
-        const image = await provider.call(prompt, request.aspectRatio);
+        const image = await provider.call(prompt, request.aspectRatio, request.sourceImageDataUrl);
 
         if (!image) {
           throw new Error(`${provider.name} is not configured.`);
