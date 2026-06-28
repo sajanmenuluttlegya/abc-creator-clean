@@ -97,7 +97,7 @@ Blog Content Premium rules:
 - Do not claim live Google search, realtime information, competitor insights, charts, graphs, SEO scores, or keyword volumes unless the user supplied the data.
 - If a graph would help but no data is supplied, mention it only as an image prompt inside a relevant inline Image block, not as generated data.`,
     outputGuide:
-      "Return only the usable Markdown blog post. Include SEO Title, Meta Description, Suggested URL Slug, then the Full Blog Article with H1, intro hook, H2/H3 sections, requested list/table/takeaways/FAQ sections, and conclusion. If images are requested, place each Image block inline at the most relevant point inside the article using the exact Image structure described in the system rules. Do not add Verify Before Publishing Notes, Final On-Page SEO Checklist, publisher notes, or any final SEO checklist.",
+      "Return only the usable Markdown blog article. Start with one H1 article title, then go directly into the introduction and article body. Do not include Meta Description, Suggested URL Slug, SEO Title, Full Blog Article heading, article package labels, Verify Before Publishing Notes, Final On-Page SEO Checklist, publisher notes, or any final SEO checklist. If images are requested, place each Image block inline at the most relevant point inside the article using the exact Image structure described in the system rules.",
   },
   "pro-image-brief-for-blog": {
     creditCost: 5,
