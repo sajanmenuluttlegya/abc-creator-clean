@@ -365,22 +365,20 @@ function buildImagePrompt(request: ImageGenerationRequest, imageIndex: number) {
   const title = compactSentence(inputs.title || inputs.blog_topic || inputs.blog_title || "blog article", 160);
   const visualStyle = compactSentence(inputs.visual_style || inputs.image_brief_mode || "Auto premium editorial", 90);
   const visualMode = compactSentence(inputs.visual_mode || "Auto-smart", 70);
-  const chartPreference = compactSentence(inputs.chart_preference || "Auto", 90);
   const brandContext = compactSentence(inputs.brand_or_context || "not supplied", 220);
   const userPrompt = compactParagraphs(request.prompt, 900);
   const sourceText = compactParagraphs(request.sourceText, 450);
 
   return [
-    "Create one premium blog image.",
+    "Create one premium blog illustration image.",
     "",
     "Context",
     `- Tool: ${request.toolSlug}`,
     `- Image number: ${imageIndex}`,
     `- Topic: ${title}`,
     `- Aspect ratio: ${ratio}`,
-    `- Style: ${visualStyle}`,
-    `- Visual mode: ${visualMode}`,
-    `- Graph/chart preference: ${chartPreference}`,
+    `- Illustration style: ${visualStyle}`,
+    `- Visual mood: ${visualMode}`,
     `- Brand context: ${brandContext}`,
     "",
     "Image brief",
@@ -389,12 +387,11 @@ function buildImagePrompt(request: ImageGenerationRequest, imageIndex: number) {
     "Article context",
     sourceText || "not supplied",
     "",
-    "Visual rules",
-    "- Premium, polished, clean, publish-ready.",
-    "- Prefer theme-aware charts, graphs, dashboards, data visualizations, circular/radial graphs, polygon/radar charts, sankey-style flows, network maps, and infographic compositions over plain box-flow illustrations.",
-    "- Use the strongest visual type for the section; avoid generic stock art.",
-    "- Avoid cramped boxes, tiny labels, low-information pipeline cards, and cheap illustration styles.",
-    "- Keep any text minimal, large, and readable.",
+    "Image-only rules",
+    "- Create a premium editorial illustration, photo-real scene, cinematic concept image, 3D render, abstract artwork, or visual metaphor for this exact article placement.",
+    "- Do not create coded diagrams, charts, graphs, dashboards, sankeys, radar charts, node maps, or flowcharts in the image; those are rendered separately by the app's code-based diagram renderer.",
+    "- Avoid infographic text, tiny labels, UI mockups full of unreadable text, and plain box-flow visuals.",
+    "- Keep any unavoidable text minimal, large, and readable.",
     "- Must still look strong when exported onto a white background.",
     "- No watermarks, fake logos, protected brand marks, copyrighted characters, or public-figure likenesses.",
     "- Output image only.",
