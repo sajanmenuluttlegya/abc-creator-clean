@@ -83,21 +83,27 @@ ${commonGenerationRules}
 Blog Content Premium rules:
 - Treat the user's outline as the source structure. Preserve the intended H2/H3 flow unless it clearly needs minor polish.
 - Respect voice, tone, audience, language, selected target word-count range, words per section, and article depth.
+- Make the article feel genuinely researched and editorially premium: define terms clearly, explain mechanisms, compare alternatives, include frameworks, decision criteria, examples, caveats, and practical takeaways.
 - Use SEO keywords naturally. Do not keyword-stuff.
 - If the user asks for key takeaways, include them near the top after the introduction.
 - If the user asks for a list section, include one useful numbered or bulleted list in the most relevant section.
 - If the user asks for a table section, include one clean Markdown table where it adds value.
-- If the user asks for FAQs, include concise FAQs near the end.
-- Do not include a "Verify Before Publishing Notes" section, "Verify before publishing" section, "Final On-Page SEO Checklist" section, SEO checklist, publisher notes, or final verification notes.
-- Do not include a separate bottom "Optional Image Briefs" section.
-- If images are requested, insert each image prompt as its own inline Markdown block at the most relevant article position, directly after the paragraph or H2/H3 section it belongs to. The hero image must appear near the top after the intro. Section images must appear between relevant blog sections, not grouped at the bottom.
+- Add premium visual intelligence throughout the article. Where relevant, include inline visual blocks that specify exactly what a professional designer, diagram tool, or image model should create and where it belongs.
+- Choose the visual type based on the topic, not randomly. Use lineage graphs for evolution/history, data lineage for data pipelines, knowledge graphs for entities and relationships, graph visualizations or node-link diagrams for connected systems, dependency graphs for dependencies, DAGs for one-way workflows, tree diagrams and hierarchy charts for parent-child structures, flowcharts for step-by-step processes, mind maps for idea expansion, concept maps for labeled relationships, ERDs for database/entity relationships, Sankey diagrams for flows of money/data/energy, taxonomies for classification, and ontologies for formal concept maps.
+- Place each visual block immediately after the section where it helps the reader understand the article. Do not group visual suggestions at the bottom.
+- Each visual block must use this exact Markdown structure: "### Visual: <descriptive title>", then "Type:", "Placement:", "Purpose:", "What to show:", "Labels/Data needed:", "Alt Text:", and "Caption:".
+- Visual blocks may describe graphs, diagrams, or charts, but must not invent exact numbers, live data, market share, search volume, analytics, or citations. If data is needed but not supplied, write placeholders such as "Use verified data from [source]" or "Replace with supplied dataset".
+- If the selected Images option requests images, insert image prompts as inline Markdown blocks at the most relevant article positions. The hero image must appear near the top after the intro. Section images must appear between relevant blog sections, not grouped at the bottom.
 - Each inline image block must use this exact structure so the page can attach a Generate Image button: "### Image 1: Hero Image" or "### Image 2: Section Image for <section title>", then "Placement:", "Prompt:", "Alt Text:", and "Caption:".
 - The image block is only the prompt/metadata. Do not claim the image was generated inside the article text.
+- Use visual blocks and image blocks only when they are relevant and premium. Avoid filler visuals.
 - Do not include audio options or audio generation suggestions.
-- Do not claim live Google search, realtime information, competitor insights, charts, graphs, SEO scores, or keyword volumes unless the user supplied the data.
-- If a graph would help but no data is supplied, mention it only as an image prompt inside a relevant inline Image block, not as generated data.`,
+- Do not include a "Verify Before Publishing Notes" section, "Verify before publishing" section, "Final On-Page SEO Checklist" section, SEO checklist, publisher notes, or final verification notes.
+- Do not include a separate bottom "Optional Image Briefs" section.
+- Do not claim live Google search, realtime information, competitor insights, charts, graphs, SEO scores, keyword volumes, or external citations unless the user supplied the data.
+- If a graph would help but no data is supplied, include it as a Visual block with placeholders for verified data, not as a fabricated finished graph.",
     outputGuide:
-      "Return only the usable Markdown blog article. Start with one H1 article title, then go directly into the introduction and article body. Do not include Meta Description, Suggested URL Slug, SEO Title, Full Blog Article heading, article package labels, Verify Before Publishing Notes, Final On-Page SEO Checklist, publisher notes, or any final SEO checklist. If images are requested, place each Image block inline at the most relevant point inside the article using the exact Image structure described in the system rules.",
+      "Return only the usable Markdown blog article. Start with one H1 article title, then go directly into the introduction and article body. Make the article feel premium, researched, practical, and publication-ready. Add relevant inline Visual blocks in the most useful article positions using the exact Visual structure from the system rules. If images are requested, also place Image blocks inline at the most relevant point using the exact Image structure. Do not include Meta Description, Suggested URL Slug, SEO Title, Full Blog Article heading, article package labels, Verify Before Publishing Notes, Final On-Page SEO Checklist, publisher notes, or any final SEO checklist.",
   },
   "pro-image-brief-for-blog": {
     creditCost: 5,
