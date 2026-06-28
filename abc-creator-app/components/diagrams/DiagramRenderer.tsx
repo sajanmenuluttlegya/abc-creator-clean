@@ -27,26 +27,39 @@ type Node = { id: string; label: string; level?: number };
 type Edge = { from: string; to: string; label?: string };
 type ChartPoint = Node & { x: number; y: number; color: string; value: number };
 
+type DiagramMode = "screen" | "export";
+
 const font = "Inter, Arial, Helvetica, sans-serif";
 
 const colors = [
-  "#22d3ee",
-  "#a78bfa",
-  "#34d399",
-  "#f472b6",
-  "#fbbf24",
-  "#60a5fa",
-  "#fb7185",
-  "#4ade80",
+  "#0ea5e9",
+  "#8b5cf6",
+  "#10b981",
+  "#ec4899",
+  "#f59e0b",
+  "#3b82f6",
+  "#ef4444",
+  "#14b8a6",
 ];
 
-const diagramThemeStyle = {
+const screenTheme = {
   "--abc-diagram-bg": "#04040a",
   "--abc-diagram-panel": "rgba(15, 23, 42, 0.76)",
-  "--abc-diagram-grid": "rgba(148, 163, 184, 0.12)",
+  "--abc-diagram-grid": "rgba(148, 163, 184, 0.14)",
   "--abc-diagram-text": "#f8fafc",
   "--abc-diagram-muted": "#cbd5e1",
   "--abc-diagram-border": "rgba(168, 85, 247, 0.36)",
+  "--abc-diagram-soft-fill": "rgba(99,102,241,0.16)",
+} as CSSProperties;
+
+const exportTheme = {
+  "--abc-diagram-bg": "#ffffff",
+  "--abc-diagram-panel": "#ffffff",
+  "--abc-diagram-grid": "rgba(100, 116, 139, 0.18)",
+  "--abc-diagram-text": "#0f172a",
+  "--abc-diagram-muted": "#475569",
+  "--abc-diagram-border": "rgba(99, 102, 241, 0.24)",
+  "--abc-diagram-soft-fill": "rgba(99,102,241,0.10)",
 } as CSSProperties;
 
 function typeOfDiagram(value?: string) {
@@ -69,9 +82,45 @@ function typeOfDiagram(value?: string) {
   return type;
 }
 
+function chooseVisualFamily(type?: string) {
+  const normalized = typeOfDiagram(type);
+
+  if (
+    normalized === "knowledge-graph" ||
+    normalized === "node-link-diagram" ||
+    normalized === "graph-visualization" ||
+    normalized === "mind-map" ||
+    normalized === "concept-map" ||
+    normalized === "ontology"
+  ) {
+    return "radial-network";
+  }
+
+  if (
+    normalized === "taxonomy" ||
+    normalized === "hierarchy-chart" ||
+    normalized === "tree-diagram" ||
+    normalized === "lineage-graph" ||
+    normalized === "data-lineage" ||
+    normalized === "dependency-graph"
+  ) {
+    return "radar-polygon";
+  }
+
+  if (normalized === "sankey") return "sankey";
+  if (normalized === "erd") return "entity-cards";
+
+  return "premium-chart";
+}
+
 function text(value: unknown, fallback: string) {
   const result = String(value || "").trim();
   return result || fallback;
+}
+
+function safeLabel(value: string, max: number) {
+  const cleaned = value.replace(/\s+/g, " ").trim();
+  return cleaned.length > max ? `${cleaned.slice(0, Math.max(1, max - 1))}…` : cleaned;
 }
 
 function getEdges(spec: DiagramSpec): Edge[] {
@@ -163,18 +212,18 @@ function Grid({ width, height }: { width: number; height: number }) {
   );
 }
 
-function PremiumChart({ spec, radial = false }: { spec: DiagramSpec; radial?: boolean }) {
+function PremiumChart({ spec }: { spec: DiagramSpec }) {
   const nodes = getNodes(spec);
   const edges = getEdges(spec);
   const points = chartPoints(nodes);
   const width = 860;
-  const height = radial ? 420 : 360;
+  const height = 360;
   const baseline = height - 84;
   const pointById = new Map(points.map((point) => [point.id, point]));
-  const linePath = points
-    .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`)
-    .join(" ");
-  const areaPath = `${linePath} L ${points.at(-1)?.x || 75} ${baseline} L ${points[0]?.x || 75} ${baseline} Z`;
+  const linePath = points.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`).join(" ");
+  const firstPoint = points[0];
+  const lastPoint = points[points.length - 1] || firstPoint;
+  const areaPath = `${linePath} L ${lastPoint?.x || 75} ${baseline} L ${firstPoint?.x || 75} ${baseline} Z`;
 
   return (
     <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="auto" role="img" aria-label={spec.title || "Premium chart"} style={{ display: "block" }}>
@@ -185,12 +234,12 @@ function PremiumChart({ spec, radial = false }: { spec: DiagramSpec; radial?: bo
           <stop offset="100%" stopColor="#ec4899" stopOpacity="0.08" />
         </linearGradient>
         <linearGradient id="abcChartStroke" x1="0" x2="1" y1="0" y2="0">
-          <stop offset="0%" stopColor="#22d3ee" />
-          <stop offset="50%" stopColor="#a78bfa" />
-          <stop offset="100%" stopColor="#f472b6" />
+          <stop offset="0%" stopColor="#0ea5e9" />
+          <stop offset="50%" stopColor="#8b5cf6" />
+          <stop offset="100%" stopColor="#ec4899" />
         </linearGradient>
         <filter id="abcGlow" x="-30%" y="-30%" width="160%" height="160%">
-          <feGaussianBlur stdDeviation="5" result="blur" />
+          <feGaussianBlur stdDeviation="4" result="blur" />
           <feMerge>
             <feMergeNode in="blur" />
             <feMergeNode in="SourceGraphic" />
@@ -200,7 +249,6 @@ function PremiumChart({ spec, radial = false }: { spec: DiagramSpec; radial?: bo
 
       <rect x="1" y="1" width={width - 2} height={height - 2} rx="24" fill="var(--abc-diagram-bg)" stroke="var(--abc-diagram-border)" strokeWidth="1.2" />
       <Grid width={width} height={height} />
-
       <path d={areaPath} fill="url(#abcChartArea)" />
       <path d={linePath} fill="none" stroke="url(#abcChartStroke)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" filter="url(#abcGlow)" />
 
@@ -226,17 +274,109 @@ function PremiumChart({ spec, radial = false }: { spec: DiagramSpec; radial?: bo
         return (
           <g key={point.id}>
             <line x1={point.x} x2={point.x} y1={point.y + 10} y2={baseline} stroke={point.color} strokeOpacity="0.28" strokeWidth="7" strokeLinecap="round" />
-            <circle cx={point.x} cy={point.y} r="15" fill={point.color} fillOpacity="0.26" />
+            <circle cx={point.x} cy={point.y} r="15" fill={point.color} fillOpacity="0.24" />
             <circle cx={point.x} cy={point.y} r="8" fill={point.color} filter="url(#abcGlow)" />
             <text x={point.x} y={labelY} textAnchor="middle" fill="var(--abc-diagram-text)" fontFamily={font} fontSize="11" fontWeight="750">
-              {lines.map((line, lineIndex) => (
-                <tspan key={`${point.id}-${lineIndex}`} x={point.x} dy={lineIndex ? 13 : 0}>{line}</tspan>
-              ))}
+              {lines.map((line, lineIndex) => <tspan key={`${point.id}-${lineIndex}`} x={point.x} dy={lineIndex ? 13 : 0}>{line}</tspan>)}
             </text>
           </g>
         );
       })}
     </svg>
+  );
+}
+
+function RadarPolygon({ spec }: { spec: DiagramSpec }) {
+  const nodes = getNodes(spec).slice(0, 8);
+  const width = 860;
+  const height = 420;
+  const cx = width / 2;
+  const cy = height / 2;
+  const radius = 130;
+
+  const points = nodes.map((node, index) => {
+    const angle = -Math.PI / 2 + (Math.PI * 2 * index) / Math.max(nodes.length, 1);
+    const value = 0.55 + ((node.label.length * 17 + index * 13) % 35) / 100;
+    return {
+      ...node,
+      x: cx + Math.cos(angle) * radius * value,
+      y: cy + Math.sin(angle) * radius * value,
+      lx: cx + Math.cos(angle) * (radius + 54),
+      ly: cy + Math.sin(angle) * (radius + 54),
+      color: colors[index % colors.length],
+    };
+  });
+
+  const polygon = points.map((point) => `${point.x},${point.y}`).join(" ");
+
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="auto" role="img" aria-label={spec.title || "Polygon chart"} style={{ display: "block" }}>
+      <rect x="1" y="1" width={width - 2} height={height - 2} rx="24" fill="var(--abc-diagram-bg)" stroke="var(--abc-diagram-border)" strokeWidth="1.2" />
+      {[0.25, 0.5, 0.75, 1].map((item) => <circle key={item} cx={cx} cy={cy} r={radius * item} fill="none" stroke="var(--abc-diagram-grid)" strokeWidth="1" />)}
+      {points.map((point) => <line key={`axis-${point.id}`} x1={cx} y1={cy} x2={point.lx} y2={point.ly} stroke="var(--abc-diagram-grid)" strokeWidth="1" />)}
+      <polygon points={polygon} fill="var(--abc-diagram-soft-fill)" stroke="#8b5cf6" strokeWidth="3" />
+      {points.map((point) => (
+        <g key={point.id}>
+          <circle cx={point.x} cy={point.y} r="13" fill={point.color} fillOpacity="0.24" />
+          <circle cx={point.x} cy={point.y} r="7" fill={point.color} />
+          <text x={point.lx} y={point.ly} textAnchor="middle" fill="var(--abc-diagram-text)" fontFamily={font} fontSize="11" fontWeight="750">
+            {safeLabel(point.label, 18)}
+          </text>
+        </g>
+      ))}
+    </svg>
+  );
+}
+
+function RadialNetwork({ spec }: { spec: DiagramSpec }) {
+  const nodes = getNodes(spec).slice(0, 9);
+  const width = 860;
+  const height = 420;
+  const cx = width / 2;
+  const cy = height / 2;
+  const outer = 150;
+  const [core, ...rest] = nodes;
+
+  const positioned = [
+    { ...(core || { id: "core", label: spec.title || "Core" }), x: cx, y: cy, color: "#8b5cf6" },
+    ...rest.map((node, index) => {
+      const angle = -Math.PI / 2 + (Math.PI * 2 * index) / Math.max(rest.length, 1);
+      return {
+        ...node,
+        x: cx + Math.cos(angle) * outer,
+        y: cy + Math.sin(angle) * outer,
+        color: colors[index % colors.length],
+      };
+    }),
+  ];
+
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="auto" role="img" aria-label={spec.title || "Radial network"} style={{ display: "block" }}>
+      <rect x="1" y="1" width={width - 2} height={height - 2} rx="24" fill="var(--abc-diagram-bg)" stroke="var(--abc-diagram-border)" strokeWidth="1.2" />
+      <circle cx={cx} cy={cy} r={outer} fill="none" stroke="var(--abc-diagram-grid)" strokeWidth="1" />
+      {positioned.slice(1).map((node) => <line key={`edge-${node.id}`} x1={cx} y1={cy} x2={node.x} y2={node.y} stroke={node.color} strokeOpacity="0.38" strokeWidth="2.5" />)}
+      {positioned.map((node, index) => (
+        <g key={node.id}>
+          <circle cx={node.x} cy={node.y} r={index === 0 ? 24 : 16} fill={node.color} fillOpacity={index === 0 ? 0.92 : 0.78} />
+          <circle cx={node.x} cy={node.y} r={index === 0 ? 38 : 26} fill={node.color} fillOpacity="0.13" />
+          <text x={node.x} y={node.y + (index === 0 ? 44 : 34)} textAnchor="middle" fill="var(--abc-diagram-text)" fontFamily={font} fontSize="11" fontWeight="750">
+            {safeLabel(node.label, index === 0 ? 22 : 16)}
+          </text>
+        </g>
+      ))}
+    </svg>
+  );
+}
+
+function Pill({ x, y, label, color }: { x: number; y: number; label: string; color: string }) {
+  const lines = wrap(label, 15);
+  return (
+    <g>
+      <rect x={x} y={y} width="126" height="42" rx="21" fill={color} fillOpacity="0.14" stroke={color} strokeOpacity="0.72" />
+      <text x={x + 63} y={y + 18 - (lines.length - 1) * 5} textAnchor="middle" fill="var(--abc-diagram-text)" fontFamily={font} fontSize="10.5" fontWeight="750">
+        {lines.map((line, index) => <tspan key={`${label}-${index}`} x={x + 63} dy={index ? 11 : 0}>{line}</tspan>)}
+      </text>
+    </g>
   );
 }
 
@@ -268,18 +408,6 @@ function Sankey({ spec }: { spec: DiagramSpec }) {
       {left.map((label, index) => <Pill key={label} x={46} y={leftY(index) - 18} label={label} color={colors[index % colors.length]} />)}
       {right.map((label, index) => <Pill key={label} x={688} y={rightY(index) - 18} label={label} color={colors[(index + 3) % colors.length]} />)}
     </svg>
-  );
-}
-
-function Pill({ x, y, label, color }: { x: number; y: number; label: string; color: string }) {
-  const lines = wrap(label, 15);
-  return (
-    <g>
-      <rect x={x} y={y} width="126" height="42" rx="21" fill={color} fillOpacity="0.16" stroke={color} strokeOpacity="0.72" />
-      <text x={x + 63} y={y + 18 - (lines.length - 1) * 5} textAnchor="middle" fill="var(--abc-diagram-text)" fontFamily={font} fontSize="10.5" fontWeight="750">
-        {lines.map((line, index) => <tspan key={`${label}-${index}`} x={x + 63} dy={index ? 11 : 0}>{line}</tspan>)}
-      </text>
-    </g>
   );
 }
 
@@ -315,28 +443,35 @@ function Erd({ spec }: { spec: DiagramSpec }) {
   );
 }
 
-function safeLabel(value: string, max: number) {
-  const cleaned = value.replace(/\s+/g, " ").trim();
-  return cleaned.length > max ? `${cleaned.slice(0, max - 1)}…` : cleaned;
-}
-
-export function DiagramRenderer({ spec }: { spec: DiagramSpec }) {
-  const type = typeOfDiagram(spec.type);
-  const radial = ["knowledge-graph", "node-link-diagram", "graph-visualization", "mind-map", "concept-map", "ontology"].includes(type);
+export function DiagramRenderer({ spec, mode = "screen" }: { spec: DiagramSpec; mode?: DiagramMode }) {
+  const family = chooseVisualFamily(spec.type);
+  const theme = mode === "export" ? exportTheme : screenTheme;
 
   return (
     <div
       data-abc-diagram="true"
       style={{
-        ...diagramThemeStyle,
+        ...theme,
         margin: "28px 0",
-        background: "linear-gradient(135deg, rgba(34,211,238,0.08), rgba(168,85,247,0.08), rgba(236,72,153,0.06))",
+        background: mode === "export"
+          ? "#ffffff"
+          : "linear-gradient(135deg, rgba(34,211,238,0.08), rgba(168,85,247,0.08), rgba(236,72,153,0.06))",
         border: "1px solid var(--abc-diagram-border)",
         borderRadius: 22,
         padding: 14,
       }}
     >
-      {type === "sankey" ? <Sankey spec={spec} /> : type === "erd" ? <Erd spec={spec} /> : <PremiumChart spec={spec} radial={radial} />}
+      {family === "sankey" ? (
+        <Sankey spec={spec} />
+      ) : family === "entity-cards" ? (
+        <Erd spec={spec} />
+      ) : family === "radar-polygon" ? (
+        <RadarPolygon spec={spec} />
+      ) : family === "radial-network" ? (
+        <RadialNetwork spec={spec} />
+      ) : (
+        <PremiumChart spec={spec} />
+      )}
     </div>
   );
 }
