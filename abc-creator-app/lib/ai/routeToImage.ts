@@ -38,6 +38,22 @@ type CloudflareImageConfig = {
   label: string;
 };
 
+type AiHordeGeneration = {
+  img?: string;
+  model?: string;
+  censored?: boolean;
+};
+
+type AiHordeStatusResponse = {
+  done?: boolean;
+  faulted?: boolean;
+  is_possible?: boolean;
+  message?: string;
+  queue_position?: number;
+  wait_time?: number;
+  generations?: AiHordeGeneration[];
+};
+
 function env(name: string, fallback = "") {
   return process.env[name] || fallback;
 }
@@ -136,6 +152,30 @@ function getCloudflareTimeoutMs() {
   return Math.min(Math.max(Math.floor(value), 10000), 180000);
 }
 
+function getAiHordeBaseUrl() {
+  return firstEnv(["AI_HORDE_BASE_URL", "AIHORDE_BASE_URL", "STABLE_HORDE_BASE_URL"]) || "https://aihorde.net";
+}
+
+function getAiHordeApiKey() {
+  return firstEnv(["AI_HORDE_API_KEY", "AIHORDE_API_KEY", "STABLE_HORDE_API_KEY"]) || "0000000000";
+}
+
+function getAiHordeClientAgent() {
+  return firstEnv(["AI_HORDE_CLIENT_AGENT", "AIHORDE_CLIENT_AGENT", "STABLE_HORDE_CLIENT_AGENT"]) || "ABC-Creator/1.0";
+}
+
+function getAiHordeTimeoutMs() {
+  const value = Number(env("AI_HORDE_TIMEOUT_MS") || "45000");
+  if (!Number.isFinite(value)) return 45000;
+  return Math.min(Math.max(Math.floor(value), 15000), 120000);
+}
+
+function getAiHordePollIntervalMs() {
+  const value = Number(env("AI_HORDE_POLL_INTERVAL_MS") || "3000");
+  if (!Number.isFinite(value)) return 3000;
+  return Math.min(Math.max(Math.floor(value), 1500), 10000);
+}
+
 function isCloudflareRetryableStatus(status: number) {
   return status === 408 || status === 425 || status === 500 || status === 502 || status === 503 || status === 504;
 }
@@ -202,6 +242,21 @@ function clampPollinationsSize(aspectRatio: string) {
     width: makeEven(original.width * scale),
     height: makeEven(original.height * scale),
   };
+}
+
+function aiHordeSize(aspectRatio: string) {
+  switch (normalizeAspectRatio(aspectRatio)) {
+    case "9:16":
+      return { width: 448, height: 768 };
+    case "1:1":
+      return { width: 512, height: 512 };
+    case "4:3":
+      return { width: 704, height: 512 };
+    case "3:2":
+      return { width: 768, height: 512 };
+    default:
+      return { width: 768, height: 448 };
+  }
 }
 
 function imageToDataUrl(data: string, mimeType = "image/png") {
@@ -460,6 +515,159 @@ async function callPollinationsImage(
   };
 }
 
+async function imageFromAiHordeGeneration(generation: AiHordeGeneration): Promise<ProviderImage> {
+  const model = generation.model || "ai-horde-auto";
+  const image = generation.img || "";
+
+  if (image.startsWith("data:")) {
+    const mimeMatch = image.match(/^data:([^;,]+)[;,]/);
+    return {
+      dataUrl: image,
+      mimeType: mimeMatch?.[1] || "image/webp",
+      provider: "ai-horde",
+      model,
+    };
+  }
+
+  if (/^https?:\/\//i.test(image)) {
+    const response = await fetchWithTimeout(
+      image,
+      {
+        method: "GET",
+        headers: {
+          Accept: "image/png,image/jpeg,image/webp,*/*",
+        },
+      },
+      20000
+    );
+
+    if (!response.ok) {
+      const details = await responseErrorDetails(response);
+      throw new Error(`AI Horde image fetch HTTP ${response.status}${details ? `: ${details}` : ""}`);
+    }
+
+    const contentType = response.headers.get("content-type") || "image/webp";
+    const buffer = Buffer.from(await response.arrayBuffer());
+
+    return {
+      dataUrl: imageToDataUrl(buffer.toString("base64"), contentType),
+      mimeType: contentType,
+      provider: "ai-horde",
+      model,
+    };
+  }
+
+  return {
+    dataUrl: imageToDataUrl(image, "image/webp"),
+    mimeType: "image/webp",
+    provider: "ai-horde",
+    model,
+  };
+}
+
+async function callAiHordeImage(
+  prompt: string,
+  aspectRatio: string
+): Promise<ProviderImage | null> {
+  const disabled = env("AI_HORDE_DISABLED").toLowerCase() === "true";
+  if (disabled) return null;
+
+  const baseUrl = getAiHordeBaseUrl().replace(/\/$/, "");
+  const { width, height } = aiHordeSize(aspectRatio);
+  const timeoutMs = getAiHordeTimeoutMs();
+  const pollIntervalMs = getAiHordePollIntervalMs();
+  const modelList = unique(csvEnv("AI_HORDE_MODELS"));
+  const modelLabel = modelList.length ? modelList.join(",") : "auto";
+  const shortPrompt = safeTruncate(prompt, 1200);
+  const headers = {
+    apikey: getAiHordeApiKey(),
+    "Client-Agent": getAiHordeClientAgent(),
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  };
+
+  const payload: Record<string, unknown> = {
+    prompt: shortPrompt,
+    nsfw: false,
+    censor_nsfw: true,
+    trusted_workers: false,
+    params: {
+      width,
+      height,
+      steps: 20,
+      n: 1,
+      cfg_scale: 7.5,
+      sampler_name: "k_euler_a",
+    },
+  };
+
+  if (modelList.length) payload.models = modelList;
+
+  const submitResponse = await fetchWithTimeout(
+    `${baseUrl}/api/v2/generate/async`,
+    {
+      method: "POST",
+      headers,
+      body: JSON.stringify(payload),
+    },
+    20000
+  );
+
+  if (!submitResponse.ok) {
+    const details = await responseErrorDetails(submitResponse);
+    throw new Error(`AI Horde submit HTTP ${submitResponse.status}${details ? `: ${details}` : ""}`);
+  }
+
+  const submitted = await submitResponse.json() as { id?: string; message?: string; errors?: string[] };
+  const id = submitted.id;
+
+  if (!id) {
+    const details = submitted.message || submitted.errors?.join(" | ") || JSON.stringify(submitted).slice(0, 400);
+    throw new Error(`AI Horde did not return a generation id. ${details}`);
+  }
+
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeoutMs) {
+    await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+
+    const statusResponse = await fetchWithTimeout(
+      `${baseUrl}/api/v2/generate/status/${id}`,
+      {
+        method: "GET",
+        headers,
+      },
+      20000
+    );
+
+    if (!statusResponse.ok) {
+      const details = await responseErrorDetails(statusResponse);
+      throw new Error(`AI Horde status HTTP ${statusResponse.status}${details ? `: ${details}` : ""}`);
+    }
+
+    const status = await statusResponse.json() as AiHordeStatusResponse;
+    const generation = status.generations?.find((item) => item.img && !item.censored) || status.generations?.find((item) => item.img);
+
+    if (generation?.img) {
+      return imageFromAiHordeGeneration(generation);
+    }
+
+    if (status.faulted) {
+      throw new Error(`AI Horde generation faulted.${status.message ? ` ${status.message}` : ""}`);
+    }
+
+    if (status.is_possible === false) {
+      throw new Error(`AI Horde says this generation is not possible right now.${status.message ? ` ${status.message}` : ""}`);
+    }
+
+    if (status.done) {
+      throw new Error("AI Horde finished but returned no image.");
+    }
+  }
+
+  throw new Error(`AI Horde timed out after ${Math.round(timeoutMs / 1000)}s while waiting for ${modelLabel}.`);
+}
+
 async function callGeminiNativeImage(
   prompt: string,
   aspectRatio: string,
@@ -594,6 +802,7 @@ export async function routeToImage(
   const providers: Array<{ name: string; call: ImageProviderCall }> = [
     { name: "cloudflare-workers-ai", call: callCloudflareWorkersImage },
     { name: "pollinations", call: callPollinationsImage },
+    { name: "ai-horde", call: callAiHordeImage },
     { name: "gemini-native-image", call: callGeminiNativeImage },
     { name: "huggingface-open-source", call: callHuggingFaceOpenSourceImage },
   ];
