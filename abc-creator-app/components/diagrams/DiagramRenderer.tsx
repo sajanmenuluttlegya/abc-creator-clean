@@ -25,19 +25,28 @@ export type DiagramSpec = {
 
 type Node = { id: string; label: string; level?: number };
 type Edge = { from: string; to: string; label?: string };
-type Point = Node & { x: number; y: number };
+type ChartPoint = Node & { x: number; y: number; color: string; value: number };
 
 const font = "Inter, Arial, Helvetica, sans-serif";
 
+const colors = [
+  "#22d3ee",
+  "#a78bfa",
+  "#34d399",
+  "#f472b6",
+  "#fbbf24",
+  "#60a5fa",
+  "#fb7185",
+  "#4ade80",
+];
+
 const diagramThemeStyle = {
-  "--abc-diagram-bg": "#050505",
-  "--abc-diagram-node-bg": "#111827",
-  "--abc-diagram-main-node-bg": "#1f1b3d",
-  "--abc-diagram-text": "#f9fafb",
-  "--abc-diagram-muted": "#d1d5db",
-  "--abc-diagram-border": "#3b0764",
-  "--abc-diagram-node-stroke": "#a78bfa",
-  "--abc-diagram-main-stroke": "#c084fc",
+  "--abc-diagram-bg": "#04040a",
+  "--abc-diagram-panel": "rgba(15, 23, 42, 0.76)",
+  "--abc-diagram-grid": "rgba(148, 163, 184, 0.12)",
+  "--abc-diagram-text": "#f8fafc",
+  "--abc-diagram-muted": "#cbd5e1",
+  "--abc-diagram-border": "rgba(168, 85, 247, 0.36)",
 } as CSSProperties;
 
 function typeOfDiagram(value?: string) {
@@ -67,10 +76,23 @@ function text(value: unknown, fallback: string) {
 
 function getEdges(spec: DiagramSpec): Edge[] {
   const raw = spec.edges || spec.data?.edges || [];
-  return raw.map((edge) => {
-    if (Array.isArray(edge)) return { from: text(edge[0], ""), to: text(edge[1], ""), label: edge[2] ? String(edge[2]) : undefined };
-    return { from: text(edge.from || edge.source, ""), to: text(edge.to || edge.target, ""), label: edge.label };
-  }).filter((edge) => edge.from && edge.to);
+  return raw
+    .map((edge) => {
+      if (Array.isArray(edge)) {
+        return {
+          from: text(edge[0], ""),
+          to: text(edge[1], ""),
+          label: edge[2] ? String(edge[2]) : undefined,
+        };
+      }
+
+      return {
+        from: text(edge.from || edge.source, ""),
+        to: text(edge.to || edge.target, ""),
+        label: edge.label,
+      };
+    })
+    .filter((edge) => edge.from && edge.to);
 }
 
 function getNodes(spec: DiagramSpec): Node[] {
@@ -89,9 +111,10 @@ function getNodes(spec: DiagramSpec): Node[] {
   return nodes.length ? nodes : [{ id: "core", label: spec.title || "Core concept" }];
 }
 
-function wrap(label: string, max = 18) {
+function wrap(label: string, max = 16) {
   const lines: string[] = [];
   let current = "";
+
   label.split(/\s+/).forEach((word) => {
     const next = current ? `${current} ${word}` : word;
     if (next.length > max && current) {
@@ -101,122 +124,190 @@ function wrap(label: string, max = 18) {
       current = next;
     }
   });
+
   if (current) lines.push(current);
-  return lines.slice(0, 4);
+  return lines.slice(0, 3);
 }
 
-function layout(nodes: Node[], edges: Edge[], radial: boolean) {
+function chartPoints(nodes: Node[]): ChartPoint[] {
   const width = 860;
-  const height = radial ? 440 : Math.max(360, Math.ceil(nodes.length / 4) * 130 + 160);
-  const points = new Map<string, Point>();
+  const usable = width - 150;
+  const visible = nodes.slice(0, 10);
+  const count = Math.max(visible.length - 1, 1);
 
-  if (radial) {
-    const [first, ...rest] = nodes;
-    points.set(first.id, { ...first, x: width / 2, y: height / 2 });
-    rest.forEach((node, index) => {
-      const angle = (Math.PI * 2 * index) / Math.max(rest.length, 1) - Math.PI / 2;
-      points.set(node.id, { ...node, x: width / 2 + Math.cos(angle) * 320, y: height / 2 + Math.sin(angle) * 155 });
-    });
-    return { width, height, points };
-  }
-
-  const level = new Map(nodes.map((node, index) => [node.id, node.level ?? index]));
-  edges.forEach((edge) => {
-    const from = level.get(edge.from) || 0;
-    level.set(edge.to, Math.max(level.get(edge.to) || 0, from + 1));
+  return visible.map((node, index) => {
+    const wave = Math.sin(index * 1.25) * 34;
+    const value = 42 + ((index * 23 + node.label.length * 7) % 44);
+    return {
+      ...node,
+      x: 75 + (index * usable) / count,
+      y: 235 - value - wave,
+      color: colors[index % colors.length],
+      value,
+    };
   });
-  const levels = Array.from(new Set(Array.from(level.values()))).sort((a, b) => a - b);
-  levels.forEach((item, levelIndex) => {
-    const group = nodes.filter((node) => level.get(node.id) === item);
-    const x = 90 + levelIndex * ((width - 180) / Math.max(levels.length - 1, 1));
-    group.forEach((node, index) => {
-      points.set(node.id, { ...node, x, y: 90 + index * ((height - 180) / Math.max(group.length - 1, 1)) });
-    });
-  });
-  return { width, height, points };
 }
 
-function Box({ point, main = false }: { point: Point; main?: boolean }) {
-  const lines = wrap(point.label);
+function Grid({ width, height }: { width: number; height: number }) {
   return (
-    <g>
-      <rect x={point.x - 70} y={point.y - 32} width="140" height="64" rx="14" fill={main ? "var(--abc-diagram-main-node-bg)" : "var(--abc-diagram-node-bg)"} stroke={main ? "var(--abc-diagram-main-stroke)" : "var(--abc-diagram-node-stroke)"} strokeWidth="1.4" />
-      <text x={point.x} y={point.y - (lines.length - 1) * 6} textAnchor="middle" fill="var(--abc-diagram-text)" fontFamily={font} fontSize="11" fontWeight="650">
-        {lines.map((line, index) => <tspan key={`${point.id}-${index}`} x={point.x} dy={index ? 13 : 0}>{line}</tspan>)}
-      </text>
+    <g opacity="0.75">
+      {Array.from({ length: 5 }).map((_, index) => {
+        const y = 64 + index * ((height - 132) / 4);
+        return <line key={`h-${index}`} x1="42" x2={width - 42} y1={y} y2={y} stroke="var(--abc-diagram-grid)" strokeWidth="1" />;
+      })}
+      {Array.from({ length: 7 }).map((_, index) => {
+        const x = 48 + index * ((width - 96) / 6);
+        return <line key={`v-${index}`} x1={x} x2={x} y1="50" y2={height - 54} stroke="var(--abc-diagram-grid)" strokeWidth="1" />;
+      })}
     </g>
   );
 }
 
-function Graph({ spec, radial = false }: { spec: DiagramSpec; radial?: boolean }) {
+function PremiumChart({ spec, radial = false }: { spec: DiagramSpec; radial?: boolean }) {
   const nodes = getNodes(spec);
   const edges = getEdges(spec);
-  const { width, height, points } = layout(nodes, edges, radial);
+  const points = chartPoints(nodes);
+  const width = 860;
+  const height = radial ? 420 : 360;
+  const baseline = height - 84;
+  const pointById = new Map(points.map((point) => [point.id, point]));
+  const linePath = points
+    .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`)
+    .join(" ");
+  const areaPath = `${linePath} L ${points.at(-1)?.x || 75} ${baseline} L ${points[0]?.x || 75} ${baseline} Z`;
+
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="auto" style={{ display: "block", background: "var(--abc-diagram-bg)" }}>
-      <rect x="1" y="1" width={width - 2} height={height - 2} rx="22" fill="var(--abc-diagram-bg)" stroke="var(--abc-diagram-border)" strokeWidth="1.2" />
+    <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="auto" role="img" aria-label={spec.title || "Premium chart"} style={{ display: "block" }}>
+      <defs>
+        <linearGradient id="abcChartArea" x1="0" x2="1" y1="0" y2="1">
+          <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.3" />
+          <stop offset="52%" stopColor="#8b5cf6" stopOpacity="0.18" />
+          <stop offset="100%" stopColor="#ec4899" stopOpacity="0.08" />
+        </linearGradient>
+        <linearGradient id="abcChartStroke" x1="0" x2="1" y1="0" y2="0">
+          <stop offset="0%" stopColor="#22d3ee" />
+          <stop offset="50%" stopColor="#a78bfa" />
+          <stop offset="100%" stopColor="#f472b6" />
+        </linearGradient>
+        <filter id="abcGlow" x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur stdDeviation="5" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+
+      <rect x="1" y="1" width={width - 2} height={height - 2} rx="24" fill="var(--abc-diagram-bg)" stroke="var(--abc-diagram-border)" strokeWidth="1.2" />
+      <Grid width={width} height={height} />
+
+      <path d={areaPath} fill="url(#abcChartArea)" />
+      <path d={linePath} fill="none" stroke="url(#abcChartStroke)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" filter="url(#abcGlow)" />
+
       {edges.map((edge, index) => {
-        const from = points.get(edge.from);
-        const to = points.get(edge.to);
+        const from = pointById.get(edge.from);
+        const to = pointById.get(edge.to);
         if (!from || !to) return null;
-        const midX = (from.x + to.x) / 2;
-        const midY = (from.y + to.y) / 2;
         return (
-          <g key={`${edge.from}-${edge.to}-${index}`}>
-            <path d={`M ${from.x} ${from.y} C ${midX} ${from.y}, ${midX} ${to.y}, ${to.x} ${to.y}`} fill="none" stroke="#6D28D9" strokeOpacity="0.7" strokeWidth="1.8" />
-            <circle cx={to.x} cy={to.y} r="3.2" fill="#6D28D9" />
-            {edge.label ? <text x={midX} y={midY - 7} textAnchor="middle" fill="var(--abc-diagram-muted)" fontFamily={font} fontSize="10" fontWeight="600">{edge.label}</text> : null}
+          <path
+            key={`${edge.from}-${edge.to}-${index}`}
+            d={`M ${from.x} ${from.y} C ${(from.x + to.x) / 2} ${from.y - 36}, ${(from.x + to.x) / 2} ${to.y + 36}, ${to.x} ${to.y}`}
+            fill="none"
+            stroke={to.color}
+            strokeOpacity="0.28"
+            strokeWidth="2"
+          />
+        );
+      })}
+
+      {points.map((point, index) => {
+        const lines = wrap(point.label, points.length > 6 ? 11 : 15);
+        const labelY = index % 2 === 0 ? baseline + 28 : 38;
+        return (
+          <g key={point.id}>
+            <line x1={point.x} x2={point.x} y1={point.y + 10} y2={baseline} stroke={point.color} strokeOpacity="0.28" strokeWidth="7" strokeLinecap="round" />
+            <circle cx={point.x} cy={point.y} r="15" fill={point.color} fillOpacity="0.26" />
+            <circle cx={point.x} cy={point.y} r="8" fill={point.color} filter="url(#abcGlow)" />
+            <text x={point.x} y={labelY} textAnchor="middle" fill="var(--abc-diagram-text)" fontFamily={font} fontSize="11" fontWeight="750">
+              {lines.map((line, lineIndex) => (
+                <tspan key={`${point.id}-${lineIndex}`} x={point.x} dy={lineIndex ? 13 : 0}>{line}</tspan>
+              ))}
+            </text>
           </g>
         );
       })}
-      {Array.from(points.values()).map((point, index) => <Box key={point.id} point={point} main={radial && index === 0} />)}
     </svg>
   );
 }
 
 function Sankey({ spec }: { spec: DiagramSpec }) {
-  const flows = (spec.flows || spec.data?.flows || []).map((flow) => Array.isArray(flow) ? { from: text(flow[0], ""), to: text(flow[1], ""), value: Number(flow[2] || 1) } : { from: text(flow.from, ""), to: text(flow.to, ""), value: Number(flow.value || 1), label: flow.label }).filter((flow) => flow.from && flow.to);
+  const flows = (spec.flows || spec.data?.flows || [])
+    .map((flow) => Array.isArray(flow)
+      ? { from: text(flow[0], ""), to: text(flow[1], ""), value: Number(flow[2] || 1) }
+      : { from: text(flow.from, ""), to: text(flow.to, ""), value: Number(flow.value || 1), label: flow.label })
+    .filter((flow) => flow.from && flow.to);
   const data = flows.length ? flows : getEdges(spec).map((edge) => ({ from: edge.from, to: edge.to, value: 1, label: edge.label }));
-  const left = Array.from(new Set(data.map((flow) => flow.from)));
-  const right = Array.from(new Set(data.map((flow) => flow.to)));
+  const left = Array.from(new Set(data.map((flow) => flow.from))).slice(0, 6);
+  const right = Array.from(new Set(data.map((flow) => flow.to))).slice(0, 6);
   const width = 860;
-  const height = Math.max(360, Math.max(left.length, right.length) * 88 + 120);
+  const height = Math.max(340, Math.max(left.length, right.length) * 56 + 110);
   const total = data.reduce((sum, flow) => sum + Math.max(flow.value || 1, 1), 0) || 1;
-  const leftY = (index: number) => 80 + index * ((height - 160) / Math.max(left.length - 1, 1));
-  const rightY = (index: number) => 80 + index * ((height - 160) / Math.max(right.length - 1, 1));
+  const leftY = (index: number) => 70 + index * ((height - 140) / Math.max(left.length - 1, 1));
+  const rightY = (index: number) => 70 + index * ((height - 140) / Math.max(right.length - 1, 1));
+
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="auto" style={{ display: "block", background: "var(--abc-diagram-bg)" }}>
-      <rect x="1" y="1" width={width - 2} height={height - 2} rx="22" fill="var(--abc-diagram-bg)" stroke="var(--abc-diagram-border)" strokeWidth="1.2" />
-      {data.map((flow, index) => {
-        const y1 = leftY(left.indexOf(flow.from));
-        const y2 = rightY(right.indexOf(flow.to));
-        const strokeWidth = 5 + Math.min(26, ((flow.value || 1) / total) * 90);
-        return <path key={`${flow.from}-${flow.to}-${index}`} d={`M 170 ${y1} C 330 ${y1}, 530 ${y2}, 690 ${y2}`} fill="none" stroke="#7C3AED" strokeOpacity="0.32" strokeWidth={strokeWidth} strokeLinecap="round" />;
+    <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="auto" role="img" aria-label={spec.title || "Sankey chart"} style={{ display: "block" }}>
+      <rect x="1" y="1" width={width - 2} height={height - 2} rx="24" fill="var(--abc-diagram-bg)" stroke="var(--abc-diagram-border)" strokeWidth="1.2" />
+      <Grid width={width} height={height} />
+      {data.slice(0, 10).map((flow, index) => {
+        const y1 = leftY(Math.max(0, left.indexOf(flow.from)));
+        const y2 = rightY(Math.max(0, right.indexOf(flow.to)));
+        const strokeWidth = 6 + Math.min(30, ((flow.value || 1) / total) * 110);
+        return <path key={`${flow.from}-${flow.to}-${index}`} d={`M 190 ${y1} C 340 ${y1}, 520 ${y2}, 670 ${y2}`} fill="none" stroke={colors[index % colors.length]} strokeOpacity="0.42" strokeWidth={strokeWidth} strokeLinecap="round" />;
       })}
-      {left.map((label, index) => <Box key={label} point={{ id: label, label, x: 100, y: leftY(index) }} />)}
-      {right.map((label, index) => <Box key={label} point={{ id: label, label, x: 760, y: rightY(index) }} />)}
+      {left.map((label, index) => <Pill key={label} x={46} y={leftY(index) - 18} label={label} color={colors[index % colors.length]} />)}
+      {right.map((label, index) => <Pill key={label} x={688} y={rightY(index) - 18} label={label} color={colors[(index + 3) % colors.length]} />)}
     </svg>
+  );
+}
+
+function Pill({ x, y, label, color }: { x: number; y: number; label: string; color: string }) {
+  const lines = wrap(label, 15);
+  return (
+    <g>
+      <rect x={x} y={y} width="126" height="42" rx="21" fill={color} fillOpacity="0.16" stroke={color} strokeOpacity="0.72" />
+      <text x={x + 63} y={y + 18 - (lines.length - 1) * 5} textAnchor="middle" fill="var(--abc-diagram-text)" fontFamily={font} fontSize="10.5" fontWeight="750">
+        {lines.map((line, index) => <tspan key={`${label}-${index}`} x={x + 63} dy={index ? 11 : 0}>{line}</tspan>)}
+      </text>
+    </g>
   );
 }
 
 function Erd({ spec }: { spec: DiagramSpec }) {
   const entities = spec.entities || spec.data?.entities || [];
-  if (!entities.length) return <Graph spec={spec} />;
+  if (!entities.length) return <PremiumChart spec={spec} />;
   const width = 860;
-  const height = Math.max(360, Math.ceil(entities.length / 3) * 170 + 70);
+  const height = Math.max(340, Math.ceil(Math.min(entities.length, 6) / 3) * 150 + 80);
+
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="auto" style={{ display: "block", background: "var(--abc-diagram-bg)" }}>
-      <rect x="1" y="1" width={width - 2} height={height - 2} rx="22" fill="var(--abc-diagram-bg)" stroke="var(--abc-diagram-border)" strokeWidth="1.2" />
-      {entities.map((entity, index) => {
+    <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="auto" role="img" aria-label={spec.title || "Entity chart"} style={{ display: "block" }}>
+      <rect x="1" y="1" width={width - 2} height={height - 2} rx="24" fill="var(--abc-diagram-bg)" stroke="var(--abc-diagram-border)" strokeWidth="1.2" />
+      <Grid width={width} height={height} />
+      {entities.slice(0, 6).map((entity, index) => {
         const x = 54 + (index % 3) * 270;
-        const y = 46 + Math.floor(index / 3) * 170;
+        const y = 50 + Math.floor(index / 3) * 150;
+        const color = colors[index % colors.length];
         const name = entity.name || entity.label || entity.id || `Entity ${index + 1}`;
         return (
           <g key={`${name}-${index}`}>
-            <rect x={x} y={y} width="220" height="126" rx="14" fill="var(--abc-diagram-node-bg)" stroke="var(--abc-diagram-node-stroke)" strokeWidth="1.3" />
-            <rect x={x} y={y} width="220" height="38" rx="14" fill="var(--abc-diagram-main-node-bg)" stroke="var(--abc-diagram-main-stroke)" strokeWidth="1.3" />
-            <text x={x + 14} y={y + 24} fill="var(--abc-diagram-text)" fontFamily={font} fontSize="12" fontWeight="700">{name}</text>
-            {(entity.fields || []).slice(0, 4).map((field, fieldIndex) => <text key={`${name}-${field}`} x={x + 14} y={y + 62 + fieldIndex * 18} fill="var(--abc-diagram-muted)" fontFamily={font} fontSize="10.5">{field}</text>)}
+            <rect x={x} y={y} width="220" height="118" rx="20" fill={color} fillOpacity="0.11" stroke={color} strokeOpacity="0.64" />
+            <circle cx={x + 22} cy={y + 25} r="7" fill={color} />
+            <text x={x + 40} y={y + 30} fill="var(--abc-diagram-text)" fontFamily={font} fontSize="12" fontWeight="800">{safeLabel(name, 24)}</text>
+            {(entity.fields || []).slice(0, 4).map((field, fieldIndex) => (
+              <text key={`${name}-${field}`} x={x + 22} y={y + 58 + fieldIndex * 16} fill="var(--abc-diagram-muted)" fontFamily={font} fontSize="10.5" fontWeight="600">
+                {safeLabel(field, 30)}
+              </text>
+            ))}
           </g>
         );
       })}
@@ -224,14 +315,28 @@ function Erd({ spec }: { spec: DiagramSpec }) {
   );
 }
 
+function safeLabel(value: string, max: number) {
+  const cleaned = value.replace(/\s+/g, " ").trim();
+  return cleaned.length > max ? `${cleaned.slice(0, max - 1)}…` : cleaned;
+}
+
 export function DiagramRenderer({ spec }: { spec: DiagramSpec }) {
   const type = typeOfDiagram(spec.type);
   const radial = ["knowledge-graph", "node-link-diagram", "graph-visualization", "mind-map", "concept-map", "ontology"].includes(type);
+
   return (
-    <div data-abc-diagram="true" style={{ ...diagramThemeStyle, margin: "28px 0", overflowX: "auto", background: "var(--abc-diagram-bg)", border: "1px solid var(--abc-diagram-border)", borderRadius: 18, padding: 16 }}>
-      <div style={{ minWidth: 720, background: "var(--abc-diagram-bg)" }}>
-        {type === "sankey" ? <Sankey spec={spec} /> : type === "erd" ? <Erd spec={spec} /> : <Graph spec={spec} radial={radial} />}
-      </div>
+    <div
+      data-abc-diagram="true"
+      style={{
+        ...diagramThemeStyle,
+        margin: "28px 0",
+        background: "linear-gradient(135deg, rgba(34,211,238,0.08), rgba(168,85,247,0.08), rgba(236,72,153,0.06))",
+        border: "1px solid var(--abc-diagram-border)",
+        borderRadius: 22,
+        padding: 14,
+      }}
+    >
+      {type === "sankey" ? <Sankey spec={spec} /> : type === "erd" ? <Erd spec={spec} /> : <PremiumChart spec={spec} radial={radial} />}
     </div>
   );
 }
