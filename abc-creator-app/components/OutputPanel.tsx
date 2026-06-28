@@ -211,6 +211,18 @@ function shouldAutoGenerateBlogImages(toolSlug: string, inputs: Record<string, s
   return true;
 }
 
+function collectGeneratedPdfImages(root: HTMLElement | null, frame: string) {
+  if (!root) return [];
+
+  return Array.from(root.querySelectorAll<HTMLImageElement>("img[data-generated-blog-image]"))
+    .map((image) => ({
+      dataUrl: image.src || "",
+      alt: image.alt || "Generated blog image",
+      frame,
+    }))
+    .filter((image) => image.dataUrl.startsWith("data:image/"));
+}
+
 export function OutputPanel({
   isLoading,
   output,
@@ -291,6 +303,13 @@ export function OutputPanel({
     fileNameField.name = "fileBaseName";
     fileNameField.value = downloadFileBaseName;
     form.appendChild(fileNameField);
+
+    const imagesField = document.createElement("textarea");
+    imagesField.name = "images";
+    imagesField.value = JSON.stringify(
+      collectGeneratedPdfImages(exportContentRef.current, inputs.export_image_frame || "boxed")
+    );
+    form.appendChild(imagesField);
 
     document.body.appendChild(form);
     form.submit();
