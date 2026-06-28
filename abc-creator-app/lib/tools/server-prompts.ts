@@ -54,7 +54,7 @@ export const serverPrompts: Record<string, ServerPrompt> = {
     ],
     system: `You are ABC Creator's specialist for Blog Workflow and Blog Outline.${commonGenerationRules}`,
     outputGuide:
-      "Create a long-form blog outline in Markdown for the selected target word-count range. Include: recommended H1, search intent, reader promise, intro angle, detailed H2/H3 structure, bullets under each section, keyword placement notes, FAQ ideas, conclusion angle, and Verify Before Publishing notes. Do not write the full article.",
+      "Return a clean editable Markdown blog outline only. Never return only a title. Use a parseable heading hierarchy: one # H1 article title, then ## H2 sections, then optional ### H3 supporting points. Adapt by word count: Short article = 4-5 H2 sections and 1-3 H3 supporting points total; Medium article = 6-8 H2 sections and 2-4 H3 supporting points total; Long article = 8-12 H2 sections and 3-8 H3 supporting points total. Do not wrap headings in bullets, numbers, or bold. Do not output metadata labels such as Blog Outline, Recommended H1, Search Intent, Reader Promise, Intro Angle, Detailed H2/H3 Structure, Keyword Placement Notes, FAQ Ideas, Conclusion Angle, Verify Before Publishing, notes, explanations, or bullets. Do not write the full article.",
   },
   "blog-content": {
     creditCost: 8,
