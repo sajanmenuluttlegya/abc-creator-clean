@@ -3,12 +3,42 @@ import { makePdfExport } from "@/lib/pdf/exportPdfDocument";
 
 export const runtime = "nodejs";
 
+type PdfExportImage = {
+  dataUrl: string;
+  alt?: string;
+  frame?: string;
+};
+
 function safeName(value: unknown) {
   return (typeof value === "string" ? value : "abc-creator-output")
     .toLowerCase()
     .replace(/[^a-z0-9-_]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 80) || "abc-creator-output";
+}
+
+function parseImages(value: unknown): PdfExportImage[] {
+  try {
+    const parsed = typeof value === "string" ? JSON.parse(value) : value;
+    if (!Array.isArray(parsed)) return [];
+
+    return parsed
+      .map((item) => {
+        if (!item || typeof item !== "object") return null;
+        const image = item as Record<string, unknown>;
+        const dataUrl = typeof image.dataUrl === "string" ? image.dataUrl : "";
+        if (!dataUrl.startsWith("data:image/")) return null;
+
+        return {
+          dataUrl,
+          alt: typeof image.alt === "string" ? image.alt : undefined,
+          frame: typeof image.frame === "string" ? image.frame : undefined,
+        };
+      })
+      .filter((item): item is PdfExportImage => Boolean(item));
+  } catch {
+    return [];
+  }
 }
 
 async function readRequestBody(request: Request) {
@@ -19,16 +49,19 @@ async function readRequestBody(request: Request) {
     return {
       output: typeof body.output === "string" ? body.output : "",
       fileBaseName: typeof body.fileBaseName === "string" ? body.fileBaseName : "abc-creator-output",
+      images: parseImages(body.images),
     };
   }
 
   const formData = await request.formData();
   const output = formData.get("output");
   const fileBaseName = formData.get("fileBaseName");
+  const images = formData.get("images");
 
   return {
     output: typeof output === "string" ? output : "",
     fileBaseName: typeof fileBaseName === "string" ? fileBaseName : "abc-creator-output",
+    images: parseImages(images),
   };
 }
 
@@ -40,7 +73,7 @@ export async function POST(request: Request) {
 
     if (!output.trim()) return NextResponse.json({ error: "No output provided." }, { status: 400 });
 
-    const pdfBytes = await makePdfExport(output, baseName);
+    const pdfBytes = await makePdfExport(output, baseName, body.images);
     const pdfBody = pdfBytes.buffer.slice(
       pdfBytes.byteOffset,
       pdfBytes.byteOffset + pdfBytes.byteLength
