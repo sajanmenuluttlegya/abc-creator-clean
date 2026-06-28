@@ -2,14 +2,10 @@
 
 import React, { useEffect, useState } from "react";
 import { OutputPanel } from "./OutputPanel";
-import { ImageGenerationPanel } from "./ImageGenerationPanel";
 import { ThemeIcon } from "./ThemeIcon";
 import { EditableBlogOutlinePanel } from "./EditableBlogOutlinePanel";
 import type { Tool } from "@/lib/tools/public-tools";
-import {
-  getToolCreditEstimate,
-  supportsImageGeneration,
-} from "@/lib/tools/credit-costs";
+import { getToolCreditEstimate } from "@/lib/tools/credit-costs";
 
 interface ToolFormRendererProps {
   tool: Tool;
@@ -30,8 +26,6 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
   const isErrorOutput = /^(error:|not enough credits)/i.test(output.trim());
   const showEditableOutline =
     tool.slug === "blog-outline" && Boolean(output.trim()) && !isLoading && !isErrorOutput;
-  const canGenerateImages =
-    supportsImageGeneration(tool.slug) && Boolean(output.trim()) && !isLoading && !isErrorOutput;
 
   useEffect(() => {
     if (tool.slug !== "blog-content") return;
@@ -264,7 +258,6 @@ Get more credits: /pricing`
             inputs={formData}
           />
         )}
-        {canGenerateImages ? <ImageGenerationPanel toolSlug={tool.slug} inputs={formData} sourceText={output} /> : null}
       </div>
     </div>
   );
