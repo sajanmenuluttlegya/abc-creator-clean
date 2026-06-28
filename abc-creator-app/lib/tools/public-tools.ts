@@ -101,9 +101,9 @@ const articleDepthOptions = [
 const yesNoOptions = ["Yes", "No"];
 
 const imageBriefModeOptions = [
-  "No image briefs",
-  "Hero image brief only",
-  "Hero + section image briefs",
+  "No images",
+  "Hero image only",
+  "Hero + section images",
 ];
 
 const imagePlanOptions = [
@@ -201,7 +201,7 @@ export const publicTools: Tool[] = [
         description: "Generate metadata, slug ideas, FAQ schema, and social copy for this article.",
       },
       {
-        label: "Create pro image briefs",
+        label: "Create pro image prompts",
         href: "/tools/pro-image-brief-for-blog",
         description: "Plan hero and section images with prompts, alt text, and captions.",
       },
@@ -221,7 +221,7 @@ export const publicTools: Tool[] = [
       { id: "include_list", label: "Include List Section", type: "select", required: true, options: yesNoOptions },
       { id: "include_table", label: "Include Table Section", type: "select", required: true, options: yesNoOptions },
       { id: "include_faq", label: "Include FAQ Section", type: "select", required: true, options: yesNoOptions },
-      { id: "image_brief_mode", label: "Image Briefs", type: "select", required: true, options: imageBriefModeOptions },
+      { id: "image_brief_mode", label: "Images", type: "select", required: true, options: imageBriefModeOptions },
       { id: "brand_or_context", label: "Brand / Extra Context", type: "textarea", placeholder: "Optional: brand name, product, offer, examples, sources, facts, or notes to include.", required: false },
     ],
   },
@@ -248,7 +248,7 @@ export const publicTools: Tool[] = [
       { id: "blog_outline", label: "Blog Outline / Article", type: "textarea", placeholder: "Paste the blog outline, article draft, or section list.", required: true },
       { id: "visual_style", label: "Visual Style", type: "text", placeholder: "e.g., clean SaaS illustration, warm editorial photography", required: true },
       { id: "brand_or_context", label: "Brand / Product Context", type: "textarea", placeholder: "Optional: brand colors, product details, audience, offer, or visual rules.", required: false },
-      { id: "image_plan", label: "Image Plan", type: "select", required: true, options: imagePlanOptions },
+      { id: "image_plan", label: "Images", type: "select", required: true, options: imagePlanOptions },
       { id: "image_ratio", label: "Image Ratio", type: "select", required: true, options: imageRatioOptions },
       { id: "image_count_guidance", label: "Image Count Guidance", type: "select", required: true, options: imageCountGuidanceOptions },
       { id: "include_avoidance_prompts", label: "Include Avoidance Prompts", type: "select", required: true, options: yesNoOptions },
@@ -270,7 +270,7 @@ export const publicTools: Tool[] = [
     aliases: ["ai-blog-seo-pack", "blog-seo-pack-generator", "blog-seo-pack-tool"],
     nextActions: [
       {
-        label: "Create pro image briefs",
+        label: "Create pro image prompts",
         href: "/tools/pro-image-brief-for-blog",
         description: "Plan article visuals after the SEO pack is ready.",
       },
