@@ -1,5 +1,3 @@
-import { readFile } from "node:fs/promises";
-import path from "node:path";
 import { NextResponse } from "next/server";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 
@@ -156,21 +154,25 @@ function wrapLine(line: string, maxChars: number) {
   return lines;
 }
 
-async function readLogoBytes() {
-  const publicDir = path.join(process.cwd(), "public");
+async function readRequestBody(request: Request) {
+  const contentType = request.headers.get("content-type") || "";
 
-  try {
-    return await readFile(path.join(publicDir, "abc-export-logo.png"));
-  } catch {
-    // Fall back only to the dedicated export logo asset, never the app logo.
+  if (contentType.includes("application/json")) {
+    const body = await request.json();
+    return {
+      output: typeof body.output === "string" ? body.output : "",
+      fileBaseName: typeof body.fileBaseName === "string" ? body.fileBaseName : "abc-creator-output",
+    };
   }
 
-  try {
-    const base64 = await readFile(path.join(publicDir, "abc-export-logo.base64.txt"), "utf8");
-    return Buffer.from(base64.trim(), "base64");
-  } catch {
-    return null;
-  }
+  const formData = await request.formData();
+  const output = formData.get("output");
+  const fileBaseName = formData.get("fileBaseName");
+
+  return {
+    output: typeof output === "string" ? output : "",
+    fileBaseName: typeof fileBaseName === "string" ? fileBaseName : "abc-creator-output",
+  };
 }
 
 async function makePdf(output: string, baseName: string) {
@@ -185,7 +187,7 @@ async function makePdf(output: string, baseName: string) {
   const gray = rgb(0.82, 0.84, 0.89);
   const headerBg = rgb(0.96, 0.94, 1);
   let page = pdf.addPage(pageSize);
-  let y = pageSize[1] - 42;
+  let y = pageSize[1] - 70;
 
   const newPage = () => {
     page = pdf.addPage(pageSize);
@@ -229,7 +231,7 @@ async function makePdf(output: string, baseName: string) {
       thickness: 0.6,
       color: gray,
     });
-    y -= 16;
+    y -= 18;
   };
 
   const drawTable = (rows: string[][], hasHeader: boolean) => {
@@ -295,20 +297,6 @@ async function makePdf(output: string, baseName: string) {
     y -= 26;
   };
 
-  try {
-    const logoBytes = await readLogoBytes();
-    if (logoBytes) {
-      const logo = await pdf.embedPng(logoBytes);
-      const logoWidth = 94;
-      const logoHeight = 34;
-      const logoY = pageSize[1] - logoHeight - 24;
-      page.drawImage(logo, { x: margin, y: logoY, width: logoWidth, height: logoHeight });
-      y = logoY - 16;
-    }
-  } catch {
-    y -= 4;
-  }
-
   drawText("ABC Creator Export", 8, true, 5);
   drawText(titleFromName(baseName), 18, true, 8);
   drawRule();
@@ -332,8 +320,8 @@ async function makePdf(output: string, baseName: string) {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const output = typeof body.output === "string" ? body.output : "";
+    const body = await readRequestBody(request);
+    const output = body.output;
     const baseName = safeName(body.fileBaseName);
 
     if (!output.trim()) return NextResponse.json({ error: "No output provided." }, { status: 400 });
