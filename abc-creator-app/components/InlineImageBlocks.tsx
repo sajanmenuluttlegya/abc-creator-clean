@@ -285,6 +285,7 @@ export function InlineImageBlock({
 
       {image ? (
         <figure className="mt-5 overflow-hidden rounded-2xl border border-emerald-400/20 bg-black/40">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={image.dataUrl}
             alt={extractPrompt(markdown) || "Generated blog image"}
