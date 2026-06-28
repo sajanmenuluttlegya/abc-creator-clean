@@ -36,7 +36,7 @@ function cleanRenderedHtml(renderedElement?: HTMLElement | null, fallbackOutput 
   diagram.removeAttribute("class");
   diagram.setAttribute(
     "style",
-    "margin:28px 0;overflow-x:auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:18px;padding:16px;"
+    "margin:28px 0;overflow-x:auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:18px;padding:16px;--abc-diagram-bg:#ffffff;--abc-diagram-node-bg:#ffffff;--abc-diagram-main-node-bg:#f5f3ff;--abc-diagram-text:#111827;--abc-diagram-muted:#4b5563;--abc-diagram-border:#e5e7eb;--abc-diagram-node-stroke:#a78bfa;--abc-diagram-main-stroke:#7c3aed;"
   );
 });
 
@@ -87,7 +87,7 @@ export function downloadHtmlOutput(
     blockquote { border-left: 4px solid #7c3aed; margin: 1.25rem 0; padding: 0.75rem 1rem; background: #f5f3ff; }
     img { max-width: 100%; height: auto; border-radius: 12px; margin: 18px 0; display: block; }
     svg { max-width: 100%; height: auto; display: block; background: #ffffff; }
-[data-abc-diagram] { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 18px; padding: 16px; margin: 28px 0; overflow-x: auto; }
+[data-abc-diagram] { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 18px; padding: 16px; margin: 28px 0; overflow-x: auto; --abc-diagram-bg:#ffffff; --abc-diagram-node-bg:#ffffff; --abc-diagram-main-node-bg:#f5f3ff; --abc-diagram-text:#111827; --abc-diagram-muted:#4b5563; --abc-diagram-border:#e5e7eb; --abc-diagram-node-stroke:#a78bfa; --abc-diagram-main-stroke:#7c3aed; }
   </style>
 </head>
 <body>

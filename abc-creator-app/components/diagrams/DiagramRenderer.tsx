@@ -1,5 +1,7 @@
 "use client";
 
+import type { CSSProperties } from "react";
+
 type NodeSpec = { id?: string; label?: string; level?: number };
 type EdgeSpec = { from?: string; to?: string; source?: string; target?: string; label?: string };
 type FlowSpec = { from?: string; to?: string; value?: number; label?: string };
@@ -26,6 +28,17 @@ type Edge = { from: string; to: string; label?: string };
 type Point = Node & { x: number; y: number };
 
 const font = "Inter, Arial, Helvetica, sans-serif";
+
+const diagramThemeStyle = {
+  "--abc-diagram-bg": "#050505",
+  "--abc-diagram-node-bg": "#111827",
+  "--abc-diagram-main-node-bg": "#1f1b3d",
+  "--abc-diagram-text": "#f9fafb",
+  "--abc-diagram-muted": "#d1d5db",
+  "--abc-diagram-border": "#3b0764",
+  "--abc-diagram-node-stroke": "#a78bfa",
+  "--abc-diagram-main-stroke": "#c084fc",
+} as CSSProperties;
 
 function typeOfDiagram(value?: string) {
   const type = (value || "graph").toLowerCase().replace(/[_\s]+/g, "-");
@@ -127,8 +140,8 @@ function Box({ point, main = false }: { point: Point; main?: boolean }) {
   const lines = wrap(point.label);
   return (
     <g>
-      <rect x={point.x - 70} y={point.y - 32} width="140" height="64" rx="14" fill={main ? "#F5F3FF" : "#FFFFFF"} stroke={main ? "#6D28D9" : "#A78BFA"} strokeWidth="1.4" />
-      <text x={point.x} y={point.y - (lines.length - 1) * 6} textAnchor="middle" fill="#111827" fontFamily={font} fontSize="11" fontWeight="650">
+      <rect x={point.x - 70} y={point.y - 32} width="140" height="64" rx="14" fill={main ? "var(--abc-diagram-main-node-bg)" : "var(--abc-diagram-node-bg)"} stroke={main ? "var(--abc-diagram-main-stroke)" : "var(--abc-diagram-node-stroke)"} strokeWidth="1.4" />
+      <text x={point.x} y={point.y - (lines.length - 1) * 6} textAnchor="middle" fill="var(--abc-diagram-text)" fontFamily={font} fontSize="11" fontWeight="650">
         {lines.map((line, index) => <tspan key={`${point.id}-${index}`} x={point.x} dy={index ? 13 : 0}>{line}</tspan>)}
       </text>
     </g>
@@ -140,8 +153,8 @@ function Graph({ spec, radial = false }: { spec: DiagramSpec; radial?: boolean }
   const edges = getEdges(spec);
   const { width, height, points } = layout(nodes, edges, radial);
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="auto" style={{ display: "block", background: "#ffffff" }}>
-      <rect x="1" y="1" width={width - 2} height={height - 2} rx="22" fill="#FFFFFF" stroke="#E5E7EB" strokeWidth="1.2" />
+    <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="auto" style={{ display: "block", background: "var(--abc-diagram-bg)" }}>
+      <rect x="1" y="1" width={width - 2} height={height - 2} rx="22" fill="var(--abc-diagram-bg)" stroke="var(--abc-diagram-border)" strokeWidth="1.2" />
       {edges.map((edge, index) => {
         const from = points.get(edge.from);
         const to = points.get(edge.to);
@@ -152,7 +165,7 @@ function Graph({ spec, radial = false }: { spec: DiagramSpec; radial?: boolean }
           <g key={`${edge.from}-${edge.to}-${index}`}>
             <path d={`M ${from.x} ${from.y} C ${midX} ${from.y}, ${midX} ${to.y}, ${to.x} ${to.y}`} fill="none" stroke="#6D28D9" strokeOpacity="0.7" strokeWidth="1.8" />
             <circle cx={to.x} cy={to.y} r="3.2" fill="#6D28D9" />
-            {edge.label ? <text x={midX} y={midY - 7} textAnchor="middle" fill="#4B5563" fontFamily={font} fontSize="10" fontWeight="600">{edge.label}</text> : null}
+            {edge.label ? <text x={midX} y={midY - 7} textAnchor="middle" fill="var(--abc-diagram-muted)" fontFamily={font} fontSize="10" fontWeight="600">{edge.label}</text> : null}
           </g>
         );
       })}
@@ -172,8 +185,8 @@ function Sankey({ spec }: { spec: DiagramSpec }) {
   const leftY = (index: number) => 80 + index * ((height - 160) / Math.max(left.length - 1, 1));
   const rightY = (index: number) => 80 + index * ((height - 160) / Math.max(right.length - 1, 1));
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="auto" style={{ display: "block", background: "#ffffff" }}>
-      <rect x="1" y="1" width={width - 2} height={height - 2} rx="22" fill="#FFFFFF" stroke="#E5E7EB" strokeWidth="1.2" />
+    <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="auto" style={{ display: "block", background: "var(--abc-diagram-bg)" }}>
+      <rect x="1" y="1" width={width - 2} height={height - 2} rx="22" fill="var(--abc-diagram-bg)" stroke="var(--abc-diagram-border)" strokeWidth="1.2" />
       {data.map((flow, index) => {
         const y1 = leftY(left.indexOf(flow.from));
         const y2 = rightY(right.indexOf(flow.to));
@@ -192,18 +205,18 @@ function Erd({ spec }: { spec: DiagramSpec }) {
   const width = 860;
   const height = Math.max(360, Math.ceil(entities.length / 3) * 170 + 70);
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="auto" style={{ display: "block", background: "#ffffff" }}>
-      <rect x="1" y="1" width={width - 2} height={height - 2} rx="22" fill="#FFFFFF" stroke="#E5E7EB" strokeWidth="1.2" />
+    <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="auto" style={{ display: "block", background: "var(--abc-diagram-bg)" }}>
+      <rect x="1" y="1" width={width - 2} height={height - 2} rx="22" fill="var(--abc-diagram-bg)" stroke="var(--abc-diagram-border)" strokeWidth="1.2" />
       {entities.map((entity, index) => {
         const x = 54 + (index % 3) * 270;
         const y = 46 + Math.floor(index / 3) * 170;
         const name = entity.name || entity.label || entity.id || `Entity ${index + 1}`;
         return (
           <g key={`${name}-${index}`}>
-            <rect x={x} y={y} width="220" height="126" rx="14" fill="#FFFFFF" stroke="#A78BFA" strokeWidth="1.3" />
-            <rect x={x} y={y} width="220" height="38" rx="14" fill="#F5F3FF" stroke="#7C3AED" strokeWidth="1.3" />
-            <text x={x + 14} y={y + 24} fill="#111827" fontFamily={font} fontSize="12" fontWeight="700">{name}</text>
-            {(entity.fields || []).slice(0, 4).map((field, fieldIndex) => <text key={`${name}-${field}`} x={x + 14} y={y + 62 + fieldIndex * 18} fill="#4B5563" fontFamily={font} fontSize="10.5">{field}</text>)}
+            <rect x={x} y={y} width="220" height="126" rx="14" fill="var(--abc-diagram-node-bg)" stroke="var(--abc-diagram-node-stroke)" strokeWidth="1.3" />
+            <rect x={x} y={y} width="220" height="38" rx="14" fill="var(--abc-diagram-main-node-bg)" stroke="var(--abc-diagram-main-stroke)" strokeWidth="1.3" />
+            <text x={x + 14} y={y + 24} fill="var(--abc-diagram-text)" fontFamily={font} fontSize="12" fontWeight="700">{name}</text>
+            {(entity.fields || []).slice(0, 4).map((field, fieldIndex) => <text key={`${name}-${field}`} x={x + 14} y={y + 62 + fieldIndex * 18} fill="var(--abc-diagram-muted)" fontFamily={font} fontSize="10.5">{field}</text>)}
           </g>
         );
       })}
@@ -215,8 +228,8 @@ export function DiagramRenderer({ spec }: { spec: DiagramSpec }) {
   const type = typeOfDiagram(spec.type);
   const radial = ["knowledge-graph", "node-link-diagram", "graph-visualization", "mind-map", "concept-map", "ontology"].includes(type);
   return (
-    <div data-abc-diagram="true" style={{ margin: "28px 0", overflowX: "auto", background: "#ffffff", border: "1px solid #e5e7eb", borderRadius: 18, padding: 16 }}>
-      <div style={{ minWidth: 720, background: "#ffffff" }}>
+    <div data-abc-diagram="true" style={{ ...diagramThemeStyle, margin: "28px 0", overflowX: "auto", background: "var(--abc-diagram-bg)", border: "1px solid var(--abc-diagram-border)", borderRadius: 18, padding: 16 }}>
+      <div style={{ minWidth: 720, background: "var(--abc-diagram-bg)" }}>
         {type === "sankey" ? <Sankey spec={spec} /> : type === "erd" ? <Erd spec={spec} /> : <Graph spec={spec} radial={radial} />}
       </div>
     </div>
