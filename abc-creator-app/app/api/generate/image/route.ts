@@ -190,13 +190,14 @@ export async function POST(req: NextRequest) {
 
     const sourceText =
       operation === "edit"
-        ? `Image edit request. Use the previous image as conceptual reference when supported by the provider.\n\nOriginal image brief/source:\n${body.sourceText || ""}\n\nEdit instruction:\n${body.prompt || ""}`
+        ? `Image edit request. Use the provided previous image as visual reference when the provider supports image input.\n\nOriginal image brief/source:\n${body.sourceText || ""}\n\nEdit instruction:\n${body.prompt || ""}`
         : body.sourceText || "";
 
     const result = await routeToImage({
       toolSlug,
       prompt: body.prompt || "",
       sourceText,
+      sourceImageDataUrl: operation === "edit" ? body.sourceImageDataUrl || "" : "",
       aspectRatio: body.aspectRatio || "16:9 landscape",
       count: imageCount,
       inputs: body.inputs || {},
