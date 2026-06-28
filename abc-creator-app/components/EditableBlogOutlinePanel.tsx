@@ -19,6 +19,23 @@ interface EditableBlogOutlinePanelProps {
 
 const HANDOFF_KEY = "abc_creator_blog_outline_handoff";
 const OUTLINE_FILE_BASE_NAME = "blog-outline-selected-outline";
+const OUTLINE_METADATA_HEADINGS = [
+  "search intent",
+  "reader promise",
+  "intro angle",
+  "introduction angle",
+  "detailed h2/h3 structure",
+  "detailed h2 h3 structure",
+  "h2/h3 structure",
+  "keyword placement notes",
+  "keyword placement",
+  "faq ideas",
+  "conclusion angle",
+  "verify before publishing",
+  "recommended h1",
+  "reader takeaway",
+  "section purpose",
+];
 
 function makeId() {
   return `heading-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -34,6 +51,24 @@ function cleanHeadingText(value: string) {
     .trim();
 }
 
+function normalizeHeadingKey(value: string) {
+  return cleanHeadingText(value)
+    .toLowerCase()
+    .replace(/^\d+[.)]\s*/, "")
+    .replace(/:$/g, "")
+    .replace(/[–—-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isOutlineMetadataHeading(value: string) {
+  const normalized = normalizeHeadingKey(value);
+  return OUTLINE_METADATA_HEADINGS.some(
+    (metadataHeading) =>
+      normalized === metadataHeading || normalized.startsWith(`${metadataHeading}:`)
+  );
+}
+
 function parseOutlineHeadings(markdown: string): OutlineHeading[] {
   const headings: OutlineHeading[] = [];
 
@@ -44,7 +79,7 @@ function parseOutlineHeadings(markdown: string): OutlineHeading[] {
     const markdownHeading = /^(#{1,3})\s+(.+)$/.exec(line);
     if (markdownHeading) {
       const text = cleanHeadingText(markdownHeading[2]);
-      if (text) {
+      if (text && !isOutlineMetadataHeading(text)) {
         headings.push({
           id: makeId(),
           level: Math.min(markdownHeading[1].length, 3) as 1 | 2 | 3,
@@ -58,7 +93,7 @@ function parseOutlineHeadings(markdown: string): OutlineHeading[] {
     const labeledHeading = /^(?:[-*]\s*)?(H[1-3])\s*[:\-–]\s*(.+)$/i.exec(line);
     if (labeledHeading) {
       const text = cleanHeadingText(labeledHeading[2]);
-      if (text) {
+      if (text && !isOutlineMetadataHeading(text)) {
         headings.push({
           id: makeId(),
           level: Number(labeledHeading[1].slice(1)) as 1 | 2 | 3,
@@ -77,7 +112,10 @@ function parseOutlineHeadings(markdown: string): OutlineHeading[] {
 
 function outlineToMarkdown(headings: OutlineHeading[]) {
   return headings
-    .filter((heading) => heading.enabled && heading.text.trim())
+    .filter(
+      (heading) =>
+        heading.enabled && heading.text.trim() && !isOutlineMetadataHeading(heading.text)
+    )
     .map((heading) => `${"#".repeat(heading.level)} ${heading.text.trim()}`)
     .join("\n\n");
 }
@@ -110,7 +148,11 @@ export function EditableBlogOutlinePanel({ output, inputs }: EditableBlogOutline
   }, [output]);
 
   const selectedHeadings = useMemo(
-    () => headings.filter((heading) => heading.enabled && heading.text.trim()),
+    () =>
+      headings.filter(
+        (heading) =>
+          heading.enabled && heading.text.trim() && !isOutlineMetadataHeading(heading.text)
+      ),
     [headings]
   );
   const selectedOutline = useMemo(() => outlineToMarkdown(headings), [headings]);
@@ -194,7 +236,7 @@ export function EditableBlogOutlinePanel({ output, inputs }: EditableBlogOutline
 
   const downloadOutline = async (format: OutlineDownloadFormat) => {
     if (!selectedOutline.trim()) {
-      setMessage("Select at least one heading before downloading.");
+      setMessage("Select at least one article heading before downloading.");
       return;
     }
 
@@ -230,7 +272,7 @@ export function EditableBlogOutlinePanel({ output, inputs }: EditableBlogOutline
 
   const copyOutline = async () => {
     if (!selectedOutline.trim()) {
-      setMessage("Select at least one heading before copying.");
+      setMessage("Select at least one article heading before copying.");
       return;
     }
 
@@ -254,12 +296,12 @@ export function EditableBlogOutlinePanel({ output, inputs }: EditableBlogOutline
 
   const continueToBlogContent = () => {
     if (!selectedOutline.trim()) {
-      setMessage("Select at least one heading before continuing.");
+      setMessage("Select at least one article heading before continuing.");
       return;
     }
 
     const title =
-      headings.find((heading) => heading.enabled && heading.level === 1 && heading.text.trim())?.text ||
+      selectedHeadings.find((heading) => heading.level === 1 && heading.text.trim())?.text ||
       inputs.blog_title ||
       "";
 
@@ -285,7 +327,7 @@ export function EditableBlogOutlinePanel({ output, inputs }: EditableBlogOutline
           <h2 className="mt-2 text-2xl font-bold text-white">Select and refine headings</h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-400">
             Edit, add, delete, reorder, or uncheck headings before sending this outline to Blog Content.
-            This handoff uses temporary browser session storage only.
+            Outline metadata labels are removed from the handoff.
           </p>
         </div>
 
