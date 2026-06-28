@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { downloadOutput } from "@/lib/download/exportDocuments";
 
 type OutlineHeading = {
   id: string;
@@ -9,12 +10,15 @@ type OutlineHeading = {
   enabled: boolean;
 };
 
+type OutlineDownloadFormat = "pdf" | "docx" | "txt";
+
 interface EditableBlogOutlinePanelProps {
   output: string;
   inputs: Record<string, string>;
 }
 
 const HANDOFF_KEY = "abc_creator_blog_outline_handoff";
+const OUTLINE_FILE_BASE_NAME = "blog-outline-selected-outline";
 
 function makeId() {
   return `heading-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -94,16 +98,23 @@ function fallbackCopy(text: string) {
 export function EditableBlogOutlinePanel({ output, inputs }: EditableBlogOutlinePanelProps) {
   const [headings, setHeadings] = useState<OutlineHeading[]>([]);
   const [copied, setCopied] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [message, setMessage] = useState("");
+  const exportContentRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setHeadings(parseOutlineHeadings(output));
     setCopied(false);
+    setIsDownloading(false);
     setMessage("");
   }, [output]);
 
+  const selectedHeadings = useMemo(
+    () => headings.filter((heading) => heading.enabled && heading.text.trim()),
+    [headings]
+  );
   const selectedOutline = useMemo(() => outlineToMarkdown(headings), [headings]);
-  const selectedCount = headings.filter((heading) => heading.enabled && heading.text.trim()).length;
+  const selectedCount = selectedHeadings.length;
 
   const updateHeading = (id: string, text: string) => {
     setHeadings((current) =>
@@ -148,6 +159,73 @@ export function EditableBlogOutlinePanel({ output, inputs }: EditableBlogOutline
       next.splice(targetIndex, 0, item);
       return next;
     });
+  };
+
+  const submitPdfFormDownload = () => {
+    const iframeName = `abc_outline_pdf_export_${Date.now()}`;
+    const iframe = document.createElement("iframe");
+    iframe.name = iframeName;
+    iframe.style.display = "none";
+    document.body.appendChild(iframe);
+
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = "/api/export/pdf";
+    form.target = iframeName;
+    form.style.display = "none";
+
+    const outputField = document.createElement("textarea");
+    outputField.name = "output";
+    outputField.value = selectedOutline;
+    form.appendChild(outputField);
+
+    const fileNameField = document.createElement("input");
+    fileNameField.type = "hidden";
+    fileNameField.name = "fileBaseName";
+    fileNameField.value = OUTLINE_FILE_BASE_NAME;
+    form.appendChild(fileNameField);
+
+    document.body.appendChild(form);
+    form.submit();
+    form.remove();
+
+    window.setTimeout(() => iframe.remove(), 60000);
+  };
+
+  const downloadOutline = async (format: OutlineDownloadFormat) => {
+    if (!selectedOutline.trim()) {
+      setMessage("Select at least one heading before downloading.");
+      return;
+    }
+
+    if (isDownloading) return;
+
+    setIsDownloading(true);
+    setMessage("");
+
+    try {
+      if (format === "pdf") {
+        submitPdfFormDownload();
+        window.setTimeout(() => setIsDownloading(false), 1500);
+        return;
+      }
+
+      await downloadOutput(
+        format,
+        selectedOutline,
+        OUTLINE_FILE_BASE_NAME,
+        exportContentRef.current
+      );
+      setMessage("Selected outline download started.");
+      setIsDownloading(false);
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? `Download failed: ${error.message}`
+          : "Download failed. Please try again."
+      );
+      setIsDownloading(false);
+    }
   };
 
   const copyOutline = async () => {
@@ -221,6 +299,18 @@ export function EditableBlogOutlinePanel({ output, inputs }: EditableBlogOutline
           {message}
         </div>
       ) : null}
+
+      <div ref={exportContentRef} className="sr-only" aria-hidden="true">
+        {selectedHeadings.map((heading) =>
+          heading.level === 1 ? (
+            <h1 key={heading.id}>{heading.text}</h1>
+          ) : heading.level === 2 ? (
+            <h2 key={heading.id}>{heading.text}</h2>
+          ) : (
+            <h3 key={heading.id}>{heading.text}</h3>
+          )
+        )}
+      </div>
 
       <div className="space-y-3">
         {headings.map((heading, index) => (
@@ -302,6 +392,30 @@ export function EditableBlogOutlinePanel({ output, inputs }: EditableBlogOutline
           >
             {copied ? "Copied!" : "Copy Selected Outline"}
           </button>
+          <select
+            aria-label="Download selected outline"
+            defaultValue=""
+            disabled={isDownloading}
+            onChange={(event) => {
+              const format = event.currentTarget.value as OutlineDownloadFormat | "";
+              event.currentTarget.value = "";
+              if (format) void downloadOutline(format);
+            }}
+            className="cursor-pointer rounded-full border border-purple-400/30 bg-purple-500/10 px-5 py-2.5 text-sm font-semibold text-purple-100 transition hover:bg-purple-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <option value="" className="bg-black text-white">
+              {isDownloading ? "Preparing..." : "Download"}
+            </option>
+            <option value="pdf" className="bg-black text-white">
+              PDF
+            </option>
+            <option value="docx" className="bg-black text-white">
+              DOCX
+            </option>
+            <option value="txt" className="bg-black text-white">
+              Text file
+            </option>
+          </select>
           <button
             type="button"
             onClick={continueToBlogContent}
