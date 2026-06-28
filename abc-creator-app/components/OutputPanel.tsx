@@ -202,6 +202,15 @@ function renderMarkdownWithDiagrams(markdown: string, prefix: string) {
   });
 }
 
+function shouldAutoGenerateBlogImages(toolSlug: string, inputs: Record<string, string>, isLoading: boolean) {
+  if (isLoading || toolSlug !== "blog-content") return false;
+
+  const imageMode = (inputs.image_brief_mode || "").toLowerCase();
+  if (!imageMode || imageMode.includes("no images")) return false;
+
+  return true;
+}
+
 export function OutputPanel({
   isLoading,
   output,
@@ -221,6 +230,7 @@ export function OutputPanel({
   const showNextActions =
     hasOutput && !isLoading && !isErrorOutput && recommendedNextActions.length > 0;
   const outputSegments = useMemo(() => splitOutputIntoImageSegments(displayOutput), [displayOutput]);
+  const autoGenerateBlogImages = shouldAutoGenerateBlogImages(toolSlug, inputs, isLoading);
 
   const fallbackCopy = () => {
     const textarea = document.createElement("textarea");
@@ -343,6 +353,10 @@ export function OutputPanel({
             <span className="rounded-full border border-blue-400/25 bg-blue-500/10 px-3 py-1 text-xs font-semibold text-blue-200">
               Preparing download...
             </span>
+          ) : autoGenerateBlogImages ? (
+            <span className="rounded-full border border-emerald-400/25 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-200">
+              Auto-generating blog images — 23 credits each
+            </span>
           ) : null}
         </div>
 
@@ -405,6 +419,7 @@ export function OutputPanel({
                   prompt={segment.prompt}
                   toolSlug={toolSlug}
                   inputs={inputs}
+                  autoGenerate={autoGenerateBlogImages}
                 />
               ) : (
                 <div key={segment.id}>{renderMarkdownWithDiagrams(segment.content, segment.id)}</div>
