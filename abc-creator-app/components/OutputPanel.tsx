@@ -1,27 +1,120 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import type { Components } from "react-markdown";
 import type { RecommendedNextAction } from "@/lib/tools/public-tools";
 import {
   downloadOutput,
   type OutputDownloadFormat,
 } from "@/lib/download/exportDocuments";
+import { downloadHtmlOutput } from "@/lib/download/exportHtml";
+import {
+  InlineImageBlock,
+  splitOutputIntoImageSegments,
+} from "./InlineImageBlocks";
+
+type OutputPanelDownloadFormat = OutputDownloadFormat | "html";
 
 interface OutputPanelProps {
   isLoading: boolean;
   output: string;
   recommendedNextActions?: RecommendedNextAction[];
   downloadFileBaseName?: string;
+  toolSlug?: string;
+  inputs?: Record<string, string>;
 }
+
+const markdownComponents: Components = {
+  h1: ({ children }) => (
+    <h1 className="mb-5 mt-2 text-3xl font-bold text-white">
+      {children}
+    </h1>
+  ),
+  h2: ({ children }) => (
+    <h2 className="mb-4 mt-8 text-2xl font-bold text-white">
+      {children}
+    </h2>
+  ),
+  h3: ({ children }) => (
+    <h3 className="mb-3 mt-7 text-xl font-bold text-purple-100">
+      {children}
+    </h3>
+  ),
+  p: ({ children }) => (
+    <p className="mb-4 text-sm leading-7 text-gray-200">
+      {children}
+    </p>
+  ),
+  strong: ({ children }) => (
+    <strong className="font-bold text-white">{children}</strong>
+  ),
+  em: ({ children }) => <em className="text-purple-100">{children}</em>,
+  ul: ({ children }) => (
+    <ul className="mb-5 ml-5 list-disc space-y-2 text-sm leading-7 text-gray-200">
+      {children}
+    </ul>
+  ),
+  ol: ({ children }) => (
+    <ol className="mb-6 ml-5 list-decimal space-y-3 text-sm leading-7 text-gray-200">
+      {children}
+    </ol>
+  ),
+  li: ({ children }) => <li className="pl-1 marker:text-purple-300">{children}</li>,
+  a: ({ href, children }) => (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      className="text-purple-300 underline decoration-purple-400/40 underline-offset-4 hover:text-purple-200"
+    >
+      {children}
+    </a>
+  ),
+  blockquote: ({ children }) => (
+    <blockquote className="my-5 border-l-4 border-purple-400/50 bg-purple-500/10 px-5 py-3 text-purple-100">
+      {children}
+    </blockquote>
+  ),
+  hr: () => <hr className="mb-8 mt-8 border-0 border-t border-white/20" />,
+  code: ({ children }) => (
+    <code className="rounded-md border border-purple-500/20 bg-purple-950/40 px-1.5 py-0.5 text-purple-100">
+      {children}
+    </code>
+  ),
+  pre: ({ children }) => (
+    <pre className="my-5 overflow-x-auto rounded-2xl border border-purple-500/20 bg-black/80 p-4 text-sm text-purple-100">
+      {children}
+    </pre>
+  ),
+  table: ({ children }) => (
+    <div className="my-5 overflow-x-auto rounded-2xl border border-purple-500/20">
+      <table className="w-full min-w-[720px] border-collapse text-sm">
+        {children}
+      </table>
+    </div>
+  ),
+  th: ({ children }) => (
+    <th className="border-b border-purple-500/20 bg-purple-500/10 px-4 py-3 text-left font-bold text-white">
+      {children}
+    </th>
+  ),
+  td: ({ children }) => (
+    <td className="border-b border-purple-500/10 px-4 py-3 text-gray-200">
+      {children}
+    </td>
+  ),
+};
 
 export function OutputPanel({
   isLoading,
   output,
   recommendedNextActions = [],
   downloadFileBaseName = "abc-creator-output",
+  toolSlug = "",
+  inputs = {},
 }: OutputPanelProps) {
   const [copied, setCopied] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -32,6 +125,7 @@ export function OutputPanel({
   const isErrorOutput = /^(error:|not enough credits)/i.test(output.trim());
   const showNextActions =
     hasOutput && !isLoading && !isErrorOutput && recommendedNextActions.length > 0;
+  const outputSegments = useMemo(() => splitOutputIntoImageSegments(output), [output]);
 
   const fallbackCopy = () => {
     const textarea = document.createElement("textarea");
@@ -100,13 +194,19 @@ export function OutputPanel({
     window.setTimeout(() => iframe.remove(), 60000);
   };
 
-  const handleDownload = async (format: OutputDownloadFormat) => {
+  const handleDownload = async (format: OutputPanelDownloadFormat) => {
     if (!format || !output || isDownloading) return;
 
     setIsDownloading(true);
     setDownloadError("");
 
     try {
+      if (format === "html") {
+        downloadHtmlOutput(output, downloadFileBaseName, exportContentRef.current);
+        setIsDownloading(false);
+        return;
+      }
+
       if (format === "pdf") {
         submitPdfFormDownload();
         window.setTimeout(() => setIsDownloading(false), 1500);
@@ -166,7 +266,7 @@ export function OutputPanel({
               defaultValue=""
               disabled={isDownloading}
               onChange={(event) => {
-                const format = event.currentTarget.value as OutputDownloadFormat | "";
+                const format = event.currentTarget.value as OutputPanelDownloadFormat | "";
                 event.currentTarget.value = "";
                 if (format) void handleDownload(format);
               }}
@@ -174,6 +274,9 @@ export function OutputPanel({
             >
               <option value="" className="bg-black text-white">
                 Download
+              </option>
+              <option value="html" className="bg-black text-white">
+                HTML
               </option>
               <option value="pdf" className="bg-black text-white">
                 PDF
@@ -198,97 +301,26 @@ export function OutputPanel({
       {output ? (
         <>
           <div ref={exportContentRef} className="creator-output-scroll max-h-[78vh] overflow-y-auto overflow-x-hidden rounded-2xl border border-purple-500/15 bg-black/70 p-6 text-gray-200">
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              components={{
-                h1: ({ children }) => (
-                  <h1 className="mb-5 mt-2 text-3xl font-bold text-white">
-                    {children}
-                  </h1>
-                ),
-                h2: ({ children }) => (
-                  <h2 className="mb-4 mt-8 text-2xl font-bold text-white">
-                    {children}
-                  </h2>
-                ),
-                h3: ({ children }) => (
-                  <h3 className="mb-3 mt-7 text-xl font-bold text-purple-100">
-                    {children}
-                  </h3>
-                ),
-                p: ({ children }) => (
-                  <p className="mb-4 text-sm leading-7 text-gray-200">
-                    {children}
-                  </p>
-                ),
-                strong: ({ children }) => (
-                  <strong className="font-bold text-white">{children}</strong>
-                ),
-                em: ({ children }) => (
-                  <em className="text-purple-100">{children}</em>
-                ),
-                ul: ({ children }) => (
-                  <ul className="mb-5 ml-5 list-disc space-y-2 text-sm leading-7 text-gray-200">
-                    {children}
-                  </ul>
-                ),
-                ol: ({ children }) => (
-                  <ol className="mb-6 ml-5 list-decimal space-y-3 text-sm leading-7 text-gray-200">
-                    {children}
-                  </ol>
-                ),
-                li: ({ children }) => (
-                  <li className="pl-1 marker:text-purple-300">{children}</li>
-                ),
-                a: ({ href, children }) => (
-                  <a
-                    href={href}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-purple-300 underline decoration-purple-400/40 underline-offset-4 hover:text-purple-200"
-                  >
-                    {children}
-                  </a>
-                ),
-                blockquote: ({ children }) => (
-                  <blockquote className="my-5 border-l-4 border-purple-400/50 bg-purple-500/10 px-5 py-3 text-purple-100">
-                    {children}
-                  </blockquote>
-                ),
-                hr: () => (
-                  <hr className="mb-8 mt-8 border-0 border-t border-white/20" />
-                ),
-                code: ({ children }) => (
-                  <code className="rounded-md border border-purple-500/20 bg-purple-950/40 px-1.5 py-0.5 text-purple-100">
-                    {children}
-                  </code>
-                ),
-                pre: ({ children }) => (
-                  <pre className="my-5 overflow-x-auto rounded-2xl border border-purple-500/20 bg-black/80 p-4 text-sm text-purple-100">
-                    {children}
-                  </pre>
-                ),
-                table: ({ children }) => (
-                  <div className="my-5 overflow-x-auto rounded-2xl border border-purple-500/20">
-                    <table className="w-full min-w-[720px] border-collapse text-sm">
-                      {children}
-                    </table>
-                  </div>
-                ),
-                th: ({ children }) => (
-                  <th className="border-b border-purple-500/20 bg-purple-500/10 px-4 py-3 text-left font-bold text-white">
-                    {children}
-                  </th>
-                ),
-                td: ({ children }) => (
-                  <td className="border-b border-purple-500/10 px-4 py-3 text-gray-200">
-                    {children}
-                  </td>
-                ),
-              }}
-            >
-              {output}
-            </ReactMarkdown>
+            {outputSegments.map((segment) =>
+              segment.type === "image" ? (
+                <InlineImageBlock
+                  key={segment.id}
+                  blockId={segment.id}
+                  markdown={segment.content}
+                  prompt={segment.prompt}
+                  toolSlug={toolSlug}
+                  inputs={inputs}
+                />
+              ) : (
+                <ReactMarkdown
+                  key={segment.id}
+                  remarkPlugins={[remarkGfm]}
+                  components={markdownComponents}
+                >
+                  {segment.content}
+                </ReactMarkdown>
+              )
+            )}
 
             {isStreamingVisible ? (
               <span className="mt-2 inline-block h-5 w-2 animate-pulse rounded-sm bg-purple-300 align-middle" />
