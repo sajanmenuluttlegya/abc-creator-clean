@@ -38,6 +38,7 @@ type Node = { id: string; label: string; level?: number; value?: number };
 type Edge = { from: string; to: string; label?: string };
 type ChartPoint = Node & { x: number; y: number; color: string; value: number };
 type DiagramMode = "screen" | "export";
+type PositionedNode = Node & { x: number; y: number; color: string; ring?: number };
 
 const font = "Inter, Arial, Helvetica, sans-serif";
 
@@ -58,6 +59,7 @@ const screenTheme = {
   "--abc-diagram-text": "#f8fafc",
   "--abc-diagram-muted": "#cbd5e1",
   "--abc-diagram-border": "rgba(168, 85, 247, 0.36)",
+  "--abc-diagram-card": "rgba(255,255,255,0.045)",
   "--abc-diagram-soft-fill": "rgba(99,102,241,0.16)",
 } as CSSProperties;
 
@@ -67,6 +69,7 @@ const exportTheme = {
   "--abc-diagram-text": "#0f172a",
   "--abc-diagram-muted": "#475569",
   "--abc-diagram-border": "rgba(99, 102, 241, 0.24)",
+  "--abc-diagram-card": "rgba(248,250,252,0.95)",
   "--abc-diagram-soft-fill": "rgba(99,102,241,0.10)",
 } as CSSProperties;
 
@@ -153,12 +156,19 @@ function chooseVisualFamily(spec: DiagramSpec) {
   if (normalized === "radar-polygon") return hasNumericValues(nodes) ? "radar-polygon" : "radial-network";
 
   if (
+    normalized === "flowchart" ||
+    normalized === "dag" ||
+    normalized === "data-lineage" ||
+    normalized === "lineage-graph" ||
+    normalized === "dependency-graph"
+  ) {
+    return "workflow-strip";
+  }
+
+  if (
     normalized === "taxonomy" ||
     normalized === "hierarchy-chart" ||
     normalized === "tree-diagram" ||
-    normalized === "lineage-graph" ||
-    normalized === "data-lineage" ||
-    normalized === "dependency-graph" ||
     normalized === "knowledge-graph" ||
     normalized === "node-link-diagram" ||
     normalized === "graph-visualization" ||
@@ -188,6 +198,32 @@ function wrap(label: string, max = 16) {
 
   if (current) lines.push(current);
   return lines.slice(0, 3);
+}
+
+function distributeLabelYs(values: number[], minGap = 60, minY = 90, maxY = 410) {
+  if (!values.length) return [];
+
+  const sorted = values
+    .map((value, index) => ({ value: Math.max(minY, Math.min(maxY, value)), index }))
+    .sort((a, b) => a.value - b.value);
+  const result = new Array<number>(values.length);
+  let previous = minY - minGap;
+
+  for (const item of sorted) {
+    const nextY = Math.max(item.value, previous + minGap);
+    result[item.index] = Math.min(nextY, maxY);
+    previous = result[item.index];
+  }
+
+  for (let index = sorted.length - 2; index >= 0; index -= 1) {
+    const currentIndex = sorted[index].index;
+    const nextIndex = sorted[index + 1].index;
+    if (result[nextIndex] - result[currentIndex] < minGap) {
+      result[currentIndex] = Math.max(minY, result[nextIndex] - minGap);
+    }
+  }
+
+  return result.map((value) => Math.max(minY, Math.min(maxY, value)));
 }
 
 function normalizedValue(node: Node, index: number) {
@@ -250,7 +286,7 @@ function DiagramCaption({ spec, x, y, width }: { spec: DiagramSpec; x: number; y
   const lines = wrap(spec.caption, Math.floor(width / 9)).slice(0, 2);
   return (
     <text x={x} y={y} fill="var(--abc-diagram-muted)" fontFamily={font} fontSize="10" fontWeight="650">
-      {lines.map((line, index) => <tspan key={line} x={x} dy={index ? 13 : 0}>{line}</tspan>)}
+      {lines.map((line, index) => <tspan key={`${line}-${index}`} x={x} dy={index ? 13 : 0}>{line}</tspan>)}
     </text>
   );
 }
@@ -263,7 +299,7 @@ function PremiumChart({ spec }: { spec: DiagramSpec }) {
   const height = 376;
   const baseline = height - 84;
   const hasValues = hasNumericValues(points);
-  const xAxisLabel = spec.xAxisLabel || "Stage / concept order";
+  const xAxisLabel = spec.xAxisLabel || "Dimension / category";
   const yAxisLabel = spec.yAxisLabel || spec.metric || (hasValues ? "Value" : "Qualitative emphasis");
   const note = hasValues ? "" : "Qualitative map — not numeric market data";
   const pointById = new Map(points.map((point) => [point.id, point]));
@@ -327,6 +363,55 @@ function PremiumChart({ spec }: { spec: DiagramSpec }) {
   );
 }
 
+function WorkflowStrip({ spec }: { spec: DiagramSpec }) {
+  const nodes = getNodes(spec).slice(0, 8);
+  const width = 980;
+  const height = 340;
+  const startX = 92;
+  const endX = width - 92;
+  const centerY = 170;
+  const gap = nodes.length > 1 ? (endX - startX) / (nodes.length - 1) : 0;
+  const positioned = nodes.map((node, index) => ({ ...node, x: startX + index * gap, y: centerY, color: colors[index % colors.length] }));
+
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="auto" role="img" aria-label={spec.title || "Workflow diagram"} style={{ display: "block" }}>
+      <defs>
+        <marker id="workflowArrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(99,102,241,0.82)" />
+        </marker>
+      </defs>
+      <rect x="1" y="1" width={width - 2} height={height - 2} rx="24" fill="var(--abc-diagram-bg)" stroke="var(--abc-diagram-border)" strokeWidth="1.2" />
+      <DiagramCaption spec={spec} x={42} y={34} width={720} />
+
+      <line x1={startX} x2={endX} y1={centerY} y2={centerY} stroke="rgba(99,102,241,0.32)" strokeWidth="5" strokeLinecap="round" />
+      {positioned.slice(0, -1).map((node, index) => {
+        const next = positioned[index + 1];
+        return <line key={`${node.id}-${next.id}`} x1={node.x + 25} y1={centerY} x2={next.x - 25} y2={centerY} stroke="rgba(99,102,241,0.58)" strokeWidth="3" strokeLinecap="round" markerEnd="url(#workflowArrow)" />;
+      })}
+
+      {positioned.map((node, index) => {
+        const isBottom = index % 2 === 0;
+        const boxWidth = 126;
+        const boxHeight = 62;
+        const boxX = node.x - boxWidth / 2;
+        const boxY = isBottom ? 226 : 54;
+        const connectorEndY = isBottom ? boxY : boxY + boxHeight;
+        return (
+          <g key={node.id}>
+            <line x1={node.x} x2={node.x} y1={centerY} y2={connectorEndY} stroke={node.color} strokeOpacity="0.38" strokeWidth="6" strokeLinecap="round" />
+            <circle cx={node.x} cy={centerY} r="18" fill={node.color} fillOpacity="0.22" />
+            <circle cx={node.x} cy={centerY} r="9" fill={node.color} />
+            <rect x={boxX} y={boxY} width={boxWidth} height={boxHeight} rx="16" fill="var(--abc-diagram-card)" stroke={node.color} strokeOpacity="0.34" />
+            <text x={node.x} y={boxY + 22} textAnchor="middle" fill="var(--abc-diagram-text)" fontFamily={font} fontSize="10.5" fontWeight="780">
+              {wrap(node.label, 16).map((line, lineIndex) => <tspan key={`${node.id}-${lineIndex}`} x={node.x} dy={lineIndex ? 12 : 0}>{line}</tspan>)}
+            </text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
 function RadarPolygon({ spec }: { spec: DiagramSpec }) {
   const nodes = getNodes(spec).slice(0, 8);
   const width = 860;
@@ -375,57 +460,98 @@ function RadarPolygon({ spec }: { spec: DiagramSpec }) {
 }
 
 function RadialNetwork({ spec }: { spec: DiagramSpec }) {
-  const nodes = getNodes(spec).slice(0, 10);
-  const edges = getEdges(spec);
-  const width = 860;
-  const height = 438;
-  const cx = width / 2;
-  const cy = height / 2 + 4;
-  const rings = [70, 126, 178];
+  const nodes = getNodes(spec).slice(0, 8);
+  const width = 980;
+  const height = 500;
+  const cx = 405;
+  const cy = 255;
+  const rings = [68, 128, 188];
   const ringLabels = spec.ringLabels?.length ? spec.ringLabels : ["Core", "Direct links", "Outer context"];
   const [core, ...rest] = nodes;
 
-  const positioned = [
+  const positioned: PositionedNode[] = [
     { ...(core || { id: "core", label: spec.title || "Core" }), x: cx, y: cy, color: "#8b5cf6", ring: 0 },
     ...rest.map((node, index) => {
-      const ringIndex = Math.min(2, Math.max(1, node.level || (index < 5 ? 1 : 2)));
+      const ringIndex = Math.min(2, Math.max(1, node.level || (index < 3 ? 1 : 2)));
       const ringRadius = rings[ringIndex];
-      const totalInRing = rest.filter((item, itemIndex) => Math.min(2, Math.max(1, item.level || (itemIndex < 5 ? 1 : 2))) === ringIndex).length || 1;
-      const indexInRing = rest.slice(0, index + 1).filter((item, itemIndex) => Math.min(2, Math.max(1, item.level || (itemIndex < 5 ? 1 : 2))) === ringIndex).length - 1;
-      const angle = -Math.PI / 2 + (Math.PI * 2 * indexInRing) / totalInRing;
+      const group = rest.filter((item, itemIndex) => Math.min(2, Math.max(1, item.level || (itemIndex < 3 ? 1 : 2))) === ringIndex);
+      const groupIndex = Math.max(0, group.findIndex((item) => item.id === node.id));
+      const angle = -Math.PI / 2 + (Math.PI * 2 * groupIndex) / Math.max(group.length, 1);
       return { ...node, x: cx + Math.cos(angle) * ringRadius, y: cy + Math.sin(angle) * ringRadius, color: colors[index % colors.length], ring: ringIndex };
     }),
   ];
-  const byId = new Map(positioned.map((node) => [node.id, node]));
+
+  const leftNodes = positioned.slice(1).filter((node) => node.x < cx).sort((a, b) => a.y - b.y);
+  const rightNodes = positioned.slice(1).filter((node) => node.x >= cx).sort((a, b) => a.y - b.y);
+  const leftYs = distributeLabelYs(leftNodes.map((node) => node.y), 60, 96, height - 88);
+  const rightYs = distributeLabelYs(rightNodes.map((node) => node.y), 60, 96, height - 88);
+  const labelMap = new Map<string, { x: number; y: number; align: "start" | "end" }>();
+  leftNodes.forEach((node, index) => labelMap.set(node.id, { x: 56, y: leftYs[index], align: "start" }));
+  rightNodes.forEach((node, index) => labelMap.set(node.id, { x: width - 56, y: rightYs[index], align: "end" }));
 
   return (
     <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="auto" role="img" aria-label={spec.title || "Relationship network"} style={{ display: "block" }}>
+      <defs>
+        <marker id="calloutArrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(99,102,241,0.82)" />
+        </marker>
+      </defs>
       <rect x="1" y="1" width={width - 2} height={height - 2} rx="24" fill="var(--abc-diagram-bg)" stroke="var(--abc-diagram-border)" strokeWidth="1.2" />
-      <DiagramCaption spec={spec} x={46} y={32} width={440} />
-      {rings.map((ring, index) => (
-        <g key={ring}>
-          <circle cx={cx} cy={cy} r={ring} fill="none" stroke="var(--abc-diagram-grid)" strokeWidth="1" />
-          <text x={cx + ring + 8} y={cy - 6} fill="var(--abc-diagram-muted)" fontFamily={font} fontSize="9.5" fontWeight="700">{ringLabels[index] || `Ring ${index + 1}`}</text>
-        </g>
+      <DiagramCaption spec={spec} x={42} y={34} width={430} />
+
+      {rings.map((ring) => <circle key={ring} cx={cx} cy={cy} r={ring} fill="none" stroke="var(--abc-diagram-grid)" strokeWidth="1" />)}
+
+      {ringLabels.slice(0, 3).map((label, index) => {
+        const ring = rings[index];
+        const startX = cx + ring;
+        const startY = cy - 8;
+        const endX = width - 330;
+        const endY = 78 + index * 44;
+        return (
+          <g key={`${label}-${index}`}>
+            <path d={`M ${startX} ${startY} C ${startX + 22} ${startY - 10}, ${endX - 28} ${endY - 8}, ${endX} ${endY}`} fill="none" stroke="rgba(99,102,241,0.42)" strokeWidth="2" markerEnd="url(#calloutArrow)" />
+            <rect x={endX + 12} y={endY - 17} width="190" height="30" rx="15" fill="var(--abc-diagram-card)" stroke="rgba(99,102,241,0.30)" />
+            <text x={endX + 107} y={endY + 3} textAnchor="middle" fill="var(--abc-diagram-muted)" fontFamily={font} fontSize="10" fontWeight="760">{safeLabel(label, 24)}</text>
+          </g>
+        );
+      })}
+
+      {positioned.slice(1).map((node) => (
+        <line key={`spoke-${node.id}`} x1={cx} y1={cy} x2={node.x} y2={node.y} stroke={node.color} strokeOpacity="0.22" strokeWidth="2" />
       ))}
-      <text x={width - 52} y="32" textAnchor="end" fill="var(--abc-diagram-muted)" fontFamily={font} fontSize="10" fontWeight="700">Rings show relationship distance, not a numeric Y-axis</text>
-      {edges.length
-        ? edges.map((edge, index) => {
-            const from = byId.get(edge.from) || positioned[0];
-            const to = byId.get(edge.to);
-            if (!from || !to) return null;
-            return <line key={`${edge.from}-${edge.to}-${index}`} x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke={to.color} strokeOpacity="0.34" strokeWidth="2.5" />;
-          })
-        : positioned.slice(1).map((node) => <line key={`edge-${node.id}`} x1={cx} y1={cy} x2={node.x} y2={node.y} stroke={node.color} strokeOpacity="0.34" strokeWidth="2.5" />)}
+
       {positioned.map((node, index) => (
         <g key={node.id}>
-          <circle cx={node.x} cy={node.y} r={index === 0 ? 24 : 15} fill={node.color} fillOpacity={index === 0 ? 0.92 : 0.78} />
-          <circle cx={node.x} cy={node.y} r={index === 0 ? 38 : 25} fill={node.color} fillOpacity="0.13" />
-          <text x={node.x} y={node.y + (index === 0 ? 44 : 32)} textAnchor="middle" fill="var(--abc-diagram-text)" fontFamily={font} fontSize="10.5" fontWeight="750">
-            {wrap(node.label, index === 0 ? 18 : 14).map((line, lineIndex) => <tspan key={`${node.id}-${lineIndex}`} x={node.x} dy={lineIndex ? 12 : 0}>{line}</tspan>)}
-          </text>
+          <circle cx={node.x} cy={node.y} r={index === 0 ? 25 : 15} fill={node.color} fillOpacity={index === 0 ? 0.92 : 0.78} />
+          <circle cx={node.x} cy={node.y} r={index === 0 ? 40 : 25} fill={node.color} fillOpacity="0.12" />
         </g>
       ))}
+
+      {positioned[0] ? (
+        <text x={cx} y={cy + 55} textAnchor="middle" fill="var(--abc-diagram-text)" fontFamily={font} fontSize="11" fontWeight="780">
+          {wrap(positioned[0].label, 18).map((line, index) => <tspan key={`core-${index}`} x={cx} dy={index ? 13 : 0}>{line}</tspan>)}
+        </text>
+      ) : null}
+
+      {positioned.slice(1).map((node) => {
+        const label = labelMap.get(node.id);
+        if (!label) return null;
+        const boxWidth = 172;
+        const boxHeight = 46;
+        const boxX = label.align === "start" ? label.x : label.x - boxWidth;
+        const boxY = label.y - boxHeight / 2;
+        const anchorX = label.align === "start" ? boxX + boxWidth : boxX;
+        const anchorY = label.y;
+        return (
+          <g key={`label-${node.id}`}>
+            <path d={`M ${node.x} ${node.y} C ${(node.x + anchorX) / 2} ${node.y}, ${(node.x + anchorX) / 2} ${anchorY}, ${anchorX} ${anchorY}`} fill="none" stroke={node.color} strokeOpacity="0.42" strokeWidth="2" markerEnd="url(#calloutArrow)" />
+            <rect x={boxX} y={boxY} width={boxWidth} height={boxHeight} rx="16" fill="var(--abc-diagram-card)" stroke={node.color} strokeOpacity="0.30" />
+            <text x={boxX + boxWidth / 2} y={boxY + 18} textAnchor="middle" fill="var(--abc-diagram-text)" fontFamily={font} fontSize="10.2" fontWeight="760">
+              {wrap(node.label, 20).map((line, lineIndex) => <tspan key={`${node.id}-${lineIndex}`} x={boxX + boxWidth / 2} dy={lineIndex ? 12 : 0}>{line}</tspan>)}
+            </text>
+          </g>
+        );
+      })}
     </svg>
   );
 }
@@ -454,8 +580,8 @@ function Sankey({ spec }: { spec: DiagramSpec }) {
   const width = 860;
   const height = Math.max(340, Math.max(left.length, right.length) * 56 + 110);
   const total = data.reduce((sum, flow) => sum + Math.max(flow.value || 1, 1), 0) || 1;
-  const leftY = (index: number) => 70 + index * ((height - 140) / Math.max(left.length - 1, 1));
-  const rightY = (index: number) => 70 + index * ((height - 140) / Math.max(right.length - 1, 1));
+  const leftY = (index: number) => 78 + index * ((height - 160) / Math.max(left.length - 1, 1));
+  const rightY = (index: number) => 78 + index * ((height - 160) / Math.max(right.length - 1, 1));
 
   return (
     <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="auto" role="img" aria-label={spec.title || "Sankey chart"} style={{ display: "block" }}>
@@ -507,8 +633,8 @@ export function DiagramRenderer({ spec, mode = "screen" }: { spec: DiagramSpec; 
   const theme = mode === "export" ? exportTheme : screenTheme;
 
   return (
-    <div data-abc-diagram="true" style={{ ...theme, margin: "28px 0", background: mode === "export" ? "#ffffff" : "linear-gradient(135deg, rgba(34,211,238,0.08), rgba(168,85,247,0.08), rgba(236,72,153,0.06))", border: "1px solid var(--abc-diagram-border)", borderRadius: 22, padding: 14 }}>
-      {family === "sankey" ? <Sankey spec={spec} /> : family === "entity-cards" ? <Erd spec={spec} /> : family === "radar-polygon" ? <RadarPolygon spec={spec} /> : family === "radial-network" ? <RadialNetwork spec={spec} /> : <PremiumChart spec={spec} />}
+    <div data-abc-diagram="true" style={{ ...theme, margin: "28px 0", background: mode === "export" ? "#ffffff" : "linear-gradient(135deg, rgba(34,211,238,0.08), rgba(168,85,247,0.08), rgba(236,72,153,0.06))", border: "1px solid var(--abc-diagram-border)", borderRadius: 22, padding: 18 }}>
+      {family === "workflow-strip" ? <WorkflowStrip spec={spec} /> : family === "sankey" ? <Sankey spec={spec} /> : family === "entity-cards" ? <Erd spec={spec} /> : family === "radar-polygon" ? <RadarPolygon spec={spec} /> : family === "radial-network" ? <RadialNetwork spec={spec} /> : <PremiumChart spec={spec} />}
     </div>
   );
 }
