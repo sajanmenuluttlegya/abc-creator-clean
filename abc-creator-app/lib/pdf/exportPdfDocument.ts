@@ -3,12 +3,43 @@ import { join } from "path";
 import fontkit from "@pdf-lib/fontkit";
 import { PDFDocument, StandardFonts, rgb, type PDFFont } from "pdf-lib";
 
+type NodeSpec = { id?: string; label?: string; level?: number };
+type EdgeSpec = { from?: string; to?: string; source?: string; target?: string; label?: string };
+type FlowSpec = { from?: string; to?: string; value?: number; label?: string };
+type EntitySpec = { id?: string; name?: string; label?: string; fields?: string[] };
+
+type DiagramSpec = {
+  type?: string;
+  title?: string;
+  caption?: string;
+  nodes?: Array<string | NodeSpec>;
+  edges?: Array<[string, string, string?] | EdgeSpec>;
+  flows?: Array<[string, string, number?] | FlowSpec>;
+  entities?: EntitySpec[];
+  data?: {
+    nodes?: Array<string | NodeSpec>;
+    edges?: Array<[string, string, string?] | EdgeSpec>;
+    flows?: Array<[string, string, number?] | FlowSpec>;
+    entities?: EntitySpec[];
+  };
+};
+
+type Node = { id: string; label: string; level?: number };
+type Edge = { from: string; to: string; label?: string };
+
+type PdfExportImage = {
+  dataUrl: string;
+  alt?: string;
+  frame?: string;
+};
 
 type PdfBlock =
   | { type: "heading"; level: 1 | 2 | 3; text: string }
   | { type: "paragraph"; text: string }
   | { type: "list"; items: string[] }
-  | { type: "table"; rows: string[][]; header: boolean };
+  | { type: "table"; rows: string[][]; header: boolean }
+  | { type: "diagram"; spec: DiagramSpec }
+  | { type: "image"; alt?: string };
 
 type PdfFontSet = {
   regular: PDFFont;
@@ -36,6 +67,17 @@ const FONT_PACKAGE_DIRS = {
   ),
 } as const;
 
+const chartColors = [
+  rgb(0.055, 0.647, 0.914),
+  rgb(0.545, 0.361, 0.965),
+  rgb(0.063, 0.725, 0.506),
+  rgb(0.925, 0.282, 0.6),
+  rgb(0.957, 0.62, 0.043),
+  rgb(0.231, 0.51, 0.965),
+  rgb(0.937, 0.267, 0.267),
+  rgb(0.078, 0.722, 0.651),
+];
+
 function titleFromName(name: string) {
   return name
     .split("-")
@@ -46,7 +88,6 @@ function titleFromName(name: string) {
 
 function cleanText(value: string) {
   return value
-    .replace(/```[\s\S]*?```/g, (match) => match.replace(/```/g, ""))
     .replace(/^#{1,6}\s+/gm, "")
     .replace(/\*\*([^*]+)\*\*/g, "$1")
     .replace(/\*([^*]+)\*/g, "$1")
@@ -175,6 +216,65 @@ function isTableSeparator(line: string) {
   return /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(line);
 }
 
+function text(value: unknown, fallback: string) {
+  const result = String(value || "").trim();
+  return result || fallback;
+}
+
+function safeLabel(value: string, max: number) {
+  const cleaned = cleanText(value);
+  return cleaned.length > max ? `${cleaned.slice(0, Math.max(1, max - 1))}…` : cleaned;
+}
+
+function getNodes(spec: DiagramSpec): Node[] {
+  const raw = spec.nodes || spec.data?.nodes || [];
+  const nodes = raw.map((node, index) => {
+    if (typeof node === "string") return { id: text(node, `n${index}`), label: node };
+    const id = text(node.id || node.label, `n${index}`);
+    return { id, label: text(node.label || node.id, id), level: node.level };
+  });
+
+  getEdges(spec).forEach((edge) => {
+    if (!nodes.some((node) => node.id === edge.from)) nodes.push({ id: edge.from, label: edge.from });
+    if (!nodes.some((node) => node.id === edge.to)) nodes.push({ id: edge.to, label: edge.to });
+  });
+
+  return nodes.length ? nodes : [{ id: "core", label: spec.title || "Diagram" }];
+}
+
+function getEdges(spec: DiagramSpec): Edge[] {
+  const raw = spec.edges || spec.data?.edges || [];
+  return raw
+    .map((edge) => {
+      if (Array.isArray(edge)) {
+        return { from: text(edge[0], ""), to: text(edge[1], ""), label: edge[2] ? String(edge[2]) : undefined };
+      }
+
+      return { from: text(edge.from || edge.source, ""), to: text(edge.to || edge.target, ""), label: edge.label };
+    })
+    .filter((edge) => edge.from && edge.to);
+}
+
+function parseDiagramSpec(raw: string): DiagramSpec | null {
+  try {
+    const parsed = JSON.parse(raw.trim()) as DiagramSpec;
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function isImageBlockHeading(line: string) {
+  const normalized = line.replace(/^#{1,6}\s*/, "").trim();
+  return /^image\s+\d+\s*:/i.test(normalized);
+}
+
+function parseInlineDiagram(line: string) {
+  const match = /^abc-diagram\s*(\{[\s\S]*\})\s*$/i.exec(line.trim());
+  if (!match) return null;
+  return parseDiagramSpec(match[1]);
+}
+
 function parseBlocks(markdown: string): PdfBlock[] {
   const lines = markdown.replace(/\r\n/g, "\n").split("\n");
   const blocks: PdfBlock[] = [];
@@ -192,12 +292,54 @@ function parseBlocks(markdown: string): PdfBlock[] {
     listItems = [];
   };
 
-  for (let index = 0; index < lines.length; index++) {
+  for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index].trim();
 
     if (!line) {
       flushParagraph();
       flushList();
+      continue;
+    }
+
+    if (/^```abc-diagram\s*$/i.test(line)) {
+      flushParagraph();
+      flushList();
+      const diagramLines: string[] = [];
+      index += 1;
+
+      while (index < lines.length && !/^```\s*$/.test(lines[index].trim())) {
+        diagramLines.push(lines[index]);
+        index += 1;
+      }
+
+      const spec = parseDiagramSpec(diagramLines.join("\n"));
+      if (spec) blocks.push({ type: "diagram", spec });
+      continue;
+    }
+
+    const inlineDiagram = parseInlineDiagram(line);
+    if (inlineDiagram) {
+      flushParagraph();
+      flushList();
+      blocks.push({ type: "diagram", spec: inlineDiagram });
+      continue;
+    }
+
+    if (isImageBlockHeading(line)) {
+      flushParagraph();
+      flushList();
+      blocks.push({ type: "image", alt: cleanText(line) });
+
+      while (index + 1 < lines.length) {
+        const next = lines[index + 1].trim();
+        if (!next) {
+          index += 1;
+          continue;
+        }
+        if (/^```abc-diagram\s*$/i.test(next) || (/^#{1,6}\s+/.test(next) && !isImageBlockHeading(next))) break;
+        index += 1;
+      }
+
       continue;
     }
 
@@ -269,7 +411,13 @@ function wrapLine(line: string, maxChars: number) {
   return lines;
 }
 
-export async function makePdfExport(output: string, baseName: string) {
+function dataUrlToBuffer(dataUrl: string) {
+  const match = /^data:([^;,]+);base64,(.+)$/i.exec(dataUrl.trim());
+  if (!match) return null;
+  return { mimeType: match[1].toLowerCase(), buffer: Buffer.from(match[2], "base64") };
+}
+
+export async function makePdfExport(output: string, baseName: string, images: PdfExportImage[] = []) {
   const pdf = await PDFDocument.create();
   const fonts = await loadFonts(pdf);
   const pageSize: [number, number] = [612, 792];
@@ -278,9 +426,11 @@ export async function makePdfExport(output: string, baseName: string) {
   const contentWidth = pageSize[0] - margin * 2;
   const black = rgb(0.05, 0.05, 0.06);
   const gray = rgb(0.82, 0.84, 0.89);
+  const lightGray = rgb(0.965, 0.97, 0.985);
   const headerBg = rgb(0.96, 0.94, 1);
   let page = pdf.addPage(pageSize);
   let y = pageSize[1] - 70;
+  let imageIndex = 0;
 
   const newPage = () => {
     page = pdf.addPage(pageSize);
@@ -311,6 +461,13 @@ export async function makePdfExport(output: string, baseName: string) {
     ensure(16);
     page.drawLine({ start: { x: margin, y }, end: { x: pageSize[0] - margin, y }, thickness: 0.6, color: gray });
     y -= 18;
+  };
+  const drawSmallText = (value: string, x: number, yPos: number, size = 7.5, width = 90, isBold = true) => {
+    const lines = wrapLine(value, Math.max(8, Math.floor(width / (size * 0.52)))).slice(0, 2);
+    lines.forEach((line, lineIndex) => {
+      const selected = chooseFont(line, isBold, fonts);
+      page.drawText(selected.text, { x, y: yPos - lineIndex * (size + 2), size, font: selected.font, color: black });
+    });
   };
   const drawTable = (rows: string[][], hasHeader: boolean) => {
     if (!rows.length) return;
@@ -346,12 +503,127 @@ export async function makePdfExport(output: string, baseName: string) {
 
     y -= 26;
   };
+  const drawImage = async (alt?: string) => {
+    const image = images[imageIndex];
+    imageIndex += 1;
+    if (!image?.dataUrl) return;
+
+    const decoded = dataUrlToBuffer(image.dataUrl);
+    if (!decoded) return;
+
+    try {
+      const embedded = decoded.mimeType.includes("png")
+        ? await pdf.embedPng(decoded.buffer)
+        : await pdf.embedJpg(decoded.buffer);
+      const fit = embedded.scaleToFit(contentWidth, 285);
+      const framed = !String(image.frame || "boxed").toLowerCase().includes("borderless");
+      const height = fit.height + (framed ? 22 : 10);
+      ensure(height + 18);
+
+      if (framed) {
+        page.drawRectangle({ x: margin, y: y - fit.height - 18, width: contentWidth, height: fit.height + 18, color: rgb(1, 1, 1), borderColor: gray, borderWidth: 0.8 });
+        page.drawImage(embedded, { x: margin + 9, y: y - fit.height - 9, width: fit.width - 18, height: fit.height });
+      } else {
+        page.drawImage(embedded, { x: margin, y: y - fit.height, width: fit.width, height: fit.height });
+      }
+
+      y -= height;
+      const caption = cleanText(image.alt || alt || "");
+      if (caption) drawText(caption, 7.5, false, 10);
+      else y -= 10;
+    } catch {
+      // Skip unsupported or invalid image data rather than breaking the whole PDF export.
+    }
+  };
+  const drawDiagram = (spec: DiagramSpec) => {
+    const type = String(spec.type || "graph").toLowerCase();
+    const nodes = getNodes(spec).slice(0, 10);
+    const edges = getEdges(spec);
+    const height = 220;
+    const topPadding = 26;
+    const cardX = margin;
+    const cardY = y - height;
+    const cardW = contentWidth;
+    const cardH = height;
+    ensure(cardH + 24);
+
+    page.drawRectangle({ x: cardX, y: cardY, width: cardW, height: cardH, color: rgb(1, 1, 1), borderColor: rgb(0.84, 0.82, 0.96), borderWidth: 0.9 });
+
+    const title = safeLabel(spec.title || "Structured visual", 70);
+    const selected = chooseFont(title, true, fonts);
+    page.drawText(selected.text, { x: cardX + 16, y: y - 18, size: 10.5, font: selected.font, color: black });
+
+    if (type.includes("sankey")) {
+      const rawFlows = spec.flows || spec.data?.flows || [];
+      const flows = rawFlows.length ? rawFlows : edges.map((edge) => ({ from: edge.from, to: edge.to, value: 1 }));
+      const left = Array.from(new Set(flows.map((flow) => Array.isArray(flow) ? text(flow[0], "") : text(flow.from, "")))).slice(0, 5);
+      const right = Array.from(new Set(flows.map((flow) => Array.isArray(flow) ? text(flow[1], "") : text(flow.to, "")))).slice(0, 5);
+      const leftY = (index: number) => y - topPadding - 40 - index * 28;
+      const rightY = (index: number) => y - topPadding - 40 - index * 28;
+
+      flows.slice(0, 8).forEach((flow, index) => {
+        const from = Array.isArray(flow) ? text(flow[0], "") : text(flow.from, "");
+        const to = Array.isArray(flow) ? text(flow[1], "") : text(flow.to, "");
+        const y1 = leftY(Math.max(0, left.indexOf(from)));
+        const y2 = rightY(Math.max(0, right.indexOf(to)));
+        const color = chartColors[index % chartColors.length];
+        page.drawLine({ start: { x: cardX + 130, y: y1 }, end: { x: cardX + cardW - 130, y: y2 }, thickness: 4, color, opacity: 0.42 });
+      });
+
+      left.forEach((label, index) => {
+        page.drawRectangle({ x: cardX + 16, y: leftY(index) - 10, width: 100, height: 20, color: lightGray, borderColor: chartColors[index % chartColors.length], borderWidth: 0.6 });
+        drawSmallText(label, cardX + 22, leftY(index) - 2, 6.8, 88);
+      });
+      right.forEach((label, index) => {
+        page.drawRectangle({ x: cardX + cardW - 116, y: rightY(index) - 10, width: 100, height: 20, color: lightGray, borderColor: chartColors[(index + 3) % chartColors.length], borderWidth: 0.6 });
+        drawSmallText(label, cardX + cardW - 110, rightY(index) - 2, 6.8, 88);
+      });
+    } else if (type.includes("taxonomy") || type.includes("hierarchy") || type.includes("lineage") || type.includes("tree") || type.includes("dependency")) {
+      const cx = cardX + cardW / 2;
+      const cy = y - 118;
+      const radius = 64;
+      nodes.slice(0, 8).forEach((node, index) => {
+        const angle = -Math.PI / 2 + (Math.PI * 2 * index) / Math.max(nodes.length, 1);
+        const x = cx + Math.cos(angle) * radius;
+        const yy = cy + Math.sin(angle) * radius;
+        const lx = cx + Math.cos(angle) * (radius + 32);
+        const ly = cy + Math.sin(angle) * (radius + 32);
+        page.drawLine({ start: { x: cx, y: cy }, end: { x, y: yy }, thickness: 0.7, color: gray });
+        page.drawCircle({ x, y: yy, size: 6, color: chartColors[index % chartColors.length] });
+        drawSmallText(node.label, lx - 36, ly + 4, 6.7, 72);
+      });
+      page.drawCircle({ x: cx, y: cy, size: 8, color: rgb(0.545, 0.361, 0.965) });
+    } else {
+      const baseY = cardY + 46;
+      const chartTop = y - 58;
+      const points = nodes.map((node, index) => {
+        const x = cardX + 34 + (index * (cardW - 68)) / Math.max(nodes.length - 1, 1);
+        const value = 36 + ((index * 29 + node.label.length * 7) % 76);
+        const yy = baseY + value;
+        return { node, x, y: yy };
+      });
+
+      for (let index = 0; index < 5; index += 1) {
+        const gy = baseY + index * 28;
+        page.drawLine({ start: { x: cardX + 24, y: gy }, end: { x: cardX + cardW - 24, y: gy }, thickness: 0.35, color: gray, opacity: 0.5 });
+      }
+
+      points.forEach((point, index) => {
+        if (index > 0) page.drawLine({ start: { x: points[index - 1].x, y: points[index - 1].y }, end: { x: point.x, y: point.y }, thickness: 2, color: rgb(0.545, 0.361, 0.965) });
+        page.drawLine({ start: { x: point.x, y: baseY }, end: { x: point.x, y: point.y }, thickness: 3, color: chartColors[index % chartColors.length], opacity: 0.35 });
+        page.drawCircle({ x: point.x, y: point.y, size: 5, color: chartColors[index % chartColors.length] });
+        drawSmallText(point.node.label, point.x - 34, chartTop + (index % 2 ? 0 : 18), 6.6, 68);
+      });
+    }
+
+    y -= cardH + 22;
+  };
 
   drawText("ABC Creator Export", 8, true, 5);
   drawText(titleFromName(baseName), 18, true, 8);
   drawRule();
 
-  parseBlocks(output).forEach((block) => {
+  for (const block of parseBlocks(output)) {
     if (block.type === "heading") {
       addVerticalSpace(8);
       drawText(block.text, block.level === 1 ? 15 : block.level === 2 ? 13 : 11, true, 10);
@@ -360,10 +632,14 @@ export async function makePdfExport(output: string, baseName: string) {
     } else if (block.type === "list") {
       block.items.forEach((item) => drawText(`• ${item}`, 10, false, 4, 12));
       y -= 6;
-    } else {
+    } else if (block.type === "table") {
       drawTable(block.rows, block.header);
+    } else if (block.type === "diagram") {
+      drawDiagram(block.spec);
+    } else {
+      await drawImage(block.alt);
     }
-  });
+  }
 
   return pdf.save();
 }
