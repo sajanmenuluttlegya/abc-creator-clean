@@ -141,10 +141,14 @@ export function EditableBlogOutlinePanel({ output, inputs }: EditableBlogOutline
   const exportContentRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    setHeadings(parseOutlineHeadings(output));
-    setCopied(false);
-    setIsDownloading(false);
-    setMessage("");
+    const timer = window.setTimeout(() => {
+      setHeadings(parseOutlineHeadings(output));
+      setCopied(false);
+      setIsDownloading(false);
+      setMessage("");
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, [output]);
 
   const selectedHeadings = useMemo(

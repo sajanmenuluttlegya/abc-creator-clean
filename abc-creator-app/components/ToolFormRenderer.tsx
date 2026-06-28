@@ -30,27 +30,31 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
   useEffect(() => {
     if (tool.slug !== "blog-content") return;
 
-    try {
-      const stored = window.sessionStorage.getItem(BLOG_OUTLINE_HANDOFF_KEY);
-      if (!stored) return;
+    const timer = window.setTimeout(() => {
+      try {
+        const stored = window.sessionStorage.getItem(BLOG_OUTLINE_HANDOFF_KEY);
+        if (!stored) return;
 
-      const handoff = JSON.parse(stored) as {
-        outline?: string;
-        title?: string;
-        keywords?: string;
-      };
+        const handoff = JSON.parse(stored) as {
+          outline?: string;
+          title?: string;
+          keywords?: string;
+        };
 
-      setFormData((current) => ({
-        ...current,
-        ...(handoff.outline && !current.outline ? { outline: handoff.outline } : {}),
-        ...(handoff.title && !current.title ? { title: handoff.title } : {}),
-        ...(handoff.keywords && !current.keywords ? { keywords: handoff.keywords } : {}),
-      }));
+        setFormData((current) => ({
+          ...current,
+          ...(handoff.outline && !current.outline ? { outline: handoff.outline } : {}),
+          ...(handoff.title && !current.title ? { title: handoff.title } : {}),
+          ...(handoff.keywords && !current.keywords ? { keywords: handoff.keywords } : {}),
+        }));
 
-      window.sessionStorage.removeItem(BLOG_OUTLINE_HANDOFF_KEY);
-    } catch {
-      window.sessionStorage.removeItem(BLOG_OUTLINE_HANDOFF_KEY);
-    }
+        window.sessionStorage.removeItem(BLOG_OUTLINE_HANDOFF_KEY);
+      } catch {
+        window.sessionStorage.removeItem(BLOG_OUTLINE_HANDOFF_KEY);
+      }
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, [tool.slug]);
 
   const handleInputChange = (

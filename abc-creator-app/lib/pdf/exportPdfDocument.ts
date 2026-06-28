@@ -1,10 +1,8 @@
 import { readdir, readFile } from "fs/promises";
-import { dirname, join } from "path";
-import { createRequire } from "module";
+import { join } from "path";
 import fontkit from "@pdf-lib/fontkit";
 import { PDFDocument, StandardFonts, rgb, type PDFFont } from "pdf-lib";
 
-const requireFromHere = createRequire(import.meta.url);
 
 type PdfBlock =
   | { type: "heading"; level: 1 | 2 | 3; text: string }
@@ -20,6 +18,23 @@ type PdfFontSet = {
   arabicRegular?: PDFFont;
   arabicBold?: PDFFont;
 };
+
+const FONT_PACKAGE_DIRS = {
+  "@fontsource/noto-sans-devanagari": join(
+    process.cwd(),
+    "node_modules",
+    "@fontsource",
+    "noto-sans-devanagari",
+    "files"
+  ),
+  "@fontsource/noto-naskh-arabic": join(
+    process.cwd(),
+    "node_modules",
+    "@fontsource",
+    "noto-naskh-arabic",
+    "files"
+  ),
+} as const;
 
 function titleFromName(name: string) {
   return name
@@ -73,8 +88,9 @@ function filePriority(fileName: string) {
 
 async function embedPackageFont(pdf: PDFDocument, packageName: string, termSets: string[][]) {
   try {
-    const packagePath = requireFromHere.resolve(`${packageName}/package.json`);
-    const filesDir = join(dirname(packagePath), "files");
+    const filesDir = FONT_PACKAGE_DIRS[packageName as keyof typeof FONT_PACKAGE_DIRS];
+    if (!filesDir) return undefined;
+
     const files = await readdir(filesDir);
 
     for (const terms of termSets) {

@@ -101,7 +101,7 @@ Blog Content Premium rules:
 - Do not include a "Verify Before Publishing Notes" section, "Verify before publishing" section, "Final On-Page SEO Checklist" section, SEO checklist, publisher notes, or final verification notes.
 - Do not include a separate bottom "Optional Image Briefs" section.
 - Do not claim live Google search, realtime information, competitor insights, charts, graphs, SEO scores, keyword volumes, or external citations unless the user supplied the data.
-- If a graph would help but no data is supplied, include it as a Visual block with placeholders for verified data, not as a fabricated finished graph.",
+- If a graph would help but no data is supplied, include it as a Visual block with placeholders for verified data, not as a fabricated finished graph.`,
     outputGuide:
       "Return only the usable Markdown blog article. Start with one H1 article title, then go directly into the introduction and article body. Make the article feel premium, researched, practical, and publication-ready. Add relevant inline Visual blocks in the most useful article positions using the exact Visual structure from the system rules. If images are requested, also place Image blocks inline at the most relevant point using the exact Image structure. Do not include Meta Description, Suggested URL Slug, SEO Title, Full Blog Article heading, article package labels, Verify Before Publishing Notes, Final On-Page SEO Checklist, publisher notes, or any final SEO checklist.",
   },
