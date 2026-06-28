@@ -22,20 +22,22 @@ function parseImages(value: unknown): PdfExportImage[] {
     const parsed = typeof value === "string" ? JSON.parse(value) : value;
     if (!Array.isArray(parsed)) return [];
 
-    return parsed
-      .map((item) => {
-        if (!item || typeof item !== "object") return null;
-        const image = item as Record<string, unknown>;
-        const dataUrl = typeof image.dataUrl === "string" ? image.dataUrl : "";
-        if (!dataUrl.startsWith("data:image/")) return null;
+    const images: PdfExportImage[] = [];
 
-        return {
-          dataUrl,
-          alt: typeof image.alt === "string" ? image.alt : undefined,
-          frame: typeof image.frame === "string" ? image.frame : undefined,
-        };
-      })
-      .filter((item): item is PdfExportImage => Boolean(item));
+    for (const item of parsed) {
+      if (!item || typeof item !== "object") continue;
+
+      const image = item as Record<string, unknown>;
+      const dataUrl = typeof image.dataUrl === "string" ? image.dataUrl : "";
+      if (!dataUrl.startsWith("data:image/")) continue;
+
+      const nextImage: PdfExportImage = { dataUrl };
+      if (typeof image.alt === "string") nextImage.alt = image.alt;
+      if (typeof image.frame === "string") nextImage.frame = image.frame;
+      images.push(nextImage);
+    }
+
+    return images;
   } catch {
     return [];
   }
