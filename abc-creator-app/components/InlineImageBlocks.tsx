@@ -41,6 +41,15 @@ function isImageBlockStart(line: string) {
   const normalized = normalizeLine(line);
   if (!normalized) return false;
 
+  if (
+    normalized === "optional image briefs" ||
+    normalized === "image briefs" ||
+    normalized === "optional images" ||
+    normalized === "images"
+  ) {
+    return false;
+  }
+
   const hasImage = /\bimage\b/.test(normalized);
   const hasBriefOrPrompt = /\b(brief|prompt|hero|section|visual|placement)\b/.test(normalized);
   const hasNumberedImage = /^image\s*\d+\b/.test(normalized);
