@@ -17,18 +17,6 @@ interface OutputPanelProps {
   downloadFileBaseName?: string;
 }
 
-function downloadBlob(blob: Blob, fileName: string) {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = fileName;
-  link.rel = "noopener";
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 3000);
-}
-
 export function OutputPanel({
   isLoading,
   output,
@@ -81,36 +69,35 @@ export function OutputPanel({
     }
   };
 
-  const downloadPdfFromServer = async () => {
-    const controller = new AbortController();
-    const timeout = window.setTimeout(() => controller.abort(), 30000);
+  const submitPdfFormDownload = () => {
+    const iframeName = `abc_pdf_export_${Date.now()}`;
+    const iframe = document.createElement("iframe");
+    iframe.name = iframeName;
+    iframe.style.display = "none";
+    document.body.appendChild(iframe);
 
-    try {
-      const response = await fetch("/api/export/pdf", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ output, fileBaseName: downloadFileBaseName }),
-        signal: controller.signal,
-      });
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = "/api/export/pdf";
+    form.target = iframeName;
+    form.style.display = "none";
 
-      if (!response.ok) {
-        const data = await response.json().catch(() => null);
-        throw new Error(data?.details || data?.error || "PDF download failed.");
-      }
+    const outputField = document.createElement("textarea");
+    outputField.name = "output";
+    outputField.value = output;
+    form.appendChild(outputField);
 
-      const blob = await response.blob();
-      if (!blob.size) throw new Error("PDF export returned an empty file.");
+    const fileNameField = document.createElement("input");
+    fileNameField.type = "hidden";
+    fileNameField.name = "fileBaseName";
+    fileNameField.value = downloadFileBaseName;
+    form.appendChild(fileNameField);
 
-      downloadBlob(blob, `${downloadFileBaseName}.pdf`);
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") {
-        throw new Error("PDF export timed out. Please try again with a shorter output or use DOCX/Text file.");
-      }
+    document.body.appendChild(form);
+    form.submit();
+    form.remove();
 
-      throw error;
-    } finally {
-      window.clearTimeout(timeout);
-    }
+    window.setTimeout(() => iframe.remove(), 60000);
   };
 
   const handleDownload = async (format: OutputDownloadFormat) => {
@@ -121,22 +108,24 @@ export function OutputPanel({
 
     try {
       if (format === "pdf") {
-        await downloadPdfFromServer();
-      } else {
-        await downloadOutput(
-          format,
-          output,
-          downloadFileBaseName,
-          exportContentRef.current
-        );
+        submitPdfFormDownload();
+        window.setTimeout(() => setIsDownloading(false), 1500);
+        return;
       }
+
+      await downloadOutput(
+        format,
+        output,
+        downloadFileBaseName,
+        exportContentRef.current
+      );
+      setIsDownloading(false);
     } catch (error) {
       setDownloadError(
         error instanceof Error
           ? `Download failed: ${error.message}`
           : "Download failed. Please try again."
       );
-    } finally {
       setIsDownloading(false);
     }
   };
