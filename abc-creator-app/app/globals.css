@@ -14,6 +14,35 @@
   --font-mono: var(--font-geist-mono);
 }
 
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #5b21b6 #050505;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: #050505;
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #5b21b6, #241036);
+  border: 2px solid #050505;
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #7c3aed, #3b1b5c);
+}
+
+*::-webkit-scrollbar-corner {
+  background: #050505;
+}
+
 body {
   background: #000000;
   background-image: 
@@ -27,31 +56,11 @@ html {
   background: #000000;
 }
 
-
-
-
-
-
-
-
 .creator-subheadline {
   font-family: "Space Grotesk", Arial, sans-serif;
   font-weight: 400;
   letter-spacing: -0.025em;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 .creator-wordmark {
   font-family: "Michroma", Arial, sans-serif;
@@ -64,7 +73,7 @@ html {
 
 .creator-output-scroll {
   scrollbar-width: thin;
-  scrollbar-color: #2b123f #050505;
+  scrollbar-color: #5b21b6 #050505;
 }
 
 .creator-output-scroll::-webkit-scrollbar {
@@ -77,11 +86,11 @@ html {
 }
 
 .creator-output-scroll::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #31204a, #111111);
+  background: linear-gradient(180deg, #5b21b6, #241036);
   border: 2px solid #050505;
   border-radius: 999px;
 }
 
 .creator-output-scroll::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, #5b21b6, #1f102e);
+  background: linear-gradient(180deg, #7c3aed, #3b1b5c);
 }
