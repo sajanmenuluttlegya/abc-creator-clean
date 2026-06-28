@@ -32,6 +32,12 @@ type ImageProviderCall = (
   sourceImageDataUrl?: string
 ) => Promise<ProviderImage | null>;
 
+type CloudflareImageConfig = {
+  accountId: string;
+  apiToken: string;
+  label: string;
+};
+
 function env(name: string, fallback = "") {
   return process.env[name] || fallback;
 }
@@ -87,6 +93,75 @@ function getGeminiImageModels() {
   ]).map(normalizeGeminiModelName);
 }
 
+function getCloudflareImageConfigs(): CloudflareImageConfig[] {
+  const configs: CloudflareImageConfig[] = [];
+
+  const addConfig = (accountIdName: string, apiTokenName: string, label: string) => {
+    const accountId = env(accountIdName).trim();
+    const apiToken = env(apiTokenName).trim();
+
+    if (accountId && apiToken) {
+      configs.push({ accountId, apiToken, label });
+    }
+  };
+
+  addConfig("CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN", "cloudflare-default");
+  addConfig("CF_ACCOUNT_ID", "CF_API_TOKEN", "cf-default");
+
+  for (let index = 1; index <= 5; index += 1) {
+    addConfig(
+      `CLOUDFLARE_ACCOUNT_ID_${index}`,
+      `CLOUDFLARE_API_TOKEN_${index}`,
+      `cloudflare-${index}`
+    );
+  }
+
+  const seen = new Set<string>();
+
+  return configs.filter((config) => {
+    const key = `${config.accountId}:${config.apiToken.slice(0, 12)}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function getCloudflareImageModel() {
+  return firstEnv(["CLOUDFLARE_IMAGE_MODEL", "CF_IMAGE_MODEL"]) || "@cf/black-forest-labs/flux-1-schnell";
+}
+
+function getCloudflareTimeoutMs() {
+  const value = Number(env("CLOUDFLARE_IMAGE_TIMEOUT_MS") || "65000");
+  if (!Number.isFinite(value)) return 65000;
+  return Math.min(Math.max(Math.floor(value), 10000), 180000);
+}
+
+function isCloudflareRetryableStatus(status: number) {
+  return status === 408 || status === 425 || status === 500 || status === 502 || status === 503 || status === 504;
+}
+
+function isAbortOrNetworkError(error: unknown) {
+  if (error instanceof Error) {
+    return error.name === "AbortError" || /fetch failed|network|timeout|aborted|terminated/i.test(error.message);
+  }
+
+  return /fetch failed|network|timeout|aborted|terminated/i.test(String(error));
+}
+
+async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, {
+      ...init,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 function safeTruncate(value: string | undefined, maxLength: number) {
   const text = (value || "").trim();
   return text.length > maxLength ? `${text.slice(0, maxLength)}...` : text;
@@ -115,6 +190,18 @@ function ratioToSize(aspectRatio: string) {
     default:
       return { width: 1344, height: 768 };
   }
+}
+
+function clampPollinationsSize(aspectRatio: string) {
+  const original = ratioToSize(aspectRatio);
+  const maxSide = Math.max(original.width, original.height);
+  const scale = maxSide > 1024 ? 1024 / maxSide : 1;
+  const makeEven = (value: number) => Math.max(256, Math.round(value / 8) * 8);
+
+  return {
+    width: makeEven(original.width * scale),
+    height: makeEven(original.height * scale),
+  };
 }
 
 function imageToDataUrl(data: string, mimeType = "image/png") {
@@ -218,6 +305,159 @@ Production rules:
 - Do not include watermarks, fake logos, protected brand marks, copyrighted characters, or public-figure likenesses.
 - Avoid tiny unreadable text. If text is needed, keep it minimal and highly legible.
 - Output the image only.`;
+}
+
+async function callOneCloudflareWorkersImageConfig(
+  config: CloudflareImageConfig,
+  prompt: string
+): Promise<ProviderImage> {
+  const model = getCloudflareImageModel();
+  const timeoutMs = getCloudflareTimeoutMs();
+  const url = `https://api.cloudflare.com/client/v4/accounts/${config.accountId}/ai/run/${model}`;
+
+  const response = await fetchWithTimeout(
+    url,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${config.apiToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        prompt,
+        steps: 4,
+        seed: Math.floor(Math.random() * 2147483647),
+      }),
+    },
+    timeoutMs
+  );
+
+  if (!response.ok) {
+    const details = await responseErrorDetails(response);
+    const message = `Cloudflare Workers AI ${config.label} ${model} HTTP ${response.status}${details ? `: ${details}` : ""}`;
+
+    if (isCloudflareRetryableStatus(response.status)) {
+      throw new Error(`RETRYABLE_CLOUDFLARE_ERROR: ${message}`);
+    }
+
+    throw new Error(message);
+  }
+
+  const contentType = response.headers.get("content-type") || "";
+
+  if (contentType.startsWith("image/")) {
+    const buffer = Buffer.from(await response.arrayBuffer());
+
+    return {
+      dataUrl: imageToDataUrl(buffer.toString("base64"), contentType),
+      mimeType: contentType,
+      provider: "cloudflare-workers-ai",
+      model,
+    };
+  }
+
+  const json = await response.json() as {
+    success?: boolean;
+    result?: {
+      image?: string;
+    };
+    errors?: Array<{ message?: string }>;
+  };
+
+  const image = json.result?.image;
+
+  if (!image || image.length < 200) {
+    const errorText = json.errors?.map((error) => error.message).filter(Boolean).join(" | ");
+    throw new Error(
+      `Cloudflare Workers AI ${config.label} ${model} response did not include image data.${errorText ? ` ${errorText}` : ""}`
+    );
+  }
+
+  return {
+    dataUrl: imageToDataUrl(image, "image/jpeg"),
+    mimeType: "image/jpeg",
+    provider: "cloudflare-workers-ai",
+    model,
+  };
+}
+
+async function callCloudflareWorkersImage(
+  prompt: string
+): Promise<ProviderImage | null> {
+  const configs = getCloudflareImageConfigs();
+  if (!configs.length) return null;
+
+  const errors: string[] = [];
+
+  for (const config of configs) {
+    try {
+      return await callOneCloudflareWorkersImageConfig(config, prompt);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      errors.push(message);
+
+      if (message.startsWith("RETRYABLE_CLOUDFLARE_ERROR") || isAbortOrNetworkError(error)) {
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  throw new Error(`All Cloudflare Workers AI configs failed after timeout/network/server retries. ${errors.join(" | ")}`);
+}
+
+async function callPollinationsImage(
+  prompt: string,
+  aspectRatio: string
+): Promise<ProviderImage | null> {
+  const disabled = env("POLLINATIONS_DISABLED").toLowerCase() === "true";
+  if (disabled) return null;
+
+  const { width, height } = clampPollinationsSize(aspectRatio);
+  const model = firstEnv(["POLLINATIONS_IMAGE_MODEL", "POLLINATIONS_MODEL"]) || "flux";
+  const shortPrompt = safeTruncate(prompt, 1400);
+
+  const url = new URL(`https://image.pollinations.ai/prompt/${encodeURIComponent(shortPrompt)}`);
+  url.searchParams.set("width", String(width));
+  url.searchParams.set("height", String(height));
+  url.searchParams.set("model", model);
+  url.searchParams.set("nologo", "true");
+  url.searchParams.set("safe", "true");
+  url.searchParams.set("private", "true");
+  url.searchParams.set("seed", String(Math.floor(Math.random() * 2147483647)));
+
+  const response = await fetch(url.toString(), {
+    method: "GET",
+    headers: {
+      Accept: "image/png,image/jpeg,image/webp,*/*",
+    },
+  });
+
+  if (!response.ok) {
+    const details = await responseErrorDetails(response);
+    throw new Error(`Pollinations ${model} HTTP ${response.status}${details ? `: ${details}` : ""}`);
+  }
+
+  const contentType = response.headers.get("content-type") || "image/jpeg";
+
+  if (!contentType.startsWith("image/")) {
+    const details = await response.text();
+    throw new Error(`Pollinations ${model} did not return an image.${details ? ` ${details.slice(0, 500)}` : ""}`);
+  }
+
+  const buffer = Buffer.from(await response.arrayBuffer());
+
+  if (buffer.length < 200) {
+    throw new Error(`Pollinations ${model} returned an empty image.`);
+  }
+
+  return {
+    dataUrl: imageToDataUrl(buffer.toString("base64"), contentType),
+    mimeType: contentType,
+    provider: "pollinations",
+    model,
+  };
 }
 
 async function callGeminiNativeImage(
@@ -352,6 +592,8 @@ export async function routeToImage(
   const providerFailures: string[] = [];
 
   const providers: Array<{ name: string; call: ImageProviderCall }> = [
+    { name: "cloudflare-workers-ai", call: callCloudflareWorkersImage },
+    { name: "pollinations", call: callPollinationsImage },
     { name: "gemini-native-image", call: callGeminiNativeImage },
     { name: "huggingface-open-source", call: callHuggingFaceOpenSourceImage },
   ];
@@ -360,7 +602,7 @@ export async function routeToImage(
     try {
       const images: ProviderImage[] = [];
 
-      for (let index = 1; index <= count; index++) {
+      for (let index = 1; index <= count; index += 1) {
         const prompt = buildImagePrompt(request, index);
         const image = await provider.call(prompt, request.aspectRatio, request.sourceImageDataUrl);
 
