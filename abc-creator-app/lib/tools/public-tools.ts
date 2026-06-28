@@ -129,6 +129,48 @@ const imageCountGuidanceOptions = [
   "Suggest the ideal count",
 ];
 
+const imageStyleOptions = [
+  "Auto (recommended)",
+  "Cinematic",
+  "Photoreal",
+  "Editorial",
+  "Futuristic Tech",
+  "3D Render",
+  "Minimalist",
+  "Isometric",
+  "Infographic",
+  "Diagram / Blueprint",
+  "Cyberpunk Neon",
+  "Luxury / Premium",
+  "Abstract",
+  "Flat Vector",
+  "Retro Futurist",
+];
+
+const visualModeOptions = [
+  "Auto-smart",
+  "Mixed",
+  "Artistic",
+  "Diagram-heavy",
+  "Data-viz-heavy",
+  "Scene illustrations",
+];
+
+const chartPreferenceOptions = [
+  "Auto",
+  "Prefer charts",
+  "Prefer diagrams",
+  "Prefer flowcharts",
+  "Prefer lineage / graph visuals",
+  "Prefer scene illustrations",
+  "Avoid charts",
+];
+
+const exportImageFrameOptions = [
+  "Boxed",
+  "Borderless",
+];
+
 export const publicTools: Tool[] = [
   {
     id: "blog-topic-ideas",
@@ -222,6 +264,11 @@ export const publicTools: Tool[] = [
       { id: "include_table", label: "Include Table Section", type: "select", required: true, options: yesNoOptions },
       { id: "include_faq", label: "Include FAQ Section", type: "select", required: true, options: yesNoOptions },
       { id: "image_brief_mode", label: "Images", type: "select", required: true, options: imageBriefModeOptions },
+      { id: "image_ratio", label: "Image Ratio", type: "select", required: true, options: imageRatioOptions },
+      { id: "visual_style", label: "Image Style", type: "select", required: true, options: imageStyleOptions },
+      { id: "visual_mode", label: "Visual Mode", type: "select", required: true, options: visualModeOptions },
+      { id: "chart_preference", label: "Graphs / Flowcharts", type: "select", required: true, options: chartPreferenceOptions },
+      { id: "export_image_frame", label: "Export Image Frame", type: "select", required: true, options: exportImageFrameOptions },
       { id: "brand_or_context", label: "Brand / Extra Context", type: "textarea", placeholder: "Optional: brand name, product, offer, examples, sources, facts, or notes to include.", required: false },
     ],
   },
@@ -246,7 +293,7 @@ export const publicTools: Tool[] = [
     inputs: [
       { id: "blog_topic", label: "Blog Topic", type: "text", placeholder: "e.g., AI tools for online teachers", required: true },
       { id: "blog_outline", label: "Blog Outline / Article", type: "textarea", placeholder: "Paste the blog outline, article draft, or section list.", required: true },
-      { id: "visual_style", label: "Visual Style", type: "text", placeholder: "e.g., clean SaaS illustration, warm editorial photography", required: true },
+      { id: "visual_style", label: "Visual Style", type: "select", required: true, options: imageStyleOptions },
       { id: "brand_or_context", label: "Brand / Product Context", type: "textarea", placeholder: "Optional: brand colors, product details, audience, offer, or visual rules.", required: false },
       { id: "image_plan", label: "Images", type: "select", required: true, options: imagePlanOptions },
       { id: "image_ratio", label: "Image Ratio", type: "select", required: true, options: imageRatioOptions },
