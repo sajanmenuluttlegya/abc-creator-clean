@@ -2,8 +2,10 @@ import { NextRequest } from "next/server";
 import { randomUUID } from "crypto";
 import { createClient } from "@/lib/supabase/server";
 import {
+  calculateImageEditCredits,
   calculateImageGenerationCredits,
   IMAGE_CREDITS_PER_IMAGE,
+  IMAGE_EDIT_CREDITS,
   supportsImageGeneration,
 } from "@/lib/tools/credit-costs";
 import { routeToImage } from "@/lib/ai/routeToImage";
@@ -12,9 +14,12 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 type GenerateImageBody = {
+  operation?: "generate" | "edit";
   toolSlug?: string;
   prompt?: string;
   sourceText?: string;
+  sourceImageDataUrl?: string;
+  imageBlockId?: string;
   aspectRatio?: string;
   imageCount?: number;
   inputs?: Record<string, string>;
@@ -62,6 +67,10 @@ function sanitizeImageCount(value: unknown) {
   return Math.min(Math.max(Math.floor(numberValue), 1), 7);
 }
 
+function getOperation(body: GenerateImageBody) {
+  return body.operation === "edit" ? "edit" : "generate";
+}
+
 function hasEnoughPromptMaterial(body: GenerateImageBody) {
   const prompt = (body.prompt || "").trim();
   const sourceText = (body.sourceText || "").trim();
@@ -102,6 +111,7 @@ export async function POST(req: NextRequest) {
 
     const body = (await req.json()) as GenerateImageBody;
     const toolSlug = body.toolSlug?.trim() || "";
+    const operation = getOperation(body);
 
     if (!supportsImageGeneration(toolSlug)) {
       return Response.json(
@@ -125,13 +135,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const imageCount = sanitizeImageCount(body.imageCount);
-    const requiredCredits = calculateImageGenerationCredits(imageCount);
+    const imageCount = operation === "edit" ? 1 : sanitizeImageCount(body.imageCount);
+    const requiredCredits =
+      operation === "edit"
+        ? calculateImageEditCredits()
+        : calculateImageGenerationCredits(imageCount);
 
     const reserveResponse = await supabase.rpc("reserve_credits", {
       p_tool_slug: toolSlug,
       p_amount: requiredCredits,
-      p_idempotency_key: `${user.id}:${toolSlug}:image:${randomUUID()}`,
+      p_idempotency_key: `${user.id}:${toolSlug}:image:${operation}:${randomUUID()}`,
     });
 
     if (reserveResponse.error) {
@@ -156,6 +169,7 @@ export async function POST(req: NextRequest) {
           requiredCredits: reservation?.requiredCredits ?? requiredCredits,
           currentCredits: reservation?.currentCredits ?? 0,
           imageCreditsPerImage: IMAGE_CREDITS_PER_IMAGE,
+          imageEditCredits: IMAGE_EDIT_CREDITS,
         },
         { status: 402 }
       );
@@ -174,10 +188,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const sourceText =
+      operation === "edit"
+        ? `Image edit request. Use the previous image as conceptual reference when supported by the provider.\n\nOriginal image brief/source:\n${body.sourceText || ""}\n\nEdit instruction:\n${body.prompt || ""}`
+        : body.sourceText || "";
+
     const result = await routeToImage({
       toolSlug,
       prompt: body.prompt || "",
-      sourceText: body.sourceText || "",
+      sourceText,
       aspectRatio: body.aspectRatio || "16:9 landscape",
       count: imageCount,
       inputs: body.inputs || {},
@@ -185,7 +204,7 @@ export async function POST(req: NextRequest) {
 
     const spendResponse = await supabase.rpc("spend_reserved_credits", {
       p_transaction_id: reservedTransactionId,
-      p_provider: `image:${result.provider}`,
+      p_provider: `image:${operation}:${result.provider}`,
       p_model: result.model,
     });
 
@@ -220,18 +239,20 @@ export async function POST(req: NextRequest) {
 
     return Response.json({
       ok: true,
+      operation,
       provider: result.provider,
       model: result.model,
       imageCount,
       creditsCharged: requiredCredits,
       imageCreditsPerImage: IMAGE_CREDITS_PER_IMAGE,
+      imageEditCredits: IMAGE_EDIT_CREDITS,
       images: result.images.map((image) => ({
         index: image.index,
         dataUrl: image.dataUrl,
         mimeType: image.mimeType,
         provider: image.provider,
         model: image.model,
-        filename: `${toolSlug}-image-${image.index}.png`,
+        filename: `${toolSlug}-${operation}-image-${image.index}.png`,
       })),
     });
   } catch (error) {
