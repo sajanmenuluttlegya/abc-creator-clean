@@ -128,6 +128,42 @@ export function splitOutputIntoImageSegments(output: string): OutputSegment[] {
   return segments.length ? segments : [{ type: "markdown", content: output, id: "markdown-1" }];
 }
 
+function cleanOption(value: string | undefined, fallback: string) {
+  const text = (value || "").trim();
+  return text || fallback;
+}
+
+function buildControlledImagePrompt(basePrompt: string, inputs: Record<string, string>) {
+  const imageStyle = cleanOption(inputs.visual_style, "Auto (recommended)");
+  const visualMode = cleanOption(inputs.visual_mode, "Auto-smart");
+  const chartPreference = cleanOption(inputs.chart_preference, "Auto");
+  const imageRatio = cleanOption(inputs.image_ratio, "16:9 landscape");
+  const exportFrame = cleanOption(inputs.export_image_frame, "Boxed");
+  const brandContext = cleanOption(inputs.brand_or_context, "not supplied");
+
+  return `Image generation controls from the user's form:
+- Image style: ${imageStyle}
+- Visual mode: ${visualMode}
+- Graphs / flowcharts preference: ${chartPreference}
+- Image ratio: ${imageRatio}
+- Export image frame preference: ${exportFrame}
+- Brand / context: ${brandContext}
+
+Smart visual-selection rules:
+- If Visual Mode is Auto-smart, choose the strongest visual type for the section instead of making a generic stock image.
+- For introductions and hero placements, prefer a premium hero visual with the selected style.
+- For workflows, systems, processes, roadmaps, funnels, and pipelines, prefer a clear flowchart, DAG, system architecture, or process diagram.
+- For history, evolution, sources, dependencies, relationships, or cause-and-effect, prefer lineage graphs, node-link diagrams, dependency graphs, knowledge graphs, or concept maps.
+- For finance, trading, market data, high-frequency trading, order flow, crypto, AI trading, or analytics, prefer market-dashboard visuals, order-book/depth-style visuals, signal pipelines, risk dashboards, or execution-flow diagrams when relevant.
+- For comparisons, metrics, categories, frameworks, and decision criteria, prefer infographic, matrix, chart-like, taxonomy, or blueprint-style visuals.
+- If the user selected Diagram-heavy, Data-viz-heavy, Prefer charts, Prefer diagrams, Prefer flowcharts, or Prefer lineage / graph visuals, strongly obey that preference.
+- Keep labels minimal and readable. Avoid crowded tiny text. Use large clean visual hierarchy.
+- Never include watermarks, fake logos, protected brand marks, copyrighted characters, or public-figure likenesses.
+
+Image brief to generate:
+${basePrompt}`;
+}
+
 function downloadImage(image: GeneratedImageResult) {
   const link = document.createElement("a");
   link.href = image.dataUrl;
@@ -164,6 +200,10 @@ export function InlineImageBlock({
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const aspectRatio = inputs.image_ratio || "16:9 landscape";
   const imagePrompt = useMemo(() => prompt.trim() || markdown.trim(), [prompt, markdown]);
+  const controlledImagePrompt = useMemo(
+    () => buildControlledImagePrompt(imagePrompt, inputs),
+    [imagePrompt, inputs]
+  );
   const exportFrame = (inputs.export_image_frame || "boxed").toLowerCase();
   const isBorderlessExport = exportFrame.includes("borderless");
 
@@ -193,8 +233,8 @@ export function InlineImageBlock({
           inputs,
           sourceText: markdown,
           prompt: editing
-            ? `${imagePrompt}\n\nEdit instruction: ${editPrompt.trim()}`
-            : imagePrompt,
+            ? `${controlledImagePrompt}\n\nEdit instruction: ${editPrompt.trim()}`
+            : controlledImagePrompt,
           aspectRatio,
           imageCount: 1,
           sourceImageDataUrl: image?.dataUrl || "",
