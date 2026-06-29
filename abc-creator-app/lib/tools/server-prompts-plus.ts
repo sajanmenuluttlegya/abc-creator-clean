@@ -3,14 +3,23 @@ import {
   validateToolInputs,
 } from "./server-prompts";
 import { getVisualRoutingGuard } from "./visual-routing-guard";
+import { getOutlineScalingGuard } from "./outline-scaling-guard";
 
 export { validateToolInputs };
 
 export function getServerPrompt(toolSlug: string) {
   const prompt = baseGetServerPrompt(toolSlug);
-  const extra = getVisualRoutingGuard(toolSlug);
 
-  if (!prompt || !extra) return prompt;
+  if (!prompt) return prompt;
+
+  const extra = [
+    getVisualRoutingGuard(toolSlug),
+    getOutlineScalingGuard(toolSlug),
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+
+  if (!extra) return prompt;
 
   return {
     ...prompt,
