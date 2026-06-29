@@ -201,6 +201,7 @@ export function InlineImageBlock({
   );
   const exportFrame = (inputs.export_image_frame || "boxed").toLowerCase();
   const isBorderlessExport = exportFrame.includes("borderless");
+  const shouldKeepPromptVisible = toolSlug === "pro-image-brief-for-blog";
 
   const callImageRoute = async (operation: "generate" | "edit") => {
     const editing = operation === "edit";
@@ -328,6 +329,14 @@ export function InlineImageBlock({
   if (image) {
     return (
       <section className="my-6" data-abc-image-block={blockId}>
+        {shouldKeepPromptVisible ? (
+          <div className="mb-4 rounded-2xl border border-emerald-400/20 bg-black/35 p-5">
+            <div className="prose prose-invert max-w-none prose-p:text-gray-200 prose-strong:text-white prose-headings:text-white prose-code:text-emerald-100">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{markdown}</ReactMarkdown>
+            </div>
+          </div>
+        ) : null}
+
         <div className="group relative">
           <figure
             className={
