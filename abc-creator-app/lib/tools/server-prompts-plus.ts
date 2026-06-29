@@ -1,11 +1,20 @@
 import {
   getServerPrompt as baseGetServerPrompt,
-  validateToolInputs,
+  validateToolInputs as baseValidateToolInputs,
 } from "./server-prompts";
 import { getVisualRoutingGuard } from "./visual-routing-guard";
 import { getOutlineScalingGuard } from "./outline-scaling-guard";
 
-export { validateToolInputs };
+export function validateToolInputs(toolSlug: string, inputs: Record<string, string>) {
+  if (toolSlug === "blog-seo-pack" && typeof inputs.article_content === "string") {
+    return baseValidateToolInputs(toolSlug, {
+      ...inputs,
+      article_content: inputs.article_content.slice(0, 12000),
+    });
+  }
+
+  return baseValidateToolInputs(toolSlug, inputs);
+}
 
 export function getServerPrompt(toolSlug: string) {
   const prompt = baseGetServerPrompt(toolSlug);
