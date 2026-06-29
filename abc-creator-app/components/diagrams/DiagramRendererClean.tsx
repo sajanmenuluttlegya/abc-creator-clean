@@ -26,11 +26,32 @@ type Node = { id: string; label: string; level?: number; value?: number };
 type Edge = { from: string; to: string; label?: string };
 type Mode = "screen" | "export";
 
+type PlacedNode = Node & { x: number; y: number; color: string };
+
+type TextAnchor = "start" | "middle" | "end";
+
 const font = "Inter, Arial, Helvetica, sans-serif";
 const colors = ["#0ea5e9", "#8b5cf6", "#10b981", "#ec4899", "#f59e0b", "#3b82f6", "#ef4444", "#14b8a6"];
 
-const screenTheme = { "--abc-diagram-bg": "#04040a", "--abc-diagram-grid": "rgba(148,163,184,.14)", "--abc-diagram-text": "#f8fafc", "--abc-diagram-muted": "#cbd5e1", "--abc-diagram-border": "rgba(168,85,247,.36)", "--abc-diagram-card": "rgba(255,255,255,.045)", "--abc-diagram-soft-fill": "rgba(99,102,241,.16)" } as CSSProperties;
-const exportTheme = { "--abc-diagram-bg": "#fff", "--abc-diagram-grid": "rgba(100,116,139,.18)", "--abc-diagram-text": "#0f172a", "--abc-diagram-muted": "#475569", "--abc-diagram-border": "rgba(99,102,241,.24)", "--abc-diagram-card": "rgba(248,250,252,.95)", "--abc-diagram-soft-fill": "rgba(99,102,241,.10)" } as CSSProperties;
+const screenTheme = {
+  "--abc-diagram-bg": "#04040a",
+  "--abc-diagram-grid": "rgba(148,163,184,.14)",
+  "--abc-diagram-text": "#f8fafc",
+  "--abc-diagram-muted": "#cbd5e1",
+  "--abc-diagram-border": "rgba(168,85,247,.36)",
+  "--abc-diagram-card": "rgba(255,255,255,.045)",
+  "--abc-diagram-soft-fill": "rgba(99,102,241,.16)",
+} as CSSProperties;
+
+const exportTheme = {
+  "--abc-diagram-bg": "#fff",
+  "--abc-diagram-grid": "rgba(100,116,139,.18)",
+  "--abc-diagram-text": "#0f172a",
+  "--abc-diagram-muted": "#475569",
+  "--abc-diagram-border": "rgba(99,102,241,.24)",
+  "--abc-diagram-card": "rgba(248,250,252,.95)",
+  "--abc-diagram-soft-fill": "rgba(99,102,241,.10)",
+} as CSSProperties;
 
 function kind(value?: string) {
   const type = (value || "graph").toLowerCase().replace(/[_\s]+/g, "-");
@@ -38,8 +59,8 @@ function kind(value?: string) {
   if (type.includes("erd") || type.includes("entity-relationship")) return "erd";
   if (type.includes("radar") || type.includes("spider") || type.includes("polygon")) return "radar";
   if (type.includes("flow")) return "workflow";
-  if (type === "dag" || type.includes("acyclic") || type.includes("lineage") || type.includes("dependency")) return "workflow";
-  if (type.includes("taxonomy") || type.includes("hierarchy") || type.includes("tree") || type.includes("knowledge") || type.includes("node-link") || type.includes("mind") || type.includes("concept") || type.includes("ontology")) return "network";
+  if (type === "dag" || type.includes("acyclic") || type.includes("lineage") || type.includes("dependency") || type.includes("pipeline")) return "workflow";
+  if (type.includes("taxonomy") || type.includes("hierarchy") || type.includes("tree") || type.includes("knowledge") || type.includes("node-link") || type.includes("mind") || type.includes("concept") || type.includes("ontology") || type.includes("graph")) return "network";
   return "chart";
 }
 
@@ -58,9 +79,10 @@ function short(value: string, max: number) {
   return text.length > max ? `${text.slice(0, Math.max(1, max - 1))}…` : text;
 }
 
-function wrap(value: string, max = 16) {
+function wrap(value: string, max = 16, maxLines = 3) {
   const lines: string[] = [];
   let line = "";
+
   value.split(/\s+/).forEach((word) => {
     const next = line ? `${line} ${word}` : word;
     if (next.length > max && line) {
@@ -70,8 +92,9 @@ function wrap(value: string, max = 16) {
       line = next;
     }
   });
+
   if (line) lines.push(line);
-  return lines.slice(0, 3);
+  return lines.slice(0, maxLines);
 }
 
 function edgesOf(spec: DiagramSpec): Edge[] {
@@ -111,36 +134,6 @@ function chooseVisualFamily(spec: DiagramSpec) {
   return "chart";
 }
 
-function labelBox(x: number, y: number, label: string, color: string, width = 160) {
-  return (
-    <g>
-      <rect x={x - width / 2} y={y - 22} width={width} height="48" rx="16" fill="var(--abc-diagram-card)" stroke={color} strokeOpacity=".32" />
-      <text x={x} y={y - 4} textAnchor="middle" fill="var(--abc-diagram-text)" fontFamily={font} fontSize="10.5" fontWeight="760">
-        {wrap(label, 18).map((line, index) => <tspan key={`${line}-${index}`} x={x} dy={index ? 12 : 0}>{line}</tspan>)}
-      </text>
-    </g>
-  );
-}
-
-function spread(values: number[], gap = 62, min = 90, max = 410) {
-  const sorted = values.map((value, index) => ({ value: Math.max(min, Math.min(max, value)), index })).sort((a, b) => a.value - b.value);
-  const result = new Array<number>(values.length);
-  let previous = min - gap;
-
-  sorted.forEach((item) => {
-    result[item.index] = Math.min(Math.max(item.value, previous + gap), max);
-    previous = result[item.index];
-  });
-
-  for (let i = sorted.length - 2; i >= 0; i -= 1) {
-    const a = sorted[i].index;
-    const b = sorted[i + 1].index;
-    if (result[b] - result[a] < gap) result[a] = Math.max(min, result[b] - gap);
-  }
-
-  return result;
-}
-
 function Grid({ width, height }: { width: number; height: number }) {
   return (
     <g opacity="0.75">
@@ -158,6 +151,17 @@ function Grid({ width, height }: { width: number; height: number }) {
 
 function AxisLabel({ x, y, rotate, children }: { x: number; y: number; rotate?: number; children: string }) {
   return <text x={x} y={y} transform={rotate ? `rotate(${rotate} ${x} ${y})` : undefined} textAnchor="middle" fill="var(--abc-diagram-muted)" fontFamily={font} fontSize="10" fontWeight="700">{children}</text>;
+}
+
+function labelBox(x: number, y: number, label: string, color: string, width = 160) {
+  return (
+    <g>
+      <rect x={x - width / 2} y={y - 22} width={width} height="48" rx="16" fill="var(--abc-diagram-card)" stroke={color} strokeOpacity=".32" />
+      <text x={x} y={y - 4} textAnchor="middle" fill="var(--abc-diagram-text)" fontFamily={font} fontSize="10.5" fontWeight="760">
+        {wrap(label, 18).map((line, index) => <tspan key={`${line}-${index}`} x={x} dy={index ? 12 : 0}>{line}</tspan>)}
+      </text>
+    </g>
+  );
 }
 
 function Workflow({ spec }: { spec: DiagramSpec }) {
@@ -185,6 +189,24 @@ function Workflow({ spec }: { spec: DiagramSpec }) {
   );
 }
 
+function radialLabelPlacement(node: PlacedNode, cx: number, cy: number): { x: number; y: number; anchor: TextAnchor; baseline: "middle" | "hanging" } {
+  const dx = node.x - cx;
+  const dy = node.y - cy;
+  const absX = Math.abs(dx);
+  const absY = Math.abs(dy);
+  const offset = 29;
+
+  if (absX > absY * 1.15) {
+    return dx >= 0
+      ? { x: node.x + offset, y: node.y - 5, anchor: "start", baseline: "hanging" }
+      : { x: node.x - offset, y: node.y - 5, anchor: "end", baseline: "hanging" };
+  }
+
+  return dy >= 0
+    ? { x: node.x, y: node.y + 28, anchor: "middle", baseline: "hanging" }
+    : { x: node.x, y: node.y - 30, anchor: "middle", baseline: "middle" };
+}
+
 function Network({ spec }: { spec: DiagramSpec }) {
   const nodes = nodesOf(spec).slice(0, 8);
   const width = 980;
@@ -194,7 +216,7 @@ function Network({ spec }: { spec: DiagramSpec }) {
   const rings = [68, 128, 188];
   const ringLabels = (spec.ringLabels?.length ? spec.ringLabels : ["Core", "Direct links", "Outer context"]).slice(0, 3);
   const [core, ...rest] = nodes;
-  const placed = [
+  const placed: PlacedNode[] = [
     { ...(core || { id: "core", label: spec.title || "Core" }), x: cx, y: cy, color: "#8b5cf6" },
     ...rest.map((node, index) => {
       const ring = Math.min(2, Math.max(1, node.level || (index < 3 ? 1 : 2)));
@@ -204,13 +226,6 @@ function Network({ spec }: { spec: DiagramSpec }) {
       return { ...node, x: cx + Math.cos(angle) * rings[ring], y: cy + Math.sin(angle) * rings[ring], color: colors[index % colors.length] };
     }),
   ];
-  const left = placed.slice(1).filter((node) => node.x < cx).sort((a, b) => a.y - b.y);
-  const right = placed.slice(1).filter((node) => node.x >= cx).sort((a, b) => a.y - b.y);
-  const leftYs = spread(left.map((node) => node.y));
-  const rightYs = spread(right.map((node) => node.y));
-  const labels = new Map<string, { x: number; y: number }>();
-  left.forEach((node, index) => labels.set(node.id, { x: 142, y: leftYs[index] }));
-  right.forEach((node, index) => labels.set(node.id, { x: width - 142, y: rightYs[index] }));
 
   return (
     <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="auto" role="img" aria-label={spec.title || "Network"} style={{ display: "block" }}>
@@ -222,11 +237,14 @@ function Network({ spec }: { spec: DiagramSpec }) {
         const startY = cy - 8;
         const endX = width - 340;
         const endY = 76 + index * 44;
-        return <g key={label}><path d={`M ${startX} ${startY} L ${endX - 34} ${startY} L ${endX} ${endY}`} fill="none" stroke="rgba(99,102,241,.42)" strokeWidth="2" markerEnd="url(#ringArrow)" /><rect x={endX + 12} y={endY - 17} width="194" height="30" rx="15" fill="var(--abc-diagram-card)" stroke="rgba(99,102,241,.30)" /><text x={endX + 109} y={endY + 3} textAnchor="middle" fill="var(--abc-diagram-muted)" fontFamily={font} fontSize="10" fontWeight="760">{short(label, 24)}</text></g>;
+        return <g key={`${label}-${index}`}><path d={`M ${startX} ${startY} L ${endX - 34} ${startY} L ${endX} ${endY}`} fill="none" stroke="rgba(99,102,241,.42)" strokeWidth="2" markerEnd="url(#ringArrow)" /><rect x={endX + 12} y={endY - 17} width="194" height="30" rx="15" fill="var(--abc-diagram-card)" stroke="rgba(99,102,241,.30)" /><text x={endX + 109} y={endY + 3} textAnchor="middle" fill="var(--abc-diagram-muted)" fontFamily={font} fontSize="10" fontWeight="760">{short(label, 24)}</text></g>;
       })}
-      {placed.map((node, index) => <g key={node.id}><circle cx={node.x} cy={node.y} r={index === 0 ? 25 : 15} fill={node.color} fillOpacity={index === 0 ? .92 : .78} /><circle cx={node.x} cy={node.y} r={index === 0 ? 40 : 25} fill={node.color} fillOpacity=".12" /></g>)}
+      {placed.map((node, index) => <g key={`node-${node.id}`}><circle cx={node.x} cy={node.y} r={index === 0 ? 25 : 15} fill={node.color} fillOpacity={index === 0 ? .92 : .78} /><circle cx={node.x} cy={node.y} r={index === 0 ? 40 : 25} fill={node.color} fillOpacity=".12" /></g>)}
       {placed[0] ? <text x={cx} y={cy + 55} textAnchor="middle" fill="var(--abc-diagram-text)" fontFamily={font} fontSize="11" fontWeight="780">{wrap(placed[0].label, 18).map((line, index) => <tspan key={`${line}-${index}`} x={cx} dy={index ? 13 : 0}>{line}</tspan>)}</text> : null}
-      {placed.slice(1).map((node) => { const point = labels.get(node.id); return point ? <g key={`label-${node.id}`}>{labelBox(point.x, point.y, node.label, node.color, 172)}</g> : null; })}
+      {placed.slice(1).map((node) => {
+        const label = radialLabelPlacement(node, cx, cy);
+        return <text key={`label-${node.id}`} x={label.x} y={label.y} textAnchor={label.anchor} dominantBaseline={label.baseline} fill="var(--abc-diagram-text)" fontFamily={font} fontSize="10.2" fontWeight="760">{wrap(node.label, 15, 2).map((line, index) => <tspan key={`${node.id}-${index}`} x={label.x} dy={index ? 12 : 0}>{line}</tspan>)}</text>;
+      })}
     </svg>
   );
 }
