@@ -4,6 +4,7 @@ import {
 } from "./server-prompts";
 import { getVisualRoutingGuard } from "./visual-routing-guard";
 import { getOutlineScalingGuard } from "./outline-scaling-guard";
+import { getSeoPackSocialGuard } from "./seo-pack-social-guard";
 
 export function validateToolInputs(toolSlug: string, inputs: Record<string, string>) {
   if (toolSlug === "blog-seo-pack" && typeof inputs.article_content === "string") {
@@ -24,6 +25,7 @@ export function getServerPrompt(toolSlug: string) {
   const extra = [
     getVisualRoutingGuard(toolSlug),
     getOutlineScalingGuard(toolSlug),
+    getSeoPackSocialGuard(toolSlug),
   ]
     .filter(Boolean)
     .join("\n\n");
