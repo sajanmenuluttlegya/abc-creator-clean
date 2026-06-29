@@ -4,6 +4,7 @@ import {
   getServerPrompt,
   validateToolInputs,
 } from "@/lib/tools/server-prompts";
+import { preprocessToolInputs } from "@/lib/tools/preprocess-inputs";
 import { calculateToolCreditCost } from "@/lib/tools/credit-costs";
 import { createClient } from "@/lib/supabase/server";
 import { routeToAI, type ChatMessage } from "@/lib/ai/routeToAI";
@@ -316,7 +317,6 @@ export async function POST(req: NextRequest) {
 
     const body = (await req.json()) as GenerateBody;
     const toolSlug = body.toolSlug?.trim();
-    const inputs = body.inputs || {};
 
     if (!toolSlug) {
       return Response.json(
@@ -325,6 +325,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const inputs = preprocessToolInputs(toolSlug, body.inputs || {});
     const prompt = getServerPrompt(toolSlug);
 
     if (!prompt) {
