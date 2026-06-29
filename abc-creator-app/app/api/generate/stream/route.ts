@@ -5,6 +5,7 @@ import {
   validateToolInputs,
 } from "@/lib/tools/server-prompts";
 import { preprocessToolInputs } from "@/lib/tools/preprocess-inputs";
+import { buildResearchContext } from "@/lib/tools/research-context";
 import { calculateToolCreditCost } from "@/lib/tools/credit-costs";
 import { createClient } from "@/lib/supabase/server";
 import { routeToAI, type ChatMessage } from "@/lib/ai/routeToAI";
@@ -396,6 +397,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const researchContext = await buildResearchContext(toolSlug, inputs);
+    const researchInstructions = researchContext
+      ? `\n\nSource/research context:\n${researchContext}\n\nResearch instructions:\nUse the source/research context above for data-backed insights and coded visuals. Do not invent numeric claims beyond supplied or fetched context.`
+      : "";
+
     const messages: ChatMessage[] = [
       {
         role: "system",
@@ -408,7 +414,7 @@ export async function POST(req: NextRequest) {
 Charged credits for this request: ${requiredCredits}
 
 User inputs:
-${formatInputs(inputs)}
+${formatInputs(inputs)}${researchInstructions}
 
 Output requirements:
 ${prompt.outputGuide}`,
