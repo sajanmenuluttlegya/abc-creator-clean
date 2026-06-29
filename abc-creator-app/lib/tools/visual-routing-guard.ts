@@ -7,8 +7,13 @@ export function getVisualRoutingGuard(toolSlug: string) {
 
 Visual routing:
 - Use abc-diagram blocks for workflows, charts, graphs, dashboards, sankeys, taxonomies, pipelines, arrows, axes, legends, callouts, stage names, and visuals requiring readable labels.
-- Use generated images only for clean illustration scenes, editorial art, abstract metaphors, or photoreal supporting visuals.
-- Image prompts should request clean art without typography, signs, interface text, chart labels, headings, annotations, or readable text.
+- Keep image blocks enabled when the user selected images. Do not remove images just because coded diagrams are present.
+- Generated images are for clean, relevant, textless illustrations: hero art, editorial scenes, abstract metaphors, photoreal supporting visuals, or atmospheric section art.
+- If Images is Hero image only, include one relevant hero image when it supports the article.
+- If Images is Hero + section images, include a rational number of relevant images: usually one hero plus one or two section images, max four total for long pillar articles.
+- Every image must match the nearest section topic. Do not use generic robot/adventure/skyscraper/fantasy visuals unless the section actually calls for that scene.
+- Never place two image blocks together. Never place an image block directly beside another image block or directly beside an abc-diagram block. Put meaningful prose between visual blocks.
+- Image prompts should request clean art without typography, signs, interface text, chart labels, headings, annotations, captions, or readable text.
 - Put exact wording in normal prose or abc-diagram blocks.
 - Do not render long title or caption sentences inside diagram cards. Diagrams should show the visual structure itself.
 - In concentric or radial diagrams, node labels should sit directly near their point. Use arrows only for ring-level callouts.
