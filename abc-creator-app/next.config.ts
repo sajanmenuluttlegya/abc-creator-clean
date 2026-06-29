@@ -4,6 +4,7 @@ const nextConfig: NextConfig = {
   turbopack: {
     resolveAlias: {
       "@/lib/tools/server-prompts": "./lib/tools/server-prompts-plus.ts",
+      "@/lib/ai/routeToImage": "./lib/ai/routeToImagePlus.ts",
     },
   },
 };
