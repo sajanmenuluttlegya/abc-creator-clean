@@ -48,6 +48,23 @@ const BLOG_OUTLINE_WORD_COUNT_CREDITS: Array<[string, number]> = [
 ];
 
 const BLOG_CONTENT_WORD_COUNT_CREDITS: Array<[string, number]> = [
+  ["Premium pillar article", 7],
+  ["Very long article", 7],
+  ["Long article", 7],
+  ["Standard article", 7],
+  ["Short article", 7],
+];
+
+const BLOG_CONTENT_SECTION_FLOORS: Array<[string, number]> = [
+  ["Very long", 0],
+  ["Long", 0],
+  ["Medium", 0],
+  ["Short", 0],
+  ["Very short", 0],
+  ["2 paragraphs", 0],
+];
+
+const PRESET_BLOG_WORD_COUNT_CREDITS: Array<[string, number]> = [
   ["Premium pillar article", 16],
   ["Very long article", 13],
   ["Long article", 10],
@@ -96,7 +113,7 @@ function calculateCustomImageBriefCredits(value: string | undefined) {
 }
 
 function calculateFullBlogPresetCredits(toolSlug: string, inputs: ToolInputs) {
-  let credits = matchCredit(inputs.word_count, BLOG_CONTENT_WORD_COUNT_CREDITS, 8);
+  let credits = matchCredit(inputs.word_count, PRESET_BLOG_WORD_COUNT_CREDITS, 8);
 
   if (toolSlug === "advanced-blog-post") {
     if (includes(inputs.expertise_level, "Expert")) credits += 2;
@@ -127,15 +144,16 @@ export function calculateToolCreditCost(toolSlug: string, inputs: ToolInputs = {
     case "blog-outline":
       return matchCredit(inputs.word_count, BLOG_OUTLINE_WORD_COUNT_CREDITS, 3);
     case "blog-content": {
-      let credits = matchCredit(inputs.word_count, BLOG_CONTENT_WORD_COUNT_CREDITS, 8);
+      let credits = matchCredit(inputs.word_count, BLOG_CONTENT_WORD_COUNT_CREDITS, 7);
+      credits = Math.max(credits, matchCredit(inputs.words_per_section, BLOG_CONTENT_SECTION_FLOORS, 0));
       if (includes(inputs.article_depth, "Detailed")) credits += 4;
-      if (includes(inputs.article_depth, "Expert")) credits += 8;
-      if (yes(inputs.include_table)) credits += 2;
-      if (yes(inputs.include_list)) credits += 1;
-      if (yes(inputs.include_key_takeaways)) credits += 1;
-      if (yes(inputs.include_faq)) credits += 2;
-      if (includes(inputs.image_brief_mode, "Hero image brief only") || includes(inputs.image_brief_mode, "Hero image only")) credits += 1;
-      if (includes(inputs.image_brief_mode, "Hero + section image briefs") || includes(inputs.image_brief_mode, "Hero + section images")) credits += 3;
+      if (includes(inputs.article_depth, "Expert")) credits += 10;
+      if (yes(inputs.include_table)) credits += 4;
+      if (yes(inputs.include_list)) credits += 3;
+      if (yes(inputs.include_key_takeaways)) credits += 2;
+      if (yes(inputs.include_faq)) credits += 3;
+      if (includes(inputs.image_brief_mode, "Hero image brief only") || includes(inputs.image_brief_mode, "Hero image only")) credits += 3;
+      if (includes(inputs.image_brief_mode, "Hero + section image briefs") || includes(inputs.image_brief_mode, "Hero + section images")) credits += 8;
       return credits;
     }
     case "human-style-blog-post":
@@ -182,7 +200,7 @@ export function getToolCreditEstimate(toolSlug: string, inputs: ToolInputs = {})
 export function getToolCreditLabel(toolSlug: string) {
   if (toolSlug === "blog-topic-ideas") return "From 1 credit";
   if (toolSlug === "blog-outline") return "From 3 credits";
-  if (toolSlug === "blog-content") return "From 6 credits";
+  if (toolSlug === "blog-content") return "From 7 credits";
   if (["human-style-blog-post", "seo-optimized-blog-post", "advanced-blog-post"].includes(toolSlug)) return "From 6 credits";
   if (toolSlug === "quick-1-click-blog-post") return "From 3 credits";
   if (toolSlug === "pro-image-brief-for-blog") return "From 1 credit";
