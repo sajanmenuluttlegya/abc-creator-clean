@@ -33,26 +33,37 @@ Length and depth rules:
 - Long article (1,800-2,500 words): deeper guide with more supporting sections, examples, tables, and nuance.
 - Very long article (2,500-3,500 words): advanced long-form guide with stronger explanation, frameworks, comparisons, and practical detail.
 - Premium pillar article (3,500-5,000 words): maximum-depth premium pillar content with substantial sections, examples, frameworks, FAQs, comparisons, and decision criteria.
-- Quick very short: up to 300 words; quick publishable mini post.
-- Quick short: up to 500 words; compact but useful article.
-- Quick medium: up to 1,000 words; balanced quick article.
-- Quick long: up to 2,000 words; full quick-mode article.
-- Quick very long: up to 3,000 words; deep quick-mode article.
+- Authority pillar article (5,000-10,000 words): exhaustive authority content with strong section architecture, deep explanations, examples, frameworks, comparisons, FAQs, decision criteria, and carefully placed visuals. Aim for the selected range, but never use filler.
+- Quick short post (700-1,000 words): compact but useful.
+- Quick standard post (1,000-1,500 words): balanced quick article.
+- Quick long post (1,500-2,000 words): full quick-mode article.
+- Quick very long post (2,000-3,000 words): deeper quick-mode guide.
+- One-click authority article (5,000-10,000 words): deep one-click authority article; keep structure tight and avoid padding.
 - Longer selections must create visibly more substance, not padding. Expand through mechanisms, examples, caveats, steps, comparisons, frameworks, reader decisions, and implementation notes.
 - If a topic is narrow, spend more detail on the most relevant sections instead of adding generic filler.`;
 
 const presetVisualRules = `
-Preset visual rules:
-- Image prompts, tables, diagrams, graphs, and flowcharts are optional and should appear only when useful.
-- Use image blocks for editorial illustrations only, not charts or diagrams.
-- Image blocks must use this exact structure: ### Image: <short name>, then Placement:, Prompt:, Alt Text:, and Caption:.
-- Prompts must request textless professional images with no readable words, logos, watermarks, fake UI, or brand marks.
-- Use normal Markdown tables when a table improves clarity.
-- Use abc-diagram fenced JSON only for diagrams, flowcharts, graphs, frameworks, relationships, or systems.
-- Quick 1-Click should stay light: hero image only and at most one section image/table when clearly useful.
-- Human-Style should prefer editorial/story-style images and fewer diagrams.
-- SEO-Optimized should prefer helpful tables, FAQs, search-intent visuals, and occasional simple diagrams.
-- Advanced should use the richest visual layer: frameworks, graphs, flowcharts, comparison tables, and premium visuals when useful.`;
+Premium visual planning rules:
+- Before adding any image, table, chart, diagram, graph, or flowchart, decide the exact reader job for that section. If the visual does not make the nearby section clearer, do not add it.
+- Never place two visuals back-to-back. Do not place image after image, image after diagram, diagram after image, table directly after image, or chart directly after another chart. Put at least one meaningful normal paragraph between visual blocks.
+- Every visual must be directly relevant to the exact paragraph/section around it. Never group visuals at the bottom.
+- Visual count must scale with article length and usefulness: Short = 0-1 visuals, Standard = 1-2, Long = 2-4, Very long = 3-5, Premium pillar = 4-7, Authority pillar = 5-10 maximum. Use fewer if the article does not need them.
+- Image prompts must be section-specific and topic-specific. Do not repeat the same generic subject across multiple images for any topic. Avoid generic coins, robots, people staring at screens, random skylines, abstract blobs, mountains, or decorative stock-art unless that exact section needs it.
+- Images are only for conceptual/editorial mood or section-specific illustration. Do not use image blocks for charts, dashboards, graphs, radial maps, sankeys, node maps, or flowcharts.
+- Use normal Markdown tables for practical comparison, checklists, specs, pros/cons, pricing placeholders, matrices, and decision support.
+- Use abc-diagram fenced JSON for coded visuals. Output compact valid JSON only inside the fenced block.
+- Comparison or strategy choice = comparison table, decision matrix, priority matrix, 2x2 matrix, SWOT matrix, Venn diagram, radar/spider chart, bar chart, column chart, treemap, or sunburst chart.
+- Trend, time, or data movement = line chart, area chart, timeline, roadmap, milestone chart, Gantt chart, event chain, chronology chart, waterfall chart, candlestick chart, histogram, scatter plot, bubble chart, heatmap, box plot, violin plot, or Pareto chart.
+- Flow or process = flowchart, process map, workflow diagram, swimlane diagram, decision tree, pipeline diagram, user journey map, service blueprint, state machine diagram, sequence diagram, activity diagram, or use-case diagram.
+- Flow of value, money, energy, traffic, attention, or data = Sankey diagram only when there is a real flow from source to destination.
+- Hierarchy, lineage, ancestry, categories, or classification = family tree, lineage chart, genealogy tree, descendant tree, organizational chart, tree diagram, taxonomy tree, dendrogram, mind map, concept map, or hierarchy chart.
+- Network or relationships = network graph, node-link diagram, knowledge graph, social network graph, dependency graph, causal graph, directed graph, undirected graph, weighted graph, bipartite graph, force-directed graph, ERD, graph database schema, class diagram, or object diagram.
+- System, product, infrastructure, data, or software structure = architecture diagram, system diagram, block diagram, component diagram, deployment diagram, infrastructure diagram, database schema, ERD, circuit diagram, or wiring diagram.
+- Spatial or location-based meaning = geographic map, choropleth map, bubble map, route map, topographic map, floor plan, site map, conceptual map, or journey map.
+- Quick 1-Click should stay lighter unless authority length is selected.
+- Human-Style should prefer editorial images, story maps, simple concept maps, and light tables.
+- SEO-Optimized should prefer search-intent tables, comparison tables, FAQ structure, matrices, and only useful diagrams.
+- Advanced should use the richest relevant mix: frameworks, decision matrices, process maps, dependency graphs, ERDs, flowcharts, and charts when they help.`;
 
 export const serverBlogTools: Record<string, ServerPrompt> = {
   "human-style-blog-post": {
@@ -75,7 +86,7 @@ Human-Style Blog Post rules:
 ${fullBlogLengthRules}
 ${presetVisualRules}`,
     outputGuide:
-      "Return a copy-ready Markdown blog post package. Include: 1) SEO-aware H1, 2) short reader promise, 3) full blog article scaled to the selected word_count option, 4) natural practical examples, 5) FAQ section when useful, 6) SEO metadata suggestions, 7) internal-link placeholder ideas, and 8) a concise claims-to-verify checklist. Add editorial image/table/diagram support only where useful.",
+      "Return a copy-ready Markdown blog post package. Include: 1) SEO-aware H1, 2) short reader promise, 3) full blog article scaled to the selected word_count option, 4) natural practical examples, 5) FAQ section when useful, 6) SEO metadata suggestions, 7) internal-link placeholder ideas, and 8) a concise claims-to-verify checklist. Add images, tables, charts, diagrams, graphs, or flowcharts only where the surrounding section clearly needs them, and never place two visuals together.",
   },
   "seo-optimized-blog-post": {
     creditCost: 8,
@@ -98,7 +109,7 @@ SEO-Optimized Blog Post rules:
 ${fullBlogLengthRules}
 ${presetVisualRules}`,
     outputGuide:
-      "Return a complete Markdown SEO blog package scaled to the selected word_count option. Include: 1) SEO title/H1, 2) search intent assumption labelled as strategic, 3) full reader-friendly article with H2/H3 sections, 4) natural keyword placement notes, 5) FAQ section, 6) meta title/meta description/slug suggestions, 7) internal-link placeholder ideas, 8) schema-ready FAQ draft as a code block, and 9) concise verification notes for factual claims. Add useful tables, FAQ visuals, or image/diagram blocks only when relevant.",
+      "Return a complete Markdown SEO blog package scaled to the selected word_count option. Include: 1) SEO title/H1, 2) search intent assumption labelled as strategic, 3) full reader-friendly article with H2/H3 sections, 4) natural keyword placement notes, 5) FAQ section, 6) meta title/meta description/slug suggestions, 7) internal-link placeholder ideas, 8) schema-ready FAQ draft as a code block, and 9) concise verification notes for factual claims. Choose each visual by nearby section need; comparison gets table/bar/matrix, trend gets line/timeline, process gets flowchart, categories get taxonomy/tree, relationships get graph, and editorial support gets image.",
   },
   "advanced-blog-post": {
     creditCost: 8,
@@ -122,7 +133,7 @@ Advanced Blog Post rules:
 ${fullBlogLengthRules}
 ${presetVisualRules}`,
     outputGuide:
-      "Return a detailed Markdown expert blog package scaled to the selected word_count option. Include: 1) SEO-aware H1, 2) executive summary or reader promise, 3) detailed long-form article with deep H2/H3 sections, 4) frameworks or decision criteria, 5) examples according to examples_needed, 6) FAQs, 7) SEO metadata suggestions and internal-link placeholders, and 8) a concise factual verification checklist. Add strong tables, coded diagrams, flowcharts, framework visuals, and optional image prompts when they improve the article.",
+      "Return a detailed Markdown expert blog package scaled to the selected word_count option. Include: 1) SEO-aware H1, 2) executive summary or reader promise, 3) detailed long-form article with deep H2/H3 sections, 4) frameworks or decision criteria, 5) examples according to examples_needed, 6) FAQs, 7) SEO metadata suggestions and internal-link placeholders, and 8) a concise factual verification checklist. Add strong tables, coded diagrams, charts, flowcharts, framework visuals, and optional image prompts only when they are relevant to the exact section placement.",
   },
   "rewrite-article-with-keywords": {
     creditCost: 5,
@@ -168,7 +179,7 @@ Quick 1-Click Blog Post rules:
 ${fullBlogLengthRules}
 ${presetVisualRules}`,
     outputGuide:
-      "Return a quick-mode Markdown blog package scaled to the selected article_length option. Include: 1) suggested SEO title/H1, 2) compact outline, 3) complete article with H2/H3 sections, 4) key takeaways when useful, 5) FAQs, 6) meta title/meta description/slug suggestions, 7) suggested CTA, 8) internal-link placeholders, and 9) concise verification notes. Keep visuals light and optional.",
+      "Return a quick-mode Markdown blog package scaled to the selected article_length option. Include: 1) suggested SEO title/H1, 2) compact outline, 3) complete article with H2/H3 sections, 4) key takeaways when useful, 5) FAQs, 6) meta title/meta description/slug suggestions, 7) suggested CTA, 8) internal-link placeholders, and 9) concise verification notes. Keep visuals light unless the chosen length is an authority article, and never place visuals back-to-back.",
   },
   "blog-content-calendar": {
     creditCost: 5,
