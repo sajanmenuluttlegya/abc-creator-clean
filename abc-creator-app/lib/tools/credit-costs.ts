@@ -1,3 +1,5 @@
+import { BLOG_TOOL_CREDIT_COSTS } from "./blog-tool-credits";
+
 export type ToolInputs = Record<string, string>;
 
 export type CreditEstimate = {
@@ -20,6 +22,7 @@ const BASE_TOOL_CREDITS: Record<string, number> = {
   "blog-content": 8,
   "pro-image-brief-for-blog": 5,
   "blog-seo-pack": 5,
+  ...BLOG_TOOL_CREDIT_COSTS,
   "facebook-ad-copy": 4,
   "product-description": 3,
 };
