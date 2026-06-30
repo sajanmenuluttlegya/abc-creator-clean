@@ -230,7 +230,7 @@ export const publicTools: Tool[] = [
   {
     id: "blog-content",
     slug: "blog-content",
-    name: "Blog Content",
+    name: "Blog Post Generator",
     description: "Turn an approved outline into a premium long-form blog article.",
     icon: "blog-content",
     detailEmoji: "✍️",
