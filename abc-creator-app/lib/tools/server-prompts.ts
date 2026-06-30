@@ -32,7 +32,7 @@ General rules:
 
 export const serverPrompts: Record<string, ServerPrompt> = {
   "blog-topic-ideas": {
-    creditCost: 2,
+    creditCost: 1,
     requiredInputs: [
       { id: "niche", label: "Niche", required: true, minLength: 2, maxLength: 180 },
       { id: "keyword", label: "Keyword", required: true, minLength: 2, maxLength: 180 },
@@ -46,7 +46,7 @@ export const serverPrompts: Record<string, ServerPrompt> = {
       "Return exactly the requested number of SEO-aware blog topic ideas from the idea_count input. Use a Markdown table with columns: #, Suggested Title, Core Keyword/Angle, Search Intent, Target Reader, Difficulty Guess, and Why It Could Work. Label difficulty as a strategic guess, not a verified SEO metric. Add a short section called How to Use These Ideas and a short Verify Before Publishing note.",
   },
   "blog-outline": {
-    creditCost: 5,
+    creditCost: 3,
     requiredInputs: [
       { id: "blog_title", label: "Blog title", required: true, minLength: 4, maxLength: 220 },
       { id: "target_keyword", label: "Target keyword", required: true, minLength: 2, maxLength: 180 },
@@ -59,7 +59,7 @@ export const serverPrompts: Record<string, ServerPrompt> = {
       "Return a clean editable Markdown blog outline only. Never return only a title. Use a parseable heading hierarchy: one # H1 article title, then ## H2 sections, then optional ### H3 supporting points. Adapt by word count: Short article = 4-5 H2 sections and 1-3 H3 supporting points total; Medium article = 6-8 H2 sections and 2-4 H3 supporting points total; Long article = 8-12 H2 sections and 3-8 H3 supporting points total. Do not wrap headings in bullets, numbers, or bold. Do not output metadata labels such as Blog Outline, Recommended H1, Search Intent, Reader Promise, Intro Angle, Detailed H2/H3 Structure, Keyword Placement Notes, FAQ Ideas, Conclusion Angle, Verify Before Publishing, notes, explanations, or bullets. Do not write the full article.",
   },
   "blog-content": {
-    creditCost: 8,
+    creditCost: 7,
     requiredInputs: [
       { id: "outline", label: "Outline", required: true, minLength: 20, maxLength: 9000 },
       { id: "title", label: "Title", required: true, minLength: 4, maxLength: 220 },
@@ -125,7 +125,7 @@ Blog Content Premium rules:
       "Return only the usable Markdown blog article. Start with one H1 article title, then go directly into the introduction and article body. Make the article feel premium, researched, practical, and publication-ready. Add relevant abc-diagram fenced JSON blocks in the most useful article positions so the UI can render real inline coded visuals. Do not output visible Visual, Type, Placement, Purpose, What to show, Labels/Data needed, Alt Text, or Caption text for diagrams. If images are requested, place only rationally needed illustration Image blocks inline at relevant positions using the exact Image structure. Never put two image blocks together and never put an image directly beside another visual block. Do not include Meta Description, Suggested URL Slug, SEO Title, Full Blog Article heading, article package labels, Verify Before Publishing Notes, Final On-Page SEO Checklist, publisher notes, or any final SEO checklist.",
   },
   "pro-image-brief-for-blog": {
-    creditCost: 5,
+    creditCost: 1,
     requiredInputs: [
       { id: "blog_topic", label: "Blog topic", required: true, minLength: 4, maxLength: 220 },
       { id: "blog_outline", label: "Blog outline / article", required: true, minLength: 20, maxLength: 12000 },
@@ -134,6 +134,7 @@ Blog Content Premium rules:
       { id: "image_plan", label: "Image plan", required: true, minLength: 2, maxLength: 120 },
       { id: "image_ratio", label: "Image ratio", required: true, minLength: 2, maxLength: 80 },
       { id: "image_count_guidance", label: "Image count guidance", required: true, minLength: 2, maxLength: 80 },
+      { id: "custom_image_count", label: "Custom image count", required: false, maxLength: 2 },
       { id: "include_avoidance_prompts", label: "Include avoidance prompts", required: true, minLength: 2, maxLength: 8 },
       { id: "include_alt_text", label: "Include alt text", required: true, minLength: 2, maxLength: 8 },
       { id: "include_captions", label: "Include captions", required: true, minLength: 2, maxLength: 8 },
@@ -145,7 +146,7 @@ ${commonGenerationRules}
 
 Pro Image Brief rules:
 - The main generation output for this tool is a text-only image plan. Actual images, when enabled, are generated separately through inline Generate Image buttons after this output appears.
-- Build a premium editorial image plan from the blog topic, outline/article, style, ratio, image plan, image count guidance, and brand context.
+- Build a premium editorial image plan from the blog topic, outline/article, style, ratio, image plan, image count guidance, optional custom image count, and brand context.
 - Only include avoidance prompts, alt text, captions, and placement notes when the user selected Yes for those options.
 - Keep prompts usable for future image-generation providers, but do not mention provider names, keys, routing, or backend details.
 - Avoid copyrighted characters, protected brand marks, public-figure likenesses, unsafe visual instructions, and commercial-rights guarantees.
@@ -237,6 +238,25 @@ export function validateToolInputs(
         field,
         error: `${rule?.label || field} is too long. Please shorten it and try again.`,
       };
+    }
+  }
+
+  if (toolSlug === "pro-image-brief-for-blog") {
+    const isCustomImageCount = (inputs.image_count_guidance || "")
+      .toLowerCase()
+      .includes("custom image count");
+
+    if (isCustomImageCount) {
+      const rawCustomCount = (inputs.custom_image_count || "").trim();
+      const customCount = Number(rawCustomCount);
+
+      if (!rawCustomCount || !Number.isInteger(customCount) || customCount < 1 || customCount >= 20) {
+        return {
+          ok: false,
+          field: "custom_image_count",
+          error: "Custom image count must be a whole number from 1 to 19.",
+        };
+      }
     }
   }
 

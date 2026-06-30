@@ -128,7 +128,7 @@ const imageCountGuidanceOptions = [
   "3 images",
   "5 images",
   "7 images",
-  "Suggest the ideal count",
+  "Custom image count (under 20)",
 ];
 
 const imageStyleOptions = [
@@ -182,7 +182,7 @@ export const publicTools: Tool[] = [
     icon: "blog-topic",
     detailEmoji: "💡",
     category: "Blog Workflow",
-    displayCreditCost: 2,
+    displayCreditCost: 1,
     outputType: "text",
     aliases: ["ai-blog-topic-ideas", "blog-topic-ideas-generator", "blog-topic-ideas-tool"],
     nextActions: [
@@ -209,7 +209,7 @@ export const publicTools: Tool[] = [
     icon: "blog-outline",
     detailEmoji: "🧭",
     category: "Blog Workflow",
-    displayCreditCost: 5,
+    displayCreditCost: 3,
     outputType: "text",
     aliases: ["ai-blog-outline", "blog-outline-generator", "blog-outline-tool"],
     nextActions: [
@@ -235,7 +235,7 @@ export const publicTools: Tool[] = [
     icon: "blog-content",
     detailEmoji: "✍️",
     category: "Blog Workflow",
-    displayCreditCost: 8,
+    displayCreditCost: 7,
     outputType: "text",
     aliases: ["ai-blog-content", "blog-content-generator", "blog-content-tool"],
     nextActions: [
@@ -282,7 +282,7 @@ export const publicTools: Tool[] = [
     icon: "image-brief",
     detailEmoji: "🖼️",
     category: "Blog Workflow",
-    displayCreditCost: 5,
+    displayCreditCost: 1,
     outputType: "text",
     aliases: ["ai-pro-image-brief-for-blog", "pro-image-brief-for-blog-generator", "pro-image-brief-for-blog-tool"],
     nextActions: [
@@ -300,6 +300,7 @@ export const publicTools: Tool[] = [
       { id: "image_plan", label: "Images", type: "select", required: true, options: imagePlanOptions },
       { id: "image_ratio", label: "Image Ratio", type: "select", required: true, options: imageRatioOptions },
       { id: "image_count_guidance", label: "Image Count Guidance", type: "select", required: true, options: imageCountGuidanceOptions },
+      { id: "custom_image_count", label: "Custom Image Count (<20)", type: "text", placeholder: "Enter 1-19 only when Custom image count is selected", required: false },
       { id: "include_avoidance_prompts", label: "Include Avoidance Prompts", type: "select", required: true, options: yesNoOptions },
       { id: "include_alt_text", label: "Include Alt Text", type: "select", required: true, options: yesNoOptions },
       { id: "include_captions", label: "Include Captions", type: "select", required: true, options: yesNoOptions },

@@ -141,51 +141,53 @@ export async function POST(req: NextRequest) {
         ? calculateImageEditCredits()
         : calculateImageGenerationCredits(imageCount);
 
-    const reserveResponse = await supabase.rpc("reserve_credits", {
-      p_tool_slug: toolSlug,
-      p_amount: requiredCredits,
-      p_idempotency_key: `${user.id}:${toolSlug}:image:${operation}:${randomUUID()}`,
-    });
+    if (requiredCredits > 0) {
+      const reserveResponse = await supabase.rpc("reserve_credits", {
+        p_tool_slug: toolSlug,
+        p_amount: requiredCredits,
+        p_idempotency_key: `${user.id}:${toolSlug}:image:${operation}:${randomUUID()}`,
+      });
 
-    if (reserveResponse.error) {
-      return Response.json(
-        {
-          ok: false,
-          error: "Could not reserve image credits.",
-          details: rpcErrorMessage(reserveResponse.error),
-        },
-        { status: 500 }
-      );
-    }
+      if (reserveResponse.error) {
+        return Response.json(
+          {
+            ok: false,
+            error: "Could not reserve image credits.",
+            details: rpcErrorMessage(reserveResponse.error),
+          },
+          { status: 500 }
+        );
+      }
 
-    const reservation = reserveResponse.data as CreditReservation;
+      const reservation = reserveResponse.data as CreditReservation;
 
-    if (!reservation?.ok) {
-      return Response.json(
-        {
-          ok: false,
-          error: "Not enough credits.",
-          code: reservation?.code || "INSUFFICIENT_CREDITS",
-          requiredCredits: reservation?.requiredCredits ?? requiredCredits,
-          currentCredits: reservation?.currentCredits ?? 0,
-          imageCreditsPerImage: IMAGE_CREDITS_PER_IMAGE,
-          imageEditCredits: IMAGE_EDIT_CREDITS,
-        },
-        { status: 402 }
-      );
-    }
+      if (!reservation?.ok) {
+        return Response.json(
+          {
+            ok: false,
+            error: "Not enough credits.",
+            code: reservation?.code || "INSUFFICIENT_CREDITS",
+            requiredCredits: reservation?.requiredCredits ?? requiredCredits,
+            currentCredits: reservation?.currentCredits ?? 0,
+            imageCreditsPerImage: IMAGE_CREDITS_PER_IMAGE,
+            imageEditCredits: IMAGE_EDIT_CREDITS,
+          },
+          { status: 402 }
+        );
+      }
 
-    reservedTransactionId = reservation.transactionId || null;
+      reservedTransactionId = reservation.transactionId || null;
 
-    if (!reservedTransactionId) {
-      return Response.json(
-        {
-          ok: false,
-          error: "Credit reservation failed.",
-          code: "CREDIT_RESERVATION_MISSING_ID",
-        },
-        { status: 500 }
-      );
+      if (!reservedTransactionId) {
+        return Response.json(
+          {
+            ok: false,
+            error: "Credit reservation failed.",
+            code: "CREDIT_RESERVATION_MISSING_ID",
+          },
+          { status: 500 }
+        );
+      }
     }
 
     const sourceText =
@@ -203,39 +205,41 @@ export async function POST(req: NextRequest) {
       inputs: body.inputs || {},
     });
 
-    const spendResponse = await supabase.rpc("spend_reserved_credits", {
-      p_transaction_id: reservedTransactionId,
-      p_provider: `image:${operation}:${result.provider}`,
-      p_model: result.model,
-    });
+    if (requiredCredits > 0 && reservedTransactionId) {
+      const spendResponse = await supabase.rpc("spend_reserved_credits", {
+        p_transaction_id: reservedTransactionId,
+        p_provider: `image:${operation}:${result.provider}`,
+        p_model: result.model,
+      });
 
-    if (spendResponse.error) {
-      await refundIfReserved("image_spend_mark_failed");
+      if (spendResponse.error) {
+        await refundIfReserved("image_spend_mark_failed");
 
-      return Response.json(
-        {
-          ok: false,
-          error: "Could not finalize image credit spend.",
-          details: rpcErrorMessage(spendResponse.error),
-        },
-        { status: 500 }
-      );
-    }
+        return Response.json(
+          {
+            ok: false,
+            error: "Could not finalize image credit spend.",
+            details: rpcErrorMessage(spendResponse.error),
+          },
+          { status: 500 }
+        );
+      }
 
-    const spendData = spendResponse.data as CreditSpendResult | null;
+      const spendData = spendResponse.data as CreditSpendResult | null;
 
-    if (spendData?.ok === false) {
-      await refundIfReserved("image_spend_mark_failed");
+      if (spendData?.ok === false) {
+        await refundIfReserved("image_spend_mark_failed");
 
-      return Response.json(
-        {
-          ok: false,
-          error: "Could not finalize image credit spend.",
-          code: spendData.code || "SPEND_FAILED",
-          status: spendData.status,
-        },
-        { status: 500 }
-      );
+        return Response.json(
+          {
+            ok: false,
+            error: "Could not finalize image credit spend.",
+            code: spendData.code || "SPEND_FAILED",
+            status: spendData.status,
+          },
+          { status: 500 }
+        );
+      }
     }
 
     return Response.json({

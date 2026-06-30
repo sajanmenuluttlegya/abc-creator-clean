@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getServerPrompt } from "@/lib/tools/server-prompts";
+import { calculateToolCreditCost } from "@/lib/tools/credit-costs";
 import { routeToAI } from "@/lib/ai/routeToAI";
 import { createClient } from "@/lib/supabase/server";
 
@@ -120,9 +121,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const requiredCredits = calculateToolCreditCost(toolSlug, inputs);
+
     const reserveResponse = await supabase.rpc("reserve_credits", {
       p_tool_slug: toolSlug,
-      p_amount: prompt.creditCost,
+      p_amount: requiredCredits,
       p_idempotency_key: `${user.id}:${toolSlug}:${randomUUID()}`,
     });
 
@@ -145,7 +148,7 @@ export async function POST(req: NextRequest) {
           ok: false,
           error: "Not enough credits.",
           code: reservation?.code || "INSUFFICIENT_CREDITS",
-          requiredCredits: reservation?.requiredCredits ?? prompt.creditCost,
+          requiredCredits: reservation?.requiredCredits ?? requiredCredits,
           currentCredits: reservation?.currentCredits ?? 0,
         },
         { status: 402 }
@@ -232,7 +235,7 @@ ${prompt.outputGuide}`,
       ok: true,
       toolSlug,
       output: result.text,
-      creditsSpent: prompt.creditCost,
+      creditsSpent: requiredCredits,
     });
   } catch (error) {
     await refundIfReserved("generation_exception");

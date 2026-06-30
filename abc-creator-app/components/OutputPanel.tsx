@@ -374,7 +374,7 @@ export function OutputPanel({
             </span>
           ) : autoGenerateBlogImages ? (
             <span className="rounded-full border border-emerald-400/25 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-200">
-              Auto-generating blog images — 23 credits each
+              Auto-generating blog images — free
             </span>
           ) : null}
         </div>

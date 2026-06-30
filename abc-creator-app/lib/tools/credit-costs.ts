@@ -8,8 +8,8 @@ export type CreditEstimate = {
   label: string;
 };
 
-export const IMAGE_CREDITS_PER_IMAGE = 23;
-export const IMAGE_EDIT_CREDITS = 30;
+export const IMAGE_CREDITS_PER_IMAGE = 0;
+export const IMAGE_EDIT_CREDITS = 1;
 
 export const IMAGE_GENERATION_TOOL_SLUGS = [
   "blog-content",
@@ -17,10 +17,10 @@ export const IMAGE_GENERATION_TOOL_SLUGS = [
 ] as const;
 
 const BASE_TOOL_CREDITS: Record<string, number> = {
-  "blog-topic-ideas": 2,
-  "blog-outline": 5,
-  "blog-content": 8,
-  "pro-image-brief-for-blog": 5,
+  "blog-topic-ideas": 1,
+  "blog-outline": 3,
+  "blog-content": 7,
+  "pro-image-brief-for-blog": 1,
   "blog-seo-pack": 5,
   ...BLOG_TOOL_CREDIT_COSTS,
   "facebook-ad-copy": 4,
@@ -28,44 +28,43 @@ const BASE_TOOL_CREDITS: Record<string, number> = {
 };
 
 const BLOG_TOPIC_IDEA_COUNT_CREDITS: Array<[string, number]> = [
-  ["50 ideas", 30],
-  ["30 ideas", 16],
-  ["20 ideas", 10],
-  ["10 ideas", 5],
-  ["5 ideas", 2],
+  ["50 ideas", 5],
+  ["30 ideas", 4],
+  ["20 ideas", 3],
+  ["10 ideas", 2],
+  ["5 ideas", 1],
 ];
 
 const BLOG_OUTLINE_WORD_COUNT_CREDITS: Array<[string, number]> = [
-  ["Premium pillar article", 22],
-  ["Very long article", 16],
-  ["Long article", 11],
-  ["Standard article", 7],
-  ["Short article", 5],
+  ["Premium pillar article", 9],
+  ["Very long article", 7],
+  ["Long article", 5],
+  ["Standard article", 4],
+  ["Short article", 3],
 ];
 
 const BLOG_CONTENT_WORD_COUNT_CREDITS: Array<[string, number]> = [
-  ["Premium pillar article", 80],
-  ["Very long article", 48],
-  ["Long article", 28],
-  ["Standard article", 16],
-  ["Short article", 8],
+  ["Premium pillar article", 39],
+  ["Very long article", 27],
+  ["Long article", 15],
+  ["Standard article", 9],
+  ["Short article", 7],
 ];
 
 const BLOG_CONTENT_SECTION_FLOORS: Array<[string, number]> = [
-  ["Very long", 68],
-  ["Long", 44],
-  ["Medium", 22],
-  ["Short", 12],
-  ["Very short", 8],
-  ["2 paragraphs", 8],
+  ["Very long", 0],
+  ["Long", 0],
+  ["Medium", 0],
+  ["Short", 0],
+  ["Very short", 0],
+  ["2 paragraphs", 0],
 ];
 
 const IMAGE_BRIEF_COUNT_CREDITS: Array<[string, number]> = [
-  ["7 images", 20],
-  ["5 images", 15],
-  ["3 images", 10],
-  ["1 image", 5],
-  ["Suggest the ideal count", 16],
+  ["7 images", 3],
+  ["5 images", 2],
+  ["3 images", 2],
+  ["1 image", 1],
 ];
 
 function includes(value: string | undefined, token: string) {
@@ -79,6 +78,18 @@ function matchCredit(value: string | undefined, table: Array<[string, number]>, 
 
 function yes(value: string | undefined) {
   return (value || "").trim().toLowerCase() === "yes";
+}
+
+function parseCustomImageCount(value: string | undefined) {
+  const count = Math.floor(Number(value));
+  if (!Number.isFinite(count) || count < 1) return null;
+  return Math.min(count, 19);
+}
+
+function calculateCustomImageBriefCredits(value: string | undefined) {
+  const count = parseCustomImageCount(value);
+  if (!count) return 1;
+  return Number((count * 0.9).toFixed(1));
 }
 
 export function supportsImageGeneration(toolSlug: string) {
@@ -97,12 +108,12 @@ export function calculateImageEditCredits() {
 export function calculateToolCreditCost(toolSlug: string, inputs: ToolInputs = {}): number {
   switch (toolSlug) {
     case "blog-topic-ideas":
-      return matchCredit(inputs.idea_count, BLOG_TOPIC_IDEA_COUNT_CREDITS, 2);
+      return matchCredit(inputs.idea_count, BLOG_TOPIC_IDEA_COUNT_CREDITS, 1);
     case "blog-outline":
-      return matchCredit(inputs.word_count, BLOG_OUTLINE_WORD_COUNT_CREDITS, 5);
+      return matchCredit(inputs.word_count, BLOG_OUTLINE_WORD_COUNT_CREDITS, 3);
     case "blog-content": {
-      let credits = matchCredit(inputs.word_count, BLOG_CONTENT_WORD_COUNT_CREDITS, 8);
-      credits = Math.max(credits, matchCredit(inputs.words_per_section, BLOG_CONTENT_SECTION_FLOORS, 8));
+      let credits = matchCredit(inputs.word_count, BLOG_CONTENT_WORD_COUNT_CREDITS, 7);
+      credits = Math.max(credits, matchCredit(inputs.words_per_section, BLOG_CONTENT_SECTION_FLOORS, 0));
       if (includes(inputs.article_depth, "Detailed")) credits += 4;
       if (includes(inputs.article_depth, "Expert")) credits += 10;
       if (yes(inputs.include_table)) credits += 4;
@@ -114,14 +125,11 @@ export function calculateToolCreditCost(toolSlug: string, inputs: ToolInputs = {
       return credits;
     }
     case "pro-image-brief-for-blog": {
-      let credits = matchCredit(inputs.image_count_guidance, IMAGE_BRIEF_COUNT_CREDITS, 5);
-      if (includes(inputs.image_plan, "every major section")) credits += 6;
-      if (includes(inputs.image_plan, "Custom editorial")) credits += 5;
-      if (yes(inputs.include_avoidance_prompts)) credits += 2;
-      if (yes(inputs.include_alt_text)) credits += 2;
-      if (yes(inputs.include_captions)) credits += 2;
-      if (yes(inputs.include_placement_notes)) credits += 2;
-      return Math.max(credits, 5);
+      if (includes(inputs.image_count_guidance, "Custom image count")) {
+        return calculateCustomImageBriefCredits(inputs.custom_image_count);
+      }
+
+      return matchCredit(inputs.image_count_guidance, IMAGE_BRIEF_COUNT_CREDITS, 1);
     }
     default:
       return BASE_TOOL_CREDITS[toolSlug] ?? 1;
@@ -140,9 +148,9 @@ export function getToolCreditEstimate(toolSlug: string, inputs: ToolInputs = {})
 }
 
 export function getToolCreditLabel(toolSlug: string) {
-  if (toolSlug === "blog-topic-ideas") return "From 2 credits";
-  if (toolSlug === "blog-outline") return "From 5 credits";
-  if (toolSlug === "blog-content") return "From 8 credits";
-  if (toolSlug === "pro-image-brief-for-blog") return "From 5 credits";
+  if (toolSlug === "blog-topic-ideas") return "From 1 credit";
+  if (toolSlug === "blog-outline") return "From 3 credits";
+  if (toolSlug === "blog-content") return "From 7 credits";
+  if (toolSlug === "pro-image-brief-for-blog") return "From 1 credit";
   return `${BASE_TOOL_CREDITS[toolSlug] ?? 1} credits`;
 }
