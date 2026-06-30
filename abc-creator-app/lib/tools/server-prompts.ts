@@ -1,3 +1,5 @@
+import { serverBlogTools } from "./server-blog-tools";
+
 type ToolFieldRule = {
   id: string;
   label: string;
@@ -164,6 +166,7 @@ Pro Image Brief rules:
     outputGuide:
       "Generate a practical SEO pack in Markdown. Include: SEO title options, meta descriptions, URL slug options, excerpt, suggested tags, internal link anchor placeholders, FAQ ideas, FAQ schema draft as code block, social share copy, and Verify Before Publishing notes. Do not claim live keyword volume, ranking, SERP position, or AI visibility data.",
   },
+  ...serverBlogTools,
   "facebook-ad-copy": {
     creditCost: 4,
     requiredInputs: [
