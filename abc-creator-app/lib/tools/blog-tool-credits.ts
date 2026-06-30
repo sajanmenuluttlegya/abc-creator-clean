@@ -5,8 +5,8 @@ export const BLOG_TOOL_CREDIT_COSTS: Record<string, number> = {
   "rewrite-article-with-keywords": 5,
   "quick-1-click-blog-post": 8,
   "blog-content-calendar": 5,
-  "blog-title-generator": 2,
+  "blog-title-generator": 1,
   "blog-intro-generator": 2,
   "blog-conclusion-generator": 2,
-  "faq-generator": 2,
+  "faq-generator": 1,
 };
