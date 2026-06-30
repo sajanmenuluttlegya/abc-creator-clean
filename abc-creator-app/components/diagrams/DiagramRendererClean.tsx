@@ -49,7 +49,7 @@ const exportTheme = {
   "--abc-diagram-text": "#0f172a",
   "--abc-diagram-muted": "#475569",
   "--abc-diagram-border": "rgba(99,102,241,.24)",
-  "--abc-diagram-card": "rgba(248,250,252,.95)",
+  "--abc-diagram-card": "#ffffff",
   "--abc-diagram-soft-fill": "rgba(99,102,241,.10)",
 } as CSSProperties;
 
@@ -129,7 +129,7 @@ function chooseVisualFamily(spec: DiagramSpec) {
   if (family === "sankey") return "sankey";
   if (family === "erd") return "entity-cards";
   if (family === "radar") return hasNumericValues(nodesOf(spec)) ? "radar-polygon" : "radial-network";
-  if (family === "workflow") return "workflow-strip";
+  if (family === "workflow") return "chart";
   if (family === "network") return "radial-network";
   return "chart";
 }
