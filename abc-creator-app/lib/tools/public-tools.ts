@@ -1,3 +1,5 @@
+import { blogTools } from "./public-blog-tools";
+
 export interface RecommendedNextAction {
   label: string;
   href: string;
@@ -328,6 +330,7 @@ export const publicTools: Tool[] = [
       { id: "keyword", label: "Primary Keyword", type: "text", placeholder: "e.g., AI for small business", required: true },
     ],
   },
+  ...blogTools,
   {
     id: "facebook-ad-copy",
     slug: "facebook-ad-copy",
