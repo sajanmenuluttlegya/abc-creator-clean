@@ -27,6 +27,7 @@ const exportDiagramStyle = [
   "--abc-diagram-text:#0f172a",
   "--abc-diagram-muted:#475569",
   "--abc-diagram-border:rgba(99,102,241,0.24)",
+  "--abc-diagram-card:#ffffff",
   "--abc-diagram-soft-fill:rgba(99,102,241,0.10)",
 ].join(";");
 
