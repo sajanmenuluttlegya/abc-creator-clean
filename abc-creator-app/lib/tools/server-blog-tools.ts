@@ -170,4 +170,92 @@ Blog Content Calendar rules:
     outputGuide:
       "Return a premium Markdown content calendar. Include: 1) strategy summary, 2) core content pillars/topic clusters, 3) calendar table with period/date label, topic/title, primary keyword suggestion, secondary keyword ideas, search intent, funnel stage, article type, CTA, internal-link placeholders, and production notes, 4) repurposing ideas, 5) priority order, 6) verification checklist, and 7) missing information needed for a more accurate calendar.",
   },
+  "blog-title-generator": {
+    creditCost: 2,
+    requiredInputs: [
+      { id: "topic", label: "Topic / seed idea", required: true, minLength: 4, maxLength: 220 },
+      { id: "primary_keyword", label: "Primary keyword", required: false, maxLength: 180 },
+      { id: "audience", label: "Audience", required: true, minLength: 2, maxLength: 120 },
+      { id: "angle", label: "Title angle", required: true, minLength: 2, maxLength: 160 },
+      { id: "title_count", label: "How many titles", required: true, minLength: 2, maxLength: 80 },
+      { id: "brand_or_context", label: "Brand / extra context", required: false, maxLength: 3000 },
+    ],
+    system: `You are ABC Creator's specialist for Blog Workflow and Blog Title Generator.${commonBlogToolRules}
+
+Blog Title Generator rules:
+- Generate premium title/headline options for a blog article, not full article content.
+- Make titles specific, benefit-driven, and appropriate for the selected audience and angle.
+- Use the primary keyword naturally when supplied, but do not force it into every title.
+- Avoid clickbait, fake urgency, exaggerated promises, unsupported numbers, fake years, or invented data.
+- If title ideas imply facts or statistics, mark them as placeholders to verify.
+- Provide useful editorial notes so the user can choose the strongest title for Blog Outline or Blog Post Generator.`,
+    outputGuide:
+      "Return a Markdown title package. Include: 1) a quick strategy note, 2) grouped title options with angle labels, 3) the top 5 strongest picks with reasons, 4) keyword-fit notes, 5) titles to avoid and why, and 6) verify-before-publishing notes for any titles that imply facts, numbers, dates, or claims.",
+  },
+  "blog-intro-generator": {
+    creditCost: 2,
+    requiredInputs: [
+      { id: "blog_title", label: "Blog title / topic", required: true, minLength: 4, maxLength: 220 },
+      { id: "primary_keyword", label: "Primary keyword", required: false, maxLength: 180 },
+      { id: "audience", label: "Audience", required: true, minLength: 2, maxLength: 120 },
+      { id: "tone", label: "Tone", required: true, minLength: 2, maxLength: 80 },
+      { id: "intro_style", label: "Intro style", required: true, minLength: 2, maxLength: 160 },
+      { id: "brand_or_context", label: "Brand / extra context", required: false, maxLength: 4000 },
+    ],
+    system: `You are ABC Creator's specialist for Blog Workflow and Blog Intro Generator.${commonBlogToolRules}
+
+Blog Intro Generator rules:
+- Generate polished article introductions only, not the full article.
+- Create a strong hook, clear problem framing, reader promise, and a smooth bridge into the first section.
+- Match the selected tone, audience, and intro style.
+- Use the primary keyword naturally if supplied.
+- Do not invent statistics, studies, quotes, customer outcomes, dates, market claims, or source-backed facts.
+- If the requested style needs a stat or source and none is supplied, use a clear placeholder and verification note.`,
+    outputGuide:
+      "Return a Markdown intro package. Include: 1) 3 polished intro options, 2) a short note explaining the angle of each option, 3) one recommended final intro, 4) optional first-H2 transition line, and 5) verify-before-publishing notes for any placeholder claims.",
+  },
+  "blog-conclusion-generator": {
+    creditCost: 2,
+    requiredInputs: [
+      { id: "blog_title", label: "Blog title / topic", required: true, minLength: 4, maxLength: 220 },
+      { id: "article_summary", label: "Article summary / main points", required: true, minLength: 20, maxLength: 8000 },
+      { id: "audience", label: "Audience", required: true, minLength: 2, maxLength: 120 },
+      { id: "tone", label: "Tone", required: true, minLength: 2, maxLength: 80 },
+      { id: "conclusion_style", label: "Conclusion style", required: true, minLength: 2, maxLength: 160 },
+      { id: "cta_or_next_step", label: "CTA / next step", required: false, maxLength: 220 },
+    ],
+    system: `You are ABC Creator's specialist for Blog Workflow and Blog Conclusion Generator.${commonBlogToolRules}
+
+Blog Conclusion Generator rules:
+- Generate polished blog conclusions only, not a full article.
+- Summarize the article's main idea without repeating every section mechanically.
+- Provide a clear final takeaway and a relevant next step or CTA when supplied.
+- Avoid generic endings such as "in conclusion" unless the selected tone requires it.
+- Do not add new claims, statistics, promises, or facts that were not in the user's summary/context.
+- Make the conclusion feel premium, edited, and ready to paste into a finished article.`,
+    outputGuide:
+      "Return a Markdown conclusion package. Include: 1) 3 conclusion options in the selected style, 2) one recommended final version, 3) CTA variants when useful, 4) a short note on which option fits best, and 5) a check that no unsupported new claims were added.",
+  },
+  "faq-generator": {
+    creditCost: 2,
+    requiredInputs: [
+      { id: "topic_or_article", label: "Topic / article draft", required: true, minLength: 10, maxLength: 12000 },
+      { id: "primary_keyword", label: "Primary keyword", required: false, maxLength: 180 },
+      { id: "audience", label: "Audience", required: true, minLength: 2, maxLength: 120 },
+      { id: "faq_count", label: "FAQ count", required: true, minLength: 2, maxLength: 80 },
+      { id: "faq_purpose", label: "FAQ purpose", required: true, minLength: 2, maxLength: 160 },
+      { id: "brand_or_context", label: "Brand / extra context", required: false, maxLength: 4000 },
+    ],
+    system: `You are ABC Creator's specialist for Blog Workflow and FAQ Generator.${commonBlogToolRules}
+
+FAQ Generator rules:
+- Generate helpful FAQ questions and concise answers for a blog/article/topic.
+- Cover real reader doubts, long-tail search angles, objections, definitions, and practical next-step questions where relevant.
+- Use the primary keyword naturally if supplied, but never keyword-stuff.
+- Do not invent facts, policies, prices, legal/medical/financial advice, or source-backed claims.
+- If FAQ schema is requested through the selected purpose, provide schema-ready JSON-LD as an editable draft only and warn the user to verify all facts before publishing.
+- Keep answers direct, useful, and non-generic.`,
+    outputGuide:
+      "Return a Markdown FAQ package. Include: 1) FAQ table with question, concise answer, intent/purpose, and verification need, 2) recommended FAQ order, 3) optional schema-ready JSON-LD draft when relevant, and 4) verify-before-publishing notes for factual claims.",
+  },
 };
