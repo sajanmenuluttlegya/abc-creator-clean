@@ -332,6 +332,8 @@ export function InlineImageBlock({
   };
 
   if (image) {
+    const hoverUndoLabel = image.provider === "user-upload" ? "Undo Upload" : "Undo";
+
     return (
       <section className="my-6" data-abc-image-block={blockId}>
         {shouldKeepPromptVisible ? (
@@ -382,6 +384,16 @@ export function InlineImageBlock({
               >
                 Upload Image
               </button>
+
+              {previousImage ? (
+                <button
+                  type="button"
+                  onClick={undoEdit}
+                  className="rounded-full border border-purple-300/30 bg-purple-400/10 px-4 py-2 text-xs font-semibold text-purple-100 transition hover:bg-purple-400/20"
+                >
+                  {hoverUndoLabel}
+                </button>
+              ) : null}
 
               <button
                 type="button"
