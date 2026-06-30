@@ -62,6 +62,7 @@ const targetWordCountOptions = [
   "Long article (1,800-2,500 words)",
   "Very long article (2,500-3,500 words)",
   "Premium pillar article (3,500-5,000 words)",
+  "Authority pillar article (5,000-10,000 words)",
 ];
 
 const expertiseLevelOptions = [
@@ -91,6 +92,8 @@ const quickLengthOptions = [
   "Quick short post (700-1,000 words)",
   "Quick standard post (1,000-1,500 words)",
   "Quick long post (1,500-2,000 words)",
+  "Quick very long post (2,000-3,000 words)",
+  "One-click authority article (5,000-10,000 words)",
 ];
 
 const calendarDurationOptions = [
@@ -363,7 +366,7 @@ export const blogTools: PublicBlogTool[] = [
     icon: "blog-outline",
     detailEmoji: "🏷️",
     category: "Blog Workflow",
-    displayCreditCost: 2,
+    displayCreditCost: 1,
     outputType: "text",
     aliases: ["ai-blog-title-generator", "blog-title-generator-tool", "blog-title-tool", "blog-headline-generator", "title-generator-for-blog"],
     nextActions: titleNextActions,
@@ -426,7 +429,7 @@ export const blogTools: PublicBlogTool[] = [
     icon: "seo",
     detailEmoji: "❓",
     category: "Blog Workflow",
-    displayCreditCost: 2,
+    displayCreditCost: 1,
     outputType: "text",
     aliases: ["ai-faq-generator", "faq-generator-tool", "blog-faq-generator", "frequently-asked-questions-generator"],
     nextActions: sectionNextActions,
