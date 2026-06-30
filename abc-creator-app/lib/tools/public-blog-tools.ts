@@ -117,6 +117,55 @@ const calendarGoalOptions = [
   "Plan transactional blog content",
 ];
 
+const titleCountOptions = [
+  "10 titles",
+  "15 titles",
+  "25 titles",
+  "40 titles",
+];
+
+const titleAngleOptions = [
+  "SEO-friendly",
+  "Click-worthy but professional",
+  "How-to / educational",
+  "Listicle ideas",
+  "Thought-leadership",
+  "Comparison / alternative angles",
+  "Mixed premium angles",
+];
+
+const introStyleOptions = [
+  "Problem-first hook",
+  "Story-style hook",
+  "Stat-style placeholder hook",
+  "Direct expert explanation",
+  "Contrarian angle",
+  "Beginner-friendly setup",
+];
+
+const conclusionStyleOptions = [
+  "Actionable summary",
+  "Persuasive CTA",
+  "Executive wrap-up",
+  "Checklist-style ending",
+  "Thoughtful editorial ending",
+];
+
+const faqCountOptions = [
+  "5 FAQs",
+  "8 FAQs",
+  "10 FAQs",
+  "15 FAQs",
+];
+
+const faqPurposeOptions = [
+  "Answer beginner questions",
+  "Support SEO long-tail queries",
+  "Handle objections before conversion",
+  "Clarify technical concepts",
+  "Create FAQ schema draft",
+];
+
 const commonBlogNextActions = [
   {
     label: "Create a blog SEO pack",
@@ -150,6 +199,28 @@ const calendarNextActions = [
     href: "/tools/quick-1-click-blog-post",
     description: "Turn a calendar topic into a fast complete article draft.",
   },
+];
+
+const titleNextActions = [
+  {
+    label: "Create a blog outline",
+    href: "/tools/blog-outline",
+    description: "Turn the strongest title into a full article outline.",
+  },
+  {
+    label: "Write a quick blog post",
+    href: "/tools/quick-1-click-blog-post",
+    description: "Use a winning title to generate a fast complete article draft.",
+  },
+];
+
+const sectionNextActions = [
+  {
+    label: "Use Blog Post Generator",
+    href: "/tools/blog-content",
+    description: "Use this section inside a full premium article workflow.",
+  },
+  ...commonBlogNextActions,
 ];
 
 export const blogTools: PublicBlogTool[] = [
@@ -282,6 +353,90 @@ export const blogTools: PublicBlogTool[] = [
       { id: "posting_frequency", label: "Posting Frequency", type: "select", required: true, options: postingFrequencyOptions },
       { id: "start_date", label: "Start Date / Month", type: "text", placeholder: "Optional: e.g., July 2026, next Monday, or leave blank for Week 1 labels", required: false },
       { id: "brand_or_context", label: "Brand / Extra Context", type: "textarea", placeholder: "Optional: products, services, offers, content pillars, must-cover themes, internal pages, excluded topics, or source notes.", required: false },
+    ],
+  },
+  {
+    id: "blog-title-generator",
+    slug: "blog-title-generator",
+    name: "Blog Title Generator",
+    description: "Generate premium SEO-aware blog title options with angles, intent notes, and safe click-worthiness.",
+    icon: "blog-outline",
+    detailEmoji: "🏷️",
+    category: "Blog Workflow",
+    displayCreditCost: 2,
+    outputType: "text",
+    aliases: ["ai-blog-title-generator", "blog-title-generator-tool", "blog-title-tool", "blog-headline-generator", "title-generator-for-blog"],
+    nextActions: titleNextActions,
+    inputs: [
+      { id: "topic", label: "Topic / Seed Idea", type: "text", placeholder: "e.g., AI tools for online teachers", required: true },
+      { id: "primary_keyword", label: "Primary Keyword", type: "text", placeholder: "e.g., AI tools for teachers", required: false },
+      { id: "audience", label: "Audience", type: "select", required: true, options: audienceOptions },
+      { id: "angle", label: "Title Angle", type: "select", required: true, options: titleAngleOptions },
+      { id: "title_count", label: "How Many Titles?", type: "select", required: true, options: titleCountOptions },
+      { id: "brand_or_context", label: "Brand / Extra Context", type: "textarea", placeholder: "Optional: brand voice, forbidden words, must-include benefit, competitor titles, or source notes.", required: false },
+    ],
+  },
+  {
+    id: "blog-intro-generator",
+    slug: "blog-intro-generator",
+    name: "Blog Intro Generator",
+    description: "Write premium article introductions with strong hooks, reader promise, and smooth transition into the post.",
+    icon: "blog-content",
+    detailEmoji: "🚪",
+    category: "Blog Workflow",
+    displayCreditCost: 2,
+    outputType: "text",
+    aliases: ["ai-blog-intro-generator", "blog-intro-generator-tool", "blog-introduction-generator", "intro-generator", "introduction-generator-for-blog"],
+    nextActions: sectionNextActions,
+    inputs: [
+      { id: "blog_title", label: "Blog Title / Topic", type: "text", placeholder: "e.g., How AI Helps Small Businesses Save Time", required: true },
+      { id: "primary_keyword", label: "Primary Keyword", type: "text", placeholder: "e.g., AI for small business", required: false },
+      { id: "audience", label: "Audience", type: "select", required: true, options: audienceOptions },
+      { id: "tone", label: "Tone", type: "select", required: true, options: toneOptions },
+      { id: "intro_style", label: "Intro Style", type: "select", required: true, options: introStyleOptions },
+      { id: "brand_or_context", label: "Brand / Extra Context", type: "textarea", placeholder: "Optional: article outline, opening fact/source notes, reader pain points, CTA, or claims to verify.", required: false },
+    ],
+  },
+  {
+    id: "blog-conclusion-generator",
+    slug: "blog-conclusion-generator",
+    name: "Blog Conclusion Generator",
+    description: "Create polished article endings with summaries, next steps, and CTA options without generic filler.",
+    icon: "blog-content",
+    detailEmoji: "🏁",
+    category: "Blog Workflow",
+    displayCreditCost: 2,
+    outputType: "text",
+    aliases: ["ai-blog-conclusion-generator", "blog-conclusion-generator-tool", "conclusion-generator", "conclusion-generator-for-blog"],
+    nextActions: sectionNextActions,
+    inputs: [
+      { id: "blog_title", label: "Blog Title / Topic", type: "text", placeholder: "e.g., How AI Helps Small Businesses Save Time", required: true },
+      { id: "article_summary", label: "Article Summary / Main Points", type: "textarea", placeholder: "Paste the key points, outline, or draft sections to conclude.", required: true },
+      { id: "audience", label: "Audience", type: "select", required: true, options: audienceOptions },
+      { id: "tone", label: "Tone", type: "select", required: true, options: toneOptions },
+      { id: "conclusion_style", label: "Conclusion Style", type: "select", required: true, options: conclusionStyleOptions },
+      { id: "cta_or_next_step", label: "CTA / Next Step", type: "text", placeholder: "Optional: book a demo, download checklist, read another guide, subscribe", required: false },
+    ],
+  },
+  {
+    id: "faq-generator",
+    slug: "faq-generator",
+    name: "FAQ Generator",
+    description: "Generate useful blog FAQs with concise answers, search-intent coverage, and optional schema-ready draft.",
+    icon: "seo",
+    detailEmoji: "❓",
+    category: "Blog Workflow",
+    displayCreditCost: 2,
+    outputType: "text",
+    aliases: ["ai-faq-generator", "faq-generator-tool", "blog-faq-generator", "frequently-asked-questions-generator"],
+    nextActions: sectionNextActions,
+    inputs: [
+      { id: "topic_or_article", label: "Topic / Article Draft", type: "textarea", placeholder: "Paste a topic, outline, article draft, or product/service notes.", required: true },
+      { id: "primary_keyword", label: "Primary Keyword", type: "text", placeholder: "e.g., AI tools for teachers", required: false },
+      { id: "audience", label: "Audience", type: "select", required: true, options: audienceOptions },
+      { id: "faq_count", label: "FAQ Count", type: "select", required: true, options: faqCountOptions },
+      { id: "faq_purpose", label: "FAQ Purpose", type: "select", required: true, options: faqPurposeOptions },
+      { id: "brand_or_context", label: "Brand / Extra Context", type: "textarea", placeholder: "Optional: facts to preserve, questions users ask, source notes, product limitations, or claims to verify.", required: false },
     ],
   },
 ];
