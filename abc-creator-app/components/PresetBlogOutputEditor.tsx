@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { DiagramRenderer, parseDiagramSpec } from "./diagrams/DiagramRendererClean";
@@ -41,6 +41,33 @@ function splitDiagramBlocks(markdown: string) {
 
 function splitBlocks(markdown: string) {
   return markdown.split(/\n{2,}/).map((block) => block.trim()).filter(Boolean);
+}
+
+function headingLevel(block: string) {
+  const match = block.match(/^(#{1,6})\s+/);
+  return match ? match[1].length : 0;
+}
+
+function sectionEndIndex(blocks: string[], startIndex: number) {
+  const level = headingLevel(blocks[startIndex]);
+  if (!level) return startIndex + 1;
+
+  for (let index = startIndex + 1; index < blocks.length; index += 1) {
+    const nextLevel = headingLevel(blocks[index]);
+    if (nextLevel && nextLevel <= level) return index;
+  }
+
+  return blocks.length;
+}
+
+function isInsideDeletedHeadingSection(blocks: string[], index: number, deletedHeadingStarts: Record<number, boolean>) {
+  return Object.entries(deletedHeadingStarts).some(([rawStart, deleted]) => {
+    if (!deleted) return false;
+    const start = Number(rawStart);
+    if (!Number.isInteger(start)) return false;
+    const end = sectionEndIndex(blocks, start);
+    return index >= start && index < end;
+  });
 }
 
 function isTable(block: string) {
@@ -86,7 +113,19 @@ function tableMarkdown(block: string, toolSlug: string) {
   return `### Added Quick Table\n\n| Key point | Simple explanation | Action step |\n|---|---|---|\n| Context | ${context} | Apply this idea |\n| Takeaway | Keep it concise | Turn it into a practical step |`;
 }
 
-function Removable({ children, label }: { children: React.ReactNode; label: string }) {
+function TrashIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 6h18" />
+      <path d="M8 6V4h8v2" />
+      <path d="M6 6l1 15h10l1-15" />
+      <path d="M10 10v7" />
+      <path d="M14 10v7" />
+    </svg>
+  );
+}
+
+function Removable({ children, label }: { children: ReactNode; label: string }) {
   const [deleted, setDeleted] = useState(false);
   if (deleted) return null;
   return (
@@ -105,6 +144,7 @@ function EditableMarkdown({ markdown, toolSlug, inputs, idPrefix }: Props & { ma
   const blocks = useMemo(() => splitBlocks(markdown), [markdown]);
   const [insertions, setInsertions] = useState<Record<string, InsertedBlock[]>>({});
   const [deletedTables, setDeletedTables] = useState<Record<string, boolean>>({});
+  const [deletedHeadingStarts, setDeletedHeadingStarts] = useState<Record<number, boolean>>({});
 
   const add = (key: string, item: InsertedBlock) => {
     setInsertions((current) => ({ ...current, [key]: [...(current[key] || []), item] }));
@@ -118,13 +158,30 @@ function EditableMarkdown({ markdown, toolSlug, inputs, idPrefix }: Props & { ma
     <>
       {blocks.map((block, index) => {
         const key = `${idPrefix}-${index}`;
+        if (isInsideDeletedHeadingSection(blocks, index, deletedHeadingStarts)) return null;
+
         const table = isTable(block);
+        const level = headingLevel(block);
         const img = imagePrompt(block, toolSlug, inputs);
         return (
           <div key={key} className="group/line relative rounded-xl transition hover:bg-white/[0.025]">
             {!(table && deletedTables[key]) ? (
-              <div className="relative">
+              <div className="relative pr-10">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{block}</ReactMarkdown>
+
+                {level ? (
+                  <button
+                    type="button"
+                    title="Delete this heading and its content"
+                    aria-label="Delete this heading and its content"
+                    onClick={() => setDeletedHeadingStarts((current) => ({ ...current, [index]: true }))}
+                    data-export-ignore="true"
+                    className="absolute right-1 top-1 inline-flex h-7 w-7 items-center justify-center rounded-full border border-red-400/25 bg-red-500/10 text-red-200 opacity-0 transition hover:bg-red-500/20 hover:text-red-100 group-hover/line:opacity-100"
+                  >
+                    <TrashIcon />
+                  </button>
+                ) : null}
+
                 {table ? (
                   <div data-export-ignore="true" className="pointer-events-none absolute right-2 top-2 opacity-0 transition group-hover/line:opacity-100">
                     <button type="button" onClick={() => setDeletedTables((current) => ({ ...current, [key]: true }))} className="pointer-events-auto rounded-full border border-red-300/30 bg-black/75 px-3 py-1.5 text-xs font-semibold text-red-100 backdrop-blur-md transition hover:bg-red-500/20">
