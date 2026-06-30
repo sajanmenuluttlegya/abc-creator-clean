@@ -40,6 +40,7 @@ const BLOG_TOPIC_IDEA_COUNT_CREDITS: Array<[string, number]> = [
 ];
 
 const BLOG_OUTLINE_WORD_COUNT_CREDITS: Array<[string, number]> = [
+  ["Authority pillar article", 15],
   ["Premium pillar article", 9],
   ["Very long article", 7],
   ["Long article", 5],
@@ -48,6 +49,7 @@ const BLOG_OUTLINE_WORD_COUNT_CREDITS: Array<[string, number]> = [
 ];
 
 const BLOG_CONTENT_WORD_COUNT_CREDITS: Array<[string, number]> = [
+  ["Authority pillar article", 79],
   ["Premium pillar article", 39],
   ["Very long article", 27],
   ["Long article", 15],
@@ -65,6 +67,7 @@ const BLOG_CONTENT_SECTION_FLOORS: Array<[string, number]> = [
 ];
 
 const PRESET_BLOG_WORD_COUNT_CREDITS: Array<[string, number]> = [
+  ["Authority pillar article", 32],
   ["Premium pillar article", 16],
   ["Very long article", 13],
   ["Long article", 10],
@@ -73,10 +76,11 @@ const PRESET_BLOG_WORD_COUNT_CREDITS: Array<[string, number]> = [
 ];
 
 const QUICK_BLOG_LENGTH_CREDITS: Array<[string, number]> = [
-  ["Very long", 10],
-  ["Long", 8],
-  ["Medium", 6],
-  ["Short", 4],
+  ["authority", 20],
+  ["very long", 10],
+  ["long", 8],
+  ["standard", 6],
+  ["short", 4],
   ["Very short", 3],
 ];
 
@@ -202,7 +206,7 @@ export function getToolCreditLabel(toolSlug: string) {
   if (toolSlug === "blog-outline") return "From 3 credits";
   if (toolSlug === "blog-content") return "From 7 credits";
   if (["human-style-blog-post", "seo-optimized-blog-post", "advanced-blog-post"].includes(toolSlug)) return "From 6 credits";
-  if (toolSlug === "quick-1-click-blog-post") return "From 3 credits";
+  if (toolSlug === "quick-1-click-blog-post") return "From 4 credits";
   if (toolSlug === "pro-image-brief-for-blog") return "From 1 credit";
   return `${BASE_TOOL_CREDITS[toolSlug] ?? 1} credit${(BASE_TOOL_CREDITS[toolSlug] ?? 1) === 1 ? "" : "s"}`;
 }
