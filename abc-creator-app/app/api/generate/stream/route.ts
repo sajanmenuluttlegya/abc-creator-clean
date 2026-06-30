@@ -421,7 +421,7 @@ ${prompt.outputGuide}`,
       },
     ];
 
-    const maxTokens = 12000;
+    const maxTokens = 25000;
     const failures: string[] = [];
     const openRouterKeys = getKeys("OPENROUTER_API_KEY", 3);
     const openRouterModels = getOpenRouterModels();
@@ -490,7 +490,7 @@ ${prompt.outputGuide}`,
       return new Response(makeTextStreamFromText(fallback.text), {
         headers: {
           "Content-Type": "text/plain; charset=utf-8",
-          "Cache-Control": "no-cache, no-transform",
+          "Cache-Control": "no-cache",
           "X-Accel-Buffering": "no",
           "X-Creator-Stream-Provider": fallback.provider,
           "X-Creator-Stream-Model": fallback.model,
