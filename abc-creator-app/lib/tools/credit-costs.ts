@@ -14,6 +14,10 @@ export const IMAGE_EDIT_CREDITS = 1;
 export const IMAGE_GENERATION_TOOL_SLUGS = [
   "blog-content",
   "pro-image-brief-for-blog",
+  "quick-1-click-blog-post",
+  "human-style-blog-post",
+  "seo-optimized-blog-post",
+  "advanced-blog-post",
 ] as const;
 
 const BASE_TOOL_CREDITS: Record<string, number> = {
