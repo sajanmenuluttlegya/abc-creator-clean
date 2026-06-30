@@ -83,6 +83,7 @@ const targetWordCountOptions = [
   "Long article (1,800-2,500 words)",
   "Very long article (2,500-3,500 words)",
   "Premium pillar article (3,500-5,000 words)",
+  "Authority pillar article (5,000-10,000 words)",
 ];
 
 const wordsPerSectionOptions = [
