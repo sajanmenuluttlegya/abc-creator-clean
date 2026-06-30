@@ -6,6 +6,11 @@ import { ThemeIcon } from "@/components/ThemeIcon";
 import { publicTools } from "@/lib/tools/public-tools";
 import { getToolCreditLabel } from "@/lib/tools/credit-costs";
 
+function getCategoryIcon(category: string) {
+  if (category === "Writing Tools") return "writing-pad";
+  return "folder";
+}
+
 export default function ToolsPage() {
   const categories = [...new Set(publicTools.map((tool) => tool.category))];
   const toolsByCategory: Record<string, typeof publicTools> = {};
@@ -51,7 +56,7 @@ export default function ToolsPage() {
         {Object.entries(toolsByCategory).map(([category, tools]) => (
           <div key={category} className="mb-12">
             <h2 className="text-2xl font-semibold text-white mb-8 flex items-center gap-3">
-              <ThemeIcon name="folder" size="sm" />
+              <ThemeIcon name={getCategoryIcon(category)} size="sm" />
               {category}
             </h2>
 
