@@ -48,10 +48,10 @@ const BLOG_OUTLINE_WORD_COUNT_CREDITS: Array<[string, number]> = [
 ];
 
 const BLOG_CONTENT_WORD_COUNT_CREDITS: Array<[string, number]> = [
-  ["Premium pillar article", 7],
-  ["Very long article", 7],
-  ["Long article", 7],
-  ["Standard article", 7],
+  ["Premium pillar article", 39],
+  ["Very long article", 27],
+  ["Long article", 15],
+  ["Standard article", 9],
   ["Short article", 7],
 ];
 
