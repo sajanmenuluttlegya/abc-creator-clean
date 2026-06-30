@@ -36,6 +36,17 @@ const audienceOptions = [
   "Students",
 ];
 
+const languageOptions = [
+  "English",
+  "Hindi",
+  "Hinglish",
+  "Spanish",
+  "French",
+  "German",
+  "Portuguese",
+  "Arabic",
+];
+
 const toneOptions = [
   "Professional",
   "Friendly",
@@ -67,6 +78,45 @@ const examplesNeededOptions = [
   "Case-style examples with placeholders",
 ];
 
+const rewriteGoalOptions = [
+  "SEO refresh",
+  "Clarity and readability improvement",
+  "Premium rewrite with stronger structure",
+  "Keyword-focused rewrite",
+  "Condense and sharpen",
+  "Expand with practical detail",
+];
+
+const quickLengthOptions = [
+  "Quick short post (700-1,000 words)",
+  "Quick standard post (1,000-1,500 words)",
+  "Quick long post (1,500-2,000 words)",
+];
+
+const calendarDurationOptions = [
+  "30 days",
+  "60 days",
+  "90 days",
+  "6 months",
+];
+
+const postingFrequencyOptions = [
+  "1 post per week",
+  "2 posts per week",
+  "3 posts per week",
+  "5 posts per week",
+  "Custom frequency in context",
+];
+
+const calendarGoalOptions = [
+  "Build topical authority",
+  "Generate leads",
+  "Support product launches",
+  "Increase organic traffic",
+  "Educate existing customers",
+  "Plan transactional blog content",
+];
+
 const commonBlogNextActions = [
   {
     label: "Create a blog SEO pack",
@@ -77,6 +127,28 @@ const commonBlogNextActions = [
     label: "Create pro image prompts",
     href: "/tools/pro-image-brief-for-blog",
     description: "Plan hero and section visuals without making fake media claims.",
+  },
+];
+
+const quickBlogNextActions = [
+  {
+    label: "Use full Blog Post Generator",
+    href: "/tools/blog-content",
+    description: "Move from quick mode to the full outline-driven premium article workflow.",
+  },
+  ...commonBlogNextActions,
+];
+
+const calendarNextActions = [
+  {
+    label: "Generate blog topic ideas",
+    href: "/tools/blog-topic-ideas",
+    description: "Turn one calendar theme into more topic angles before drafting.",
+  },
+  {
+    label: "Write a quick blog post",
+    href: "/tools/quick-1-click-blog-post",
+    description: "Turn a calendar topic into a fast complete article draft.",
   },
 ];
 
@@ -144,6 +216,72 @@ export const blogTools: PublicBlogTool[] = [
       { id: "examples_needed", label: "Examples Needed", type: "select", required: true, options: examplesNeededOptions },
       { id: "word_count", label: "Target Word Count", type: "select", required: false, options: targetWordCountOptions },
       { id: "brand_or_context", label: "Brand / Extra Context", type: "textarea", placeholder: "Optional: source notes, frameworks, examples, audience context, must-include points, or claims to verify.", required: false },
+    ],
+  },
+  {
+    id: "rewrite-article-with-keywords",
+    slug: "rewrite-article-with-keywords",
+    name: "Rewrite Article With Keywords",
+    description: "Rewrite an existing article into a clearer, more premium, keyword-aligned draft without fake SEO claims.",
+    icon: "seo",
+    detailEmoji: "♻️",
+    category: "Blog Tools",
+    displayCreditCost: 5,
+    outputType: "text",
+    aliases: ["ai-rewrite-article-with-keywords", "rewrite-article-with-keywords-generator", "rewrite-article-with-keywords-tool", "article-rewriter-with-keywords"],
+    nextActions: commonBlogNextActions,
+    inputs: [
+      { id: "article", label: "Existing Article", type: "textarea", placeholder: "Paste the article, draft, or section you want rewritten.", required: true },
+      { id: "primary_keyword", label: "Primary Keyword", type: "text", placeholder: "e.g., AI content workflow", required: true },
+      { id: "secondary_keywords", label: "Secondary Keywords", type: "textarea", placeholder: "e.g., blog optimization, SEO writing, content refresh", required: false },
+      { id: "rewrite_goal", label: "Rewrite Goal", type: "select", required: true, options: rewriteGoalOptions },
+      { id: "audience", label: "Audience", type: "select", required: true, options: audienceOptions },
+      { id: "tone", label: "Tone", type: "select", required: true, options: toneOptions },
+      { id: "brand_or_context", label: "Brand / Extra Context", type: "textarea", placeholder: "Optional: brand voice, internal links, claims to preserve, facts to verify, forbidden phrases, or source notes.", required: false },
+    ],
+  },
+  {
+    id: "quick-1-click-blog-post",
+    slug: "quick-1-click-blog-post",
+    name: "Quick 1-Click Blog Post",
+    description: "Quick Mode for Blog Post Generator: create a complete article from a topic or title with fewer inputs.",
+    icon: "blog-content",
+    detailEmoji: "⚡",
+    category: "Blog Tools",
+    displayCreditCost: 8,
+    outputType: "text",
+    aliases: ["ai-quick-1-click-blog-post", "quick-1-click-blog-post-generator", "quick-blog-post", "one-click-blog-post", "quick-blog-post-generator"],
+    nextActions: quickBlogNextActions,
+    inputs: [
+      { id: "blog_title", label: "Blog Title / Topic", type: "text", placeholder: "e.g., How AI Helps Small Businesses Save Time", required: true },
+      { id: "primary_keyword", label: "Primary Keyword", type: "text", placeholder: "e.g., AI for small business", required: false },
+      { id: "audience", label: "Audience", type: "select", required: true, options: audienceOptions },
+      { id: "language", label: "Language", type: "select", required: true, options: languageOptions },
+      { id: "tone", label: "Tone", type: "select", required: true, options: toneOptions },
+      { id: "article_length", label: "Quick Article Length", type: "select", required: true, options: quickLengthOptions },
+      { id: "brand_or_context", label: "Brand / Extra Context", type: "textarea", placeholder: "Optional: must-include points, source notes, product context, audience pain points, CTAs, or claims to verify.", required: false },
+    ],
+  },
+  {
+    id: "blog-content-calendar",
+    slug: "blog-content-calendar",
+    name: "Blog Content Calendar",
+    description: "Plan a premium blog publishing calendar with topics, intents, CTAs, clusters, and verification notes.",
+    icon: "calendar",
+    detailEmoji: "🗓️",
+    category: "Blog Tools",
+    displayCreditCost: 5,
+    outputType: "text",
+    aliases: ["ai-blog-content-calendar", "blog-content-calendar-generator", "blog-content-calendar-tool", "blog-editorial-calendar", "content-calendar-for-blog"],
+    nextActions: calendarNextActions,
+    inputs: [
+      { id: "niche_or_keyword", label: "Niche / Main Keyword", type: "text", placeholder: "e.g., AI tools for online teachers", required: true },
+      { id: "audience", label: "Audience", type: "select", required: true, options: audienceOptions },
+      { id: "goal", label: "Calendar Goal", type: "select", required: true, options: calendarGoalOptions },
+      { id: "duration", label: "Calendar Duration", type: "select", required: true, options: calendarDurationOptions },
+      { id: "posting_frequency", label: "Posting Frequency", type: "select", required: true, options: postingFrequencyOptions },
+      { id: "start_date", label: "Start Date / Month", type: "text", placeholder: "Optional: e.g., July 2026, next Monday, or leave blank for Week 1 labels", required: false },
+      { id: "brand_or_context", label: "Brand / Extra Context", type: "textarea", placeholder: "Optional: products, services, offers, content pillars, must-cover themes, internal pages, excluded topics, or source notes.", required: false },
     ],
   },
 ];
