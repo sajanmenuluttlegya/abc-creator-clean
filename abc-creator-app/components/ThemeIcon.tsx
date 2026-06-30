@@ -57,6 +57,23 @@ export function ThemeIcon({ name, size = "md", className = "" }: ThemeIconProps)
           <path {...commonStroke} d="M3.5 7.5V6.3a2 2 0 0 1 2-2h4.2l1.8 2.1h7a2 2 0 0 1 2 2v1.1" opacity="0.65" />
         </IconShell>
       );
+    case "writing-pad":
+      return (
+        <IconShell name={name} size={size} className={className}>
+          <rect {...commonStroke} x="5" y="4" width="12" height="16" rx="2" />
+          <path {...commonStroke} d="M8 8h5.5M8 11h4.5M8 14h3.2" opacity="0.7" />
+          <path {...commonStroke} d="M14.2 17.7 20 12a1.7 1.7 0 0 0-2.4-2.4l-5.8 5.8-.4 2.7 2.8-.4Z" />
+          <path {...commonStroke} d="m16.8 10.4 2.4 2.4" opacity="0.65" />
+        </IconShell>
+      );
+    case "calendar":
+      return (
+        <IconShell name={name} size={size} className={className}>
+          <rect {...commonStroke} x="4" y="5.5" width="16" height="14" rx="2" />
+          <path {...commonStroke} d="M8 3.8v3.4M16 3.8v3.4M4 9.5h16" />
+          <path {...commonStroke} d="M8 13h2M12 13h2M16 13h1M8 16h2M12 16h2" opacity="0.7" />
+        </IconShell>
+      );
     case "blog-topic":
       return (
         <IconShell name={name} size={size} className={withClass("text-amber-300", className)}>
