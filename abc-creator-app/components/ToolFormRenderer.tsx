@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { OutputPanel } from "./OutputPanel";
+import { PresetBlogOutputPanel } from "./PresetBlogOutputPanel";
 import { ThemeIcon } from "./ThemeIcon";
 import { EditableBlogOutlinePanel } from "./EditableBlogOutlinePanel";
 import type { Tool } from "@/lib/tools/public-tools";
@@ -12,6 +13,12 @@ interface ToolFormRendererProps {
 }
 
 const BLOG_OUTLINE_HANDOFF_KEY = "abc_creator_blog_outline_handoff";
+const presetBlogEditorTools = new Set([
+  "quick-1-click-blog-post",
+  "human-style-blog-post",
+  "seo-optimized-blog-post",
+  "advanced-blog-post",
+]);
 
 function wait(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
@@ -26,6 +33,7 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
   const isErrorOutput = /^(error:|not enough credits)/i.test(output.trim());
   const showEditableOutline =
     tool.slug === "blog-outline" && Boolean(output.trim()) && !isLoading && !isErrorOutput;
+  const usePresetEditor = presetBlogEditorTools.has(tool.slug);
 
   useEffect(() => {
     if (tool.slug !== "blog-content") return;
@@ -252,6 +260,15 @@ Get more credits: /pricing`
       <div className="space-y-6 lg:sticky lg:top-28">
         {showEditableOutline ? (
           <EditableBlogOutlinePanel output={output} inputs={formData} />
+        ) : usePresetEditor ? (
+          <PresetBlogOutputPanel
+            isLoading={isLoading}
+            output={output}
+            recommendedNextActions={tool.nextActions}
+            downloadFileBaseName={`${tool.slug}-output`}
+            toolSlug={tool.slug}
+            inputs={formData}
+          />
         ) : (
           <OutputPanel
             isLoading={isLoading}
