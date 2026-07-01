@@ -115,8 +115,7 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
     setOutput("");
 
     try {
-      const endpoint = tool.slug === IMAGE_CAPTION_TOOL ? "/api/generate/image-caption" : "/api/generate/stream";
-      const res = await fetch(endpoint, {
+      const res = await fetch("/api/generate/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ toolSlug: tool.slug, inputs: formData }),
@@ -179,7 +178,7 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
                   {input.type === "image" ? (
                     <div className="rounded-2xl border border-dashed border-pink-300/25 bg-pink-400/5 p-4">
                       <input id={input.id} type="file" accept="image/*" onChange={handleFileInput} required={input.required && !formData[input.id]} className="w-full cursor-pointer rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white file:mr-4 file:rounded-full file:border-0 file:bg-pink-500/20 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-pink-100" />
-                      {formData[input.id] ? <p className="mt-3 text-xs text-pink-100">Image ready: {formData.image_name || "uploaded image"}</p> : <p className="mt-3 text-xs text-slate-400">Choose a clear image under 4 MB.</p>}
+                      {formData[input.id] ? <p className="mt-3 text-xs text-pink-100">Image ready: {formData.image_name || "uploaded image"}</p> : <p className="mt-3 text-xs text-slate-400">Choose a clear image under 4 MB when using image-analysis mode.</p>}
                     </div>
                   ) : input.type === "textarea" ? (
                     <textarea id={input.id} placeholder={input.placeholder} value={formData[input.id] || ""} onChange={handleInputChange} required={input.required} className="h-28 w-full resize-none rounded-xl border border-purple-500/20 bg-white/5 px-4 py-3 text-white placeholder-gray-500 transition-all duration-200 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-purple-500" />
