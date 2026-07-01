@@ -88,10 +88,80 @@ Keyword rules:
 Prompt generator rules:
 - Create safe, useful, professional prompts for normal creative, business, content, SEO, image, or productivity tasks.
 - Include role, context, task, constraints, output format, quality checklist, and optional examples when useful.
-- Do not include instructions to bypass policies, evade detection, impersonate real people, steal data, exploit systems, or produce harmful content.
 - Make prompts easy to copy and adapt.
 - When the user asks for an image prompt, keep it visual, specific, and free of protected characters or public-figure likenesses unless supplied as allowed context.`,
     outputGuide:
       "Return a premium Markdown prompt package. Use this structure: # AI Prompt Package; ## Prompt Strategy; ## Main Copy-Ready Prompt in a code block; ## Prompt Variations; ## Variables to Customize; ## Quality Checklist; ## Best Use Notes; ## Avoid / Safety Notes. Keep the main prompt clean and ready to paste.",
+  },
+  "ai-paraphrasing-tool": {
+    creditCost: 2,
+    requiredInputs: [
+      { id: "source_text", label: "Text to paraphrase", required: true, minLength: 10, maxLength: 9000 },
+      { id: "paraphrase_mode", label: "Paraphrase mode", required: true, minLength: 2, maxLength: 120 },
+      { id: "tone", label: "Tone", required: true, minLength: 2, maxLength: 120 },
+      { id: "audience", label: "Audience", required: false, maxLength: 220 },
+      { id: "keywords", label: "Words to keep", required: false, maxLength: 600 },
+      { id: "avoid", label: "Avoid", required: false, maxLength: 1200 },
+      { id: "language", label: "Language", required: true, minLength: 2, maxLength: 80 },
+    ],
+    system: `You are ABC Creator's premium paraphrasing specialist.${generalRules}
+
+Paraphrasing rules:
+- Preserve the user's original meaning, factual claims, names, numbers, and intent.
+- Improve clarity, rhythm, tone, and readability without adding unsupported facts.
+- Respect words or phrases the user asked to keep unchanged.
+- If multiple variations are requested, make each variation meaningfully different.
+- Do not add metadata, SEO sections, changelogs, verification tables, or extra notes unless the user requested them.`,
+    outputGuide:
+      "Return a premium Markdown paraphrasing package. Use this structure: # Paraphrased Content; ## Best Version; ## Alternative Versions if requested by paraphrase_mode; ## What Changed; ## Use Notes. Keep the rewritten content easy to copy and do not add unrelated sections.",
+  },
+  "ai-paragraph-generator": {
+    creditCost: 2,
+    requiredInputs: [
+      { id: "topic", label: "Topic / paragraph brief", required: true, minLength: 10, maxLength: 3000 },
+      { id: "paragraph_type", label: "Paragraph type", required: true, minLength: 2, maxLength: 120 },
+      { id: "paragraph_count", label: "Paragraph count", required: true, minLength: 2, maxLength: 80 },
+      { id: "audience", label: "Audience", required: true, minLength: 2, maxLength: 220 },
+      { id: "tone", label: "Tone", required: true, minLength: 2, maxLength: 120 },
+      { id: "keywords", label: "Keywords / points", required: false, maxLength: 1500 },
+      { id: "avoid", label: "Avoid", required: false, maxLength: 1200 },
+      { id: "language", label: "Language", required: true, minLength: 2, maxLength: 80 },
+    ],
+    system: `You are ABC Creator's premium paragraph writer.${generalRules}
+
+Paragraph writing rules:
+- Generate polished paragraphs that match the selected type, audience, tone, and language.
+- Keep each paragraph focused on one clear idea.
+- Use supplied keywords and points naturally without stuffing.
+- Do not invent facts, statistics, examples, citations, or claims not supplied by the user.
+- Make the output ready to paste into a blog, report, essay, landing page, or social post as appropriate.`,
+    outputGuide:
+      "Return a premium Markdown paragraph package. Use this structure: # Generated Paragraphs; ## Paragraph Strategy; ## Paragraph Options with each as ### Paragraph 1, ### Paragraph 2, etc.; ## Best Pick; ## Editing Notes. Return the requested number of paragraphs from paragraph_count.",
+  },
+  "ai-report-writing": {
+    creditCost: 5,
+    requiredInputs: [
+      { id: "report_topic", label: "Report topic", required: true, minLength: 4, maxLength: 240 },
+      { id: "report_context", label: "Report details / data / notes", required: true, minLength: 20, maxLength: 12000 },
+      { id: "report_type", label: "Report type", required: true, minLength: 2, maxLength: 120 },
+      { id: "report_length", label: "Report length", required: true, minLength: 2, maxLength: 120 },
+      { id: "report_structure", label: "Report structure", required: true, minLength: 2, maxLength: 120 },
+      { id: "audience", label: "Audience", required: true, minLength: 2, maxLength: 220 },
+      { id: "tone", label: "Tone", required: true, minLength: 2, maxLength: 120 },
+      { id: "must_include", label: "Must include", required: false, maxLength: 2500 },
+      { id: "avoid", label: "Avoid / compliance notes", required: false, maxLength: 1500 },
+      { id: "language", label: "Language", required: true, minLength: 2, maxLength: 80 },
+    ],
+    system: `You are ABC Creator's premium report writing specialist.${generalRules}
+
+Report writing rules:
+- Build a structured report from only the user's supplied topic, context, data, notes, and must-include details.
+- Do not invent numbers, research findings, citations, dates, achievements, financial results, or compliance conclusions.
+- If data is incomplete, write professionally with placeholders or note what needs verification.
+- Scale depth by report_length: Short = concise summary; Standard = complete practical report; Detailed = deeper analysis; Premium = polished executive-level report.
+- Use headings, tables, recommendations, risks, next steps, and summaries only where useful.
+- Do not add irrelevant metadata, SEO packs, changelogs, or verification tables.`,
+    outputGuide:
+      "Return a premium Markdown report. Use this structure unless the selected report structure requires adjustment: # Report Title; ## Executive Summary; ## Background / Context; ## Key Findings; ## Analysis; ## Recommendations; ## Risks / Limitations; ## Next Steps; ## Appendix / Notes if useful. Include concise tables where helpful, but do not invent data.",
   },
 };
