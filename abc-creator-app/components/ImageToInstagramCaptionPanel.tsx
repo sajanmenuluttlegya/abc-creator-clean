@@ -16,6 +16,13 @@ type Props = {
   inputs: Record<string, string>;
 };
 
+type SectionRegenerateResponse = {
+  ok?: boolean;
+  error?: string;
+  details?: string;
+  text?: string;
+};
+
 function makeId() {
   return `caption-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -69,11 +76,19 @@ function parseCaptionBlocks(markdown: string): CaptionBlock[] {
   return blocks.length ? blocks : [{ id: makeId(), level: 2, title: "Generated Instagram Captions", body: markdown.trim(), enabled: true }];
 }
 
+function blockToMarkdown(block: CaptionBlock) {
+  return `${"#".repeat(block.level)} ${block.title.trim()}\n\n${block.body.trim()}`.trim();
+}
+
 function blocksToMarkdown(blocks: CaptionBlock[]) {
   return blocks
     .filter((block) => block.enabled && (block.title.trim() || block.body.trim()))
-    .map((block) => `${"#".repeat(block.level)} ${block.title.trim()}\n\n${block.body.trim()}`.trim())
+    .map(blockToMarkdown)
     .join("\n\n");
+}
+
+function defaultRegenerateInstruction(block: CaptionBlock) {
+  return `Rewrite this caption/output block to be more premium and professional while preserving its purpose and Markdown heading.\n\n${blockToMarkdown(block)}`;
 }
 
 function fallbackCopy(text: string) {
@@ -93,6 +108,9 @@ export function ImageToInstagramCaptionPanel({ isLoading, output, inputs }: Prop
   const [blocks, setBlocks] = useState<CaptionBlock[]>([]);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
+  const [activeRegenerateId, setActiveRegenerateId] = useState<string | null>(null);
+  const [regenerateInstruction, setRegenerateInstruction] = useState("");
+  const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
   const selectedOutput = useMemo(() => blocksToMarkdown(blocks), [blocks]);
   const hasOutput = Boolean(output.trim());
   const imageSrc = inputs.image_data || "";
@@ -101,12 +119,18 @@ export function ImageToInstagramCaptionPanel({ isLoading, output, inputs }: Prop
     if (!output.trim()) {
       setBlocks([]);
       setMessage("");
+      setActiveRegenerateId(null);
+      setRegenerateInstruction("");
+      setRegeneratingId(null);
       return;
     }
 
     const timer = window.setTimeout(() => {
       setBlocks(parseCaptionBlocks(output));
       setMessage("");
+      setActiveRegenerateId(null);
+      setRegenerateInstruction("");
+      setRegeneratingId(null);
     }, 0);
 
     return () => window.clearTimeout(timer);
@@ -147,6 +171,53 @@ export function ImageToInstagramCaptionPanel({ isLoading, output, inputs }: Prop
       next.splice(toIndex, 0, item);
       return next;
     });
+  };
+
+  const openRegeneratePanel = (block: CaptionBlock) => {
+    setActiveRegenerateId((current) => (current === block.id ? null : block.id));
+    setRegenerateInstruction(defaultRegenerateInstruction(block));
+    setMessage("");
+  };
+
+  const regenerateBlock = async (block: CaptionBlock) => {
+    const instruction = regenerateInstruction.trim();
+
+    if (!instruction) {
+      setMessage("Add a regenerate instruction first.");
+      return;
+    }
+
+    setRegeneratingId(block.id);
+    setMessage("");
+
+    try {
+      const response = await fetch("/api/generate/section-regenerate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ toolSlug: "image-to-instagram-caption", sectionText: blockToMarkdown(block), instruction }),
+      });
+      const data = (await response.json()) as SectionRegenerateResponse;
+
+      if (!response.ok || !data.ok || !data.text?.trim()) {
+        setMessage(`${data.error || "Section regeneration failed."}${data.details ? ` ${data.details}` : ""}`);
+        return;
+      }
+
+      const parsed = parseCaptionBlocks(data.text.trim())[0];
+      if (parsed) {
+        updateBlock(block.id, { level: parsed.level, title: parsed.title, body: parsed.body });
+      } else {
+        updateBlock(block.id, { body: data.text.trim() });
+      }
+
+      setActiveRegenerateId(null);
+      setRegenerateInstruction("");
+      setMessage("Section regenerated.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : String(error));
+    } finally {
+      setRegeneratingId(null);
+    }
   };
 
   const copyOutput = async () => {
@@ -235,7 +306,7 @@ export function ImageToInstagramCaptionPanel({ isLoading, output, inputs }: Prop
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-pink-200">Premium Instagram caption studio</p>
           <h2 className="mt-2 text-2xl font-black tracking-tight text-white">Image-based captions you can edit and reorder</h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
-            Drag from the left handle, edit any block, delete weak options, or add a new caption idea before copying.
+            Drag from the left handle, edit any block, delete weak options, regenerate text, or add a new caption idea before copying.
           </p>
         </div>
 
@@ -309,10 +380,26 @@ export function ImageToInstagramCaptionPanel({ isLoading, output, inputs }: Prop
                     <option value={3} className="bg-black text-white">H3</option>
                   </select>
                   <input value={block.title} onChange={(event) => updateBlock(block.id, { title: event.currentTarget.value })} className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-bold text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-pink-500" />
+                  <button type="button" onClick={() => openRegeneratePanel(block)} className="rounded-full border border-pink-300/25 bg-pink-400/10 px-3 py-2 text-xs font-semibold text-pink-100 transition hover:bg-pink-400/20">
+                    Regenerate
+                  </button>
                   <button type="button" onClick={() => deleteBlock(block.id)} className="rounded-full border border-red-300/25 bg-red-400/10 px-3 py-2 text-xs font-semibold text-red-100 transition hover:bg-red-400/20">
                     Delete
                   </button>
                 </div>
+
+                {activeRegenerateId === block.id ? (
+                  <div className="rounded-2xl border border-pink-300/20 bg-pink-500/10 p-4">
+                    <label className="text-xs font-semibold uppercase tracking-[0.16em] text-pink-200">Regenerate this block</label>
+                    <textarea value={regenerateInstruction} onChange={(event) => setRegenerateInstruction(event.currentTarget.value)} className="mt-3 h-24 w-full resize-none rounded-2xl border border-pink-300/20 bg-black/40 px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-pink-500" />
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button type="button" onClick={() => setRegenerateInstruction("Make this caption block shorter, sharper, and more premium while preserving the intent and Markdown heading.")} className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-200">Shorter</button>
+                      <button type="button" onClick={() => setRegenerateInstruction("Make this caption block longer, more detailed, and more premium while preserving the intent and Markdown heading.")} className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-200">Longer</button>
+                      <button type="button" onClick={() => void regenerateBlock(block)} disabled={regeneratingId === block.id} className="rounded-full bg-gradient-to-r from-pink-500 to-purple-500 px-4 py-1.5 text-xs font-semibold text-white disabled:opacity-60">{regeneratingId === block.id ? "Regenerating..." : "Apply regenerate"}</button>
+                      <button type="button" onClick={() => setActiveRegenerateId(null)} disabled={regeneratingId === block.id} className="rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-semibold text-slate-200">Cancel</button>
+                    </div>
+                  </div>
+                ) : null}
 
                 <textarea value={block.body} onChange={(event) => updateBlock(block.id, { body: event.currentTarget.value })} className="min-h-32 w-full resize-y rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3 text-sm leading-7 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-pink-500" />
               </div>
