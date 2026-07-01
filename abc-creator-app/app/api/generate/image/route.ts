@@ -13,6 +13,24 @@ import { routeToImage } from "@/lib/ai/routeToImage";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const BLOG_OUTPUT_IMAGE_TOOLS = new Set([
+  "blog-topic-ideas",
+  "blog-outline",
+  "blog-content",
+  "pro-image-brief-for-blog",
+  "blog-seo-pack",
+  "quick-1-click-blog-post",
+  "human-style-blog-post",
+  "seo-optimized-blog-post",
+  "advanced-blog-post",
+  "rewrite-article-with-keywords",
+  "blog-content-calendar",
+  "blog-title-generator",
+  "blog-intro-generator",
+  "blog-conclusion-generator",
+  "faq-generator",
+]);
+
 type GenerateImageBody = {
   operation?: "generate" | "edit";
   toolSlug?: string;
@@ -77,6 +95,10 @@ function hasEnoughPromptMaterial(body: GenerateImageBody) {
   return prompt.length >= 6 || sourceText.length >= 30;
 }
 
+function supportsOutputImageForTool(toolSlug: string) {
+  return BLOG_OUTPUT_IMAGE_TOOLS.has(toolSlug) && supportsImageGeneration(toolSlug);
+}
+
 export async function POST(req: NextRequest) {
   let reservedTransactionId: string | null = null;
   let supabase: Awaited<ReturnType<typeof createClient>> | null = null;
@@ -113,11 +135,11 @@ export async function POST(req: NextRequest) {
     const toolSlug = body.toolSlug?.trim() || "";
     const operation = getOperation(body);
 
-    if (!supportsImageGeneration(toolSlug)) {
+    if (!supportsOutputImageForTool(toolSlug)) {
       return Response.json(
         {
           ok: false,
-          error: "Image generation is not enabled for this tool.",
+          error: "Output image insertion is enabled for blog tools only.",
           code: "IMAGE_TOOL_NOT_ALLOWED",
         },
         { status: 400 }
