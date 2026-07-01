@@ -105,7 +105,7 @@ export function PresetBlogOutputPanel({
 
       {hasOutput ? (
         <>
-          <div ref={exportContentRef} className="creator-output-scroll max-h-[78vh] overflow-y-auto overflow-x-hidden rounded-2xl border border-purple-500/15 bg-black/70 p-6 text-gray-200">
+          <div ref={exportContentRef} className="creator-output-scroll preset-blog-output max-h-[78vh] overflow-y-auto overflow-x-hidden rounded-2xl border border-purple-500/15 bg-black/70 p-6 text-gray-200">
             <PresetBlogOutputEditor output={displayOutput} toolSlug={toolSlug} inputs={inputs} />
             {isStreamingVisible ? <span className="mt-2 inline-block h-5 w-2 animate-pulse rounded-sm bg-purple-300 align-middle" /> : null}
           </div>
