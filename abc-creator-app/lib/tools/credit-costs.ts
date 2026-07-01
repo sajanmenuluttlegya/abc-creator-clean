@@ -78,6 +78,15 @@ const PRESET_BLOG_WORD_COUNT_CREDITS: Array<[string, number]> = [
   ["Short article", 6],
 ];
 
+const ARTICLE_REWRITE_LENGTH_CREDITS: Array<[string, number]> = [
+  ["Authority rewrite", 20],
+  ["Premium rewrite", 16],
+  ["Very long rewrite", 12],
+  ["Long rewrite", 8],
+  ["Standard rewrite", 5],
+  ["Short rewrite", 3],
+];
+
 const QUICK_BLOG_LENGTH_CREDITS: Array<[string, number]> = [
   ["authority", 20],
   ["very long", 10],
@@ -168,6 +177,8 @@ export function calculateToolCreditCost(toolSlug: string, inputs: ToolInputs = {
       return calculateFullBlogPresetCredits(toolSlug, inputs);
     case "advanced-blog-post":
       return calculateFullBlogPresetCredits(toolSlug, inputs);
+    case "rewrite-article-with-keywords":
+      return matchCredit(inputs.rewrite_length, ARTICLE_REWRITE_LENGTH_CREDITS, 3);
     case "quick-1-click-blog-post":
       return matchCredit(inputs.article_length, QUICK_BLOG_LENGTH_CREDITS, 6);
     case "pro-image-brief-for-blog": {
@@ -189,6 +200,7 @@ const DYNAMIC_TOOLS = [
   "human-style-blog-post",
   "seo-optimized-blog-post",
   "advanced-blog-post",
+  "rewrite-article-with-keywords",
   "quick-1-click-blog-post",
   "pro-image-brief-for-blog",
 ];
@@ -209,6 +221,7 @@ export function getToolCreditLabel(toolSlug: string) {
   if (toolSlug === "blog-outline") return "From 3 credits";
   if (toolSlug === "blog-content") return "From 7 credits";
   if (["human-style-blog-post", "seo-optimized-blog-post", "advanced-blog-post"].includes(toolSlug)) return "From 6 credits";
+  if (toolSlug === "rewrite-article-with-keywords") return "From 3 credits";
   if (toolSlug === "quick-1-click-blog-post") return "From 4 credits";
   if (toolSlug === "pro-image-brief-for-blog") return "From 1 credit";
   return `${BASE_TOOL_CREDITS[toolSlug] ?? 1} credit${(BASE_TOOL_CREDITS[toolSlug] ?? 1) === 1 ? "" : "s"}`;
