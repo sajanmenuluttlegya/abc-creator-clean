@@ -45,6 +45,8 @@ const articleStructureTools = new Set([
   "quick-1-click-blog-post",
 ]);
 
+const CALENDAR_CUSTOM_FREQUENCY_OPTION = "Custom frequency in context";
+
 function env(name: string, fallback = "") {
   return process.env[name] || fallback;
 }
@@ -80,6 +82,28 @@ function buildArticleStructureInstructions(toolSlug: string) {
   if (!articleStructureTools.has(toolSlug)) return "";
 
   return `\n\nMandatory article structure guard:\n- Use real Markdown headings, never plain standalone section labels.\n- Start with exactly one # H1 article title.\n- Use ## H2 for major sections and ### H3 for subsections.\n- Do not use bold text as a fake heading.\n- Do not output bare labels like Introduction, Conclusion, FAQ, Framework, Strategy, or Overview without ## or ###.\n- Tables must be valid GitHub-flavored Markdown tables with a header row, separator row, and complete body rows.\n- Do not output broken tables, half-empty rows, huge unreadable cells, or paragraph text pretending to be a table.\n- Keep all tables concise, useful, aligned with the section, and professional.`;
+}
+
+function validateCalendarCustomPostCount(toolSlug: string, inputs: Record<string, string>) {
+  if (toolSlug !== "blog-content-calendar") return null;
+  if (inputs.posting_frequency !== CALENDAR_CUSTOM_FREQUENCY_OPTION) return null;
+
+  const rawCount = (inputs.custom_post_count || "").trim();
+  const customCount = Number(rawCount);
+
+  if (!rawCount || !Number.isInteger(customCount) || customCount < 1 || customCount >= 20) {
+    return Response.json(
+      {
+        ok: false,
+        error: "Custom post count must be a whole number from 1 to 19.",
+        code: "VALIDATION_ERROR",
+        field: "custom_post_count",
+      },
+      { status: 400 }
+    );
+  }
+
+  return null;
 }
 
 function formatInputs(inputs: Record<string, string>) {
@@ -361,6 +385,12 @@ export async function POST(req: NextRequest) {
         },
         { status: 400 }
       );
+    }
+
+    const customCalendarCountError = validateCalendarCustomPostCount(toolSlug, inputs);
+
+    if (customCalendarCountError) {
+      return customCalendarCountError;
     }
 
     const requiredCredits = calculateToolCreditCost(toolSlug, inputs);
