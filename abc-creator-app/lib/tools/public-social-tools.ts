@@ -1,3 +1,5 @@
+import { generalTools } from "./public-general-tools";
+
 type PublicSocialToolInput = {
   id: string;
   label: string;
@@ -207,4 +209,5 @@ export const socialTools: PublicSocialTool[] = [
       { id: "avoid", label: "Words / Claims to Avoid", type: "textarea", placeholder: "Optional: banned words, claims, tone notes, emojis to avoid.", required: false },
     ],
   },
+  ...generalTools,
 ];
