@@ -18,6 +18,8 @@ import {
 } from "./InlineImageBlocks";
 
 type OutputPanelDownloadFormat = OutputDownloadFormat | "html";
+type SideImageRatio = "1:1" | "4:3" | "3:4";
+type SideImagePlacement = "left" | "right";
 
 type MarkdownDiagramSegment =
   | { type: "markdown"; content: string; id: string }
@@ -33,6 +35,24 @@ type SectionRegenerateResponse = {
   error?: string;
   details?: string;
   text?: string;
+};
+
+type OutputImageResponse = {
+  ok?: boolean;
+  error?: string;
+  details?: string;
+  code?: string;
+  requiredCredits?: number;
+  currentCredits?: number;
+  images?: Array<{ dataUrl: string; filename?: string }>;
+};
+
+type SideImageState = {
+  dataUrl: string;
+  prompt: string;
+  ratio: SideImageRatio;
+  placement: SideImagePlacement;
+  widthPercent: number;
 };
 
 interface OutputPanelProps {
@@ -276,8 +296,26 @@ function collectGeneratedPdfImages(root: HTMLElement | null, frame: string) {
     .filter((image) => image.dataUrl.startsWith("data:image/"));
 }
 
+function compactText(value: string, maxLength: number) {
+  const cleaned = value.replace(/[#*_`>\-]/g, " ").replace(/\s+/g, " ").trim();
+  return cleaned.length > maxLength ? `${cleaned.slice(0, Math.max(0, maxLength - 3))}...` : cleaned;
+}
+
 function defaultRegenerateInstruction(sectionText: string) {
   return `Rewrite this section to be more premium and professional while preserving the same meaning and Markdown structure.\n\n${sectionText}`;
+}
+
+function defaultSideImagePrompt(sectionText: string, inputs: Record<string, string>) {
+  const heading = sectionText.split("\n").find((line) => /^#{1,4}\s+/.test(line.trim())) || "this section";
+  const context = compactText(sectionText, 520);
+  const brand = compactText(inputs.brand_or_context || inputs.brand_name || inputs.name_or_brand || inputs.productName || "", 140);
+
+  return [
+    `Create a premium textless image to sit beside the section: ${compactText(heading, 90)}.`,
+    brand ? `Brand/context: ${brand}.` : "",
+    `Section context: ${context}`,
+    "Use a clean professional composition. Avoid readable text, watermarks, fake logos, and UI screenshots unless the section explicitly requires them.",
+  ].filter(Boolean).join("\n");
 }
 
 export function OutputPanel({
@@ -297,6 +335,12 @@ export function OutputPanel({
   const [regenerateInstruction, setRegenerateInstruction] = useState("");
   const [regeneratingBlockId, setRegeneratingBlockId] = useState<string | null>(null);
   const [sectionActionMessage, setSectionActionMessage] = useState("");
+  const [sideImages, setSideImages] = useState<Record<string, SideImageState>>({});
+  const [activeImageBlockId, setActiveImageBlockId] = useState<string | null>(null);
+  const [imagePrompt, setImagePrompt] = useState("");
+  const [imageRatio, setImageRatio] = useState<SideImageRatio>("1:1");
+  const [imagePlacement, setImagePlacement] = useState<SideImagePlacement>("right");
+  const [generatingImageBlockId, setGeneratingImageBlockId] = useState<string | null>(null);
   const exportContentRef = useRef<HTMLDivElement | null>(null);
   const displayOutput = useMemo(() => cleanOutputForDisplay(output), [output]);
   const outputBlocks = useMemo(() => splitOutputIntoDeletableBlocks(displayOutput), [displayOutput]);
@@ -325,6 +369,12 @@ export function OutputPanel({
     setRegenerateInstruction("");
     setRegeneratingBlockId(null);
     setSectionActionMessage("");
+    setSideImages({});
+    setActiveImageBlockId(null);
+    setImagePrompt("");
+    setImageRatio("1:1");
+    setImagePlacement("right");
+    setGeneratingImageBlockId(null);
   }, [displayOutput]);
 
   const fallbackCopy = () => {
@@ -446,6 +496,7 @@ export function OutputPanel({
   };
 
   const openRegeneratePanel = (block: DeletableOutputBlock) => {
+    setActiveImageBlockId(null);
     setActiveRegenerateBlockId((current) => (current === block.id ? null : block.id));
     setRegenerateInstruction(defaultRegenerateInstruction(block.content));
     setSectionActionMessage("");
@@ -485,6 +536,113 @@ export function OutputPanel({
       setRegeneratingBlockId(null);
     }
   };
+
+  const openImagePanel = (block: DeletableOutputBlock) => {
+    setActiveRegenerateBlockId(null);
+    setActiveImageBlockId((current) => (current === block.id ? null : block.id));
+    setImagePrompt(defaultSideImagePrompt(block.content, inputs));
+    setImageRatio("1:1");
+    setImagePlacement("right");
+    setSectionActionMessage("");
+  };
+
+  const generateSideImage = async (block: DeletableOutputBlock) => {
+    const prompt = imagePrompt.trim();
+
+    if (!prompt) {
+      setSectionActionMessage("Add an image prompt first.");
+      return;
+    }
+
+    setGeneratingImageBlockId(block.id);
+    setSectionActionMessage("");
+
+    try {
+      const response = await fetch("/api/generate/image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          operation: "generate",
+          toolSlug,
+          prompt,
+          sourceText: block.content,
+          aspectRatio: imageRatio,
+          imageCount: 1,
+          inputs: { ...inputs, output_image_placement: imagePlacement },
+        }),
+      });
+      const data = (await response.json()) as OutputImageResponse;
+
+      if (!response.ok || !data.ok) {
+        if (response.status === 402 || data.code === "INSUFFICIENT_CREDITS") {
+          setSectionActionMessage(`Not enough credits. This image needs ${data.requiredCredits ?? 1} credit. You currently have ${data.currentCredits ?? 0}.`);
+        } else {
+          setSectionActionMessage(`${data.error || "Image generation failed."}${data.details ? ` ${data.details}` : ""}`);
+        }
+        return;
+      }
+
+      const image = data.images?.[0];
+      if (!image?.dataUrl) {
+        setSectionActionMessage("Image generation finished but no image was returned.");
+        return;
+      }
+
+      setSideImages((current) => ({
+        ...current,
+        [block.id]: {
+          dataUrl: image.dataUrl,
+          prompt,
+          ratio: imageRatio,
+          placement: imagePlacement,
+          widthPercent: 42,
+        },
+      }));
+      setActiveImageBlockId(null);
+      setImagePrompt("");
+      setSectionActionMessage("Image added beside this section.");
+    } catch (error) {
+      setSectionActionMessage(error instanceof Error ? error.message : String(error));
+    } finally {
+      setGeneratingImageBlockId(null);
+    }
+  };
+
+  const startSideImageResize = (event: React.PointerEvent<HTMLButtonElement>, blockId: string) => {
+    const image = sideImages[blockId];
+    if (!image) return;
+
+    event.preventDefault();
+    const startX = event.clientX;
+    const startWidth = image.widthPercent;
+
+    const onMove = (moveEvent: PointerEvent) => {
+      const direction = image.placement === "left" ? 1 : -1;
+      const delta = ((moveEvent.clientX - startX) * direction) / 8;
+      const nextWidth = Math.min(70, Math.max(24, Math.round(startWidth + delta)));
+      setSideImages((current) => ({
+        ...current,
+        [blockId]: current[blockId] ? { ...current[blockId], widthPercent: nextWidth } : image,
+      }));
+    };
+
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  };
+
+  const renderSideImage = (blockId: string, image: SideImageState) => (
+    <figure className="group/side-image relative shrink-0 overflow-hidden rounded-2xl border border-emerald-300/20 bg-black/45 p-2 shadow-lg shadow-emerald-950/20" style={{ width: `${image.widthPercent}%` }}>
+      <img src={image.dataUrl} alt={image.prompt || "Generated section image"} className="w-full rounded-xl object-cover" data-generated-blog-image="true" />
+      <figcaption data-export-ignore="true" className="mt-2 line-clamp-2 text-xs leading-5 text-emerald-100/80">{image.prompt}</figcaption>
+      <button type="button" title="Delete image" aria-label="Delete image" onClick={() => setSideImages((current) => { const next = { ...current }; delete next[blockId]; return next; })} data-export-ignore="true" className="absolute right-3 top-3 h-8 w-8 rounded-full border border-red-300/30 bg-red-500/20 text-sm text-red-100 opacity-0 transition hover:bg-red-500/30 group-hover/side-image:opacity-100">🗑</button>
+      <button type="button" title="Drag to resize image" aria-label="Drag to resize image" onPointerDown={(event) => startSideImageResize(event, blockId)} data-export-ignore="true" className={`absolute ${image.placement === "left" ? "right-0" : "left-0"} top-0 h-full w-3 cursor-ew-resize bg-emerald-300/10 opacity-0 transition hover:bg-emerald-300/25 group-hover/side-image:opacity-100`} />
+    </figure>
+  );
 
   return (
     <div className="rounded-3xl border border-purple-500/25 bg-black/45 p-8 shadow-2xl shadow-purple-950/25 backdrop-blur-2xl">
@@ -568,57 +726,10 @@ export function OutputPanel({
         <>
           <div ref={exportContentRef} className="creator-output-scroll max-h-[78vh] overflow-y-auto overflow-x-hidden rounded-2xl border border-purple-500/15 bg-black/70 p-6 text-gray-200">
             {visibleOutputBlocks.length ? (
-              visibleOutputBlocks.map((block) => (
-                <div key={block.id} className="group relative rounded-2xl border border-transparent p-1 transition hover:border-cyan-300/20 hover:bg-white/[0.015]">
-                  <div data-export-ignore="true" className="absolute right-2 top-2 z-10 flex gap-2 opacity-0 transition group-hover:opacity-100">
-                    <button
-                      type="button"
-                      aria-label="Regenerate this output section"
-                      title="Regenerate this output section"
-                      onClick={() => openRegeneratePanel(block)}
-                      className="inline-flex h-8 items-center justify-center rounded-full border border-cyan-300/30 bg-cyan-500/15 px-3 text-xs font-semibold text-cyan-100 shadow-lg shadow-cyan-950/20 transition hover:bg-cyan-500/25"
-                    >
-                      Regenerate
-                    </button>
-                    <button
-                      type="button"
-                      aria-label="Delete this output section"
-                      title="Delete this output section"
-                      onClick={() => deleteOutputBlock(block.id)}
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-red-300/30 bg-red-500/15 text-sm text-red-100 shadow-lg shadow-red-950/20 transition hover:bg-red-500/25"
-                    >
-                      🗑
-                    </button>
-                  </div>
-
-                  {activeRegenerateBlockId === block.id ? (
-                    <div data-export-ignore="true" className="mb-4 rounded-2xl border border-cyan-300/20 bg-cyan-500/10 p-4 pr-4 pt-12">
-                      <label className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-200">
-                        Regenerate this section
-                      </label>
-                      <textarea
-                        value={regenerateInstruction}
-                        onChange={(event) => setRegenerateInstruction(event.currentTarget.value)}
-                        className="mt-3 h-28 w-full resize-none rounded-2xl border border-cyan-300/20 bg-black/40 px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                      />
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <button type="button" onClick={() => setRegenerateInstruction("Make this section shorter, sharper, and more premium while preserving the meaning and Markdown heading.")} className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-200">
-                          Shorter
-                        </button>
-                        <button type="button" onClick={() => setRegenerateInstruction("Make this section longer, more detailed, and more premium while preserving the meaning and Markdown heading.")} className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-200">
-                          Longer
-                        </button>
-                        <button type="button" onClick={() => void regenerateOutputBlock(block)} disabled={regeneratingBlockId === block.id} className="rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 px-4 py-1.5 text-xs font-semibold text-white disabled:opacity-60">
-                          {regeneratingBlockId === block.id ? "Regenerating..." : "Apply regenerate"}
-                        </button>
-                        <button type="button" onClick={() => setActiveRegenerateBlockId(null)} disabled={regeneratingBlockId === block.id} className="rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-semibold text-slate-200">
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  ) : null}
-
-                  <div className="pr-8">
+              visibleOutputBlocks.map((block) => {
+                const sideImage = sideImages[block.id];
+                const contentNode = (
+                  <div className="min-w-0 flex-1 pr-8">
                     {splitOutputIntoImageSegments(block.content).map((segment) =>
                       segment.type === "image" ? (
                         <InlineImageBlock
@@ -635,8 +746,109 @@ export function OutputPanel({
                       )
                     )}
                   </div>
-                </div>
-              ))
+                );
+
+                return (
+                  <div key={block.id} className="group relative rounded-2xl border border-transparent p-1 transition hover:border-cyan-300/20 hover:bg-white/[0.015]">
+                    <div data-export-ignore="true" className="absolute right-2 top-2 z-10 flex flex-wrap justify-end gap-2 opacity-0 transition group-hover:opacity-100">
+                      <button
+                        type="button"
+                        aria-label="Regenerate this output section"
+                        title="Regenerate this output section"
+                        onClick={() => openRegeneratePanel(block)}
+                        className="inline-flex h-8 items-center justify-center rounded-full border border-cyan-300/30 bg-cyan-500/15 px-3 text-xs font-semibold text-cyan-100 shadow-lg shadow-cyan-950/20 transition hover:bg-cyan-500/25"
+                      >
+                        Regenerate
+                      </button>
+                      <button
+                        type="button"
+                        aria-label="Add image beside this output section"
+                        title="Add image beside this output section"
+                        onClick={() => openImagePanel(block)}
+                        className="inline-flex h-8 items-center justify-center rounded-full border border-emerald-300/30 bg-emerald-500/15 px-3 text-xs font-semibold text-emerald-100 shadow-lg shadow-emerald-950/20 transition hover:bg-emerald-500/25"
+                      >
+                        Add image — 1 credit
+                      </button>
+                      <button
+                        type="button"
+                        aria-label="Delete this output section"
+                        title="Delete this output section"
+                        onClick={() => deleteOutputBlock(block.id)}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-red-300/30 bg-red-500/15 text-sm text-red-100 shadow-lg shadow-red-950/20 transition hover:bg-red-500/25"
+                      >
+                        🗑
+                      </button>
+                    </div>
+
+                    {activeRegenerateBlockId === block.id ? (
+                      <div data-export-ignore="true" className="mb-4 rounded-2xl border border-cyan-300/20 bg-cyan-500/10 p-4 pr-4 pt-12">
+                        <label className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-200">
+                          Regenerate this section
+                        </label>
+                        <textarea
+                          value={regenerateInstruction}
+                          onChange={(event) => setRegenerateInstruction(event.currentTarget.value)}
+                          className="mt-3 h-28 w-full resize-none rounded-2xl border border-cyan-300/20 bg-black/40 px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                        />
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <button type="button" onClick={() => setRegenerateInstruction("Make this section shorter, sharper, and more premium while preserving the meaning and Markdown heading.")} className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-200">
+                            Shorter
+                          </button>
+                          <button type="button" onClick={() => setRegenerateInstruction("Make this section longer, more detailed, and more premium while preserving the meaning and Markdown heading.")} className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-200">
+                            Longer
+                          </button>
+                          <button type="button" onClick={() => void regenerateOutputBlock(block)} disabled={regeneratingBlockId === block.id} className="rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 px-4 py-1.5 text-xs font-semibold text-white disabled:opacity-60">
+                            {regeneratingBlockId === block.id ? "Regenerating..." : "Apply regenerate"}
+                          </button>
+                          <button type="button" onClick={() => setActiveRegenerateBlockId(null)} disabled={regeneratingBlockId === block.id} className="rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-semibold text-slate-200">
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {activeImageBlockId === block.id ? (
+                      <div data-export-ignore="true" className="mb-4 rounded-2xl border border-emerald-300/20 bg-emerald-500/10 p-4 pr-4 pt-12">
+                        <label className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-200">
+                          Image beside this section
+                        </label>
+                        <textarea
+                          value={imagePrompt}
+                          onChange={(event) => setImagePrompt(event.currentTarget.value)}
+                          className="mt-3 h-28 w-full resize-none rounded-2xl border border-emerald-300/20 bg-black/40 px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        />
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                          <select value={imageRatio} onChange={(event) => setImageRatio(event.currentTarget.value as SideImageRatio)} className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white">
+                            <option value="1:1" className="bg-black text-white">1:1</option>
+                            <option value="4:3" className="bg-black text-white">4:3</option>
+                            <option value="3:4" className="bg-black text-white">3:4</option>
+                          </select>
+                          <select value={imagePlacement} onChange={(event) => setImagePlacement(event.currentTarget.value as SideImagePlacement)} className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white">
+                            <option value="left" className="bg-black text-white">Image left</option>
+                            <option value="right" className="bg-black text-white">Image right</option>
+                          </select>
+                          <button type="button" onClick={() => void generateSideImage(block)} disabled={generatingImageBlockId === block.id} className="rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-1.5 text-xs font-semibold text-white disabled:opacity-60">
+                            {generatingImageBlockId === block.id ? "Generating..." : "Generate image — 1 credit"}
+                          </button>
+                          <button type="button" onClick={() => setActiveImageBlockId(null)} disabled={generatingImageBlockId === block.id} className="rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-semibold text-slate-200">
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {sideImage ? (
+                      <div className="flex flex-col gap-5 md:flex-row">
+                        {sideImage.placement === "left" ? renderSideImage(block.id, sideImage) : null}
+                        {contentNode}
+                        {sideImage.placement === "right" ? renderSideImage(block.id, sideImage) : null}
+                      </div>
+                    ) : (
+                      contentNode
+                    )}
+                  </div>
+                );
+              })
             ) : (
               <div className="rounded-2xl border border-red-300/20 bg-red-500/10 p-5 text-sm text-red-100">
                 All output sections were deleted. Run the tool again to regenerate the output.
