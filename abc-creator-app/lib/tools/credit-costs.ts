@@ -27,6 +27,7 @@ const BASE_TOOL_CREDITS: Record<string, number> = {
   "pro-image-brief-for-blog": 1,
   "blog-seo-pack": 5,
   ...BLOG_TOOL_CREDIT_COSTS,
+  "image-to-instagram-caption": 3,
   "facebook-ad-copy": 4,
   "product-description": 3,
 };
