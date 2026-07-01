@@ -28,6 +28,8 @@ const BASE_TOOL_CREDITS: Record<string, number> = {
   "blog-seo-pack": 5,
   ...BLOG_TOOL_CREDIT_COSTS,
   "image-to-instagram-caption": 3,
+  "instagram-page-name-bio-generator": 1,
+  "social-media-bio-generator": 1,
   "facebook-ad-copy": 4,
   "product-description": 3,
 };
