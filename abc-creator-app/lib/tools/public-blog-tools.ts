@@ -88,6 +88,15 @@ const rewriteGoalOptions = [
   "Expand with practical detail",
 ];
 
+const rewriteLengthOptions = [
+  "Short rewrite (800-1,200 words)",
+  "Standard rewrite (1,200-1,800 words)",
+  "Long rewrite (1,800-2,500 words)",
+  "Very long rewrite (2,500-3,500 words)",
+  "Premium rewrite (3,500-5,000 words)",
+  "Authority rewrite (5,000-10,000 words)",
+];
+
 const quickLengthOptions = [
   "Quick short post (700-1,000 words)",
   "Quick standard post (1,000-1,500 words)",
@@ -296,11 +305,11 @@ export const blogTools: PublicBlogTool[] = [
     id: "rewrite-article-with-keywords",
     slug: "rewrite-article-with-keywords",
     name: "Article Rewriter",
-    description: "Rewrite an existing article into a clearer, more premium, keyword-aligned draft without fake SEO claims.",
+    description: "Rewrite an existing article into a premium, keyword-aligned draft with controlled length and no unwanted SEO appendix sections.",
     icon: "writing-pad",
     detailEmoji: "♻️",
     category: "Writing Tools",
-    displayCreditCost: 5,
+    displayCreditCost: 3,
     outputType: "text",
     aliases: ["article-rewriter", "ai-article-rewriter", "ai-rewrite-article-with-keywords", "rewrite-article-with-keywords-generator", "rewrite-article-with-keywords-tool", "article-rewriter-with-keywords"],
     nextActions: commonBlogNextActions,
@@ -309,9 +318,10 @@ export const blogTools: PublicBlogTool[] = [
       { id: "primary_keyword", label: "Primary Keyword", type: "text", placeholder: "e.g., AI content workflow", required: true },
       { id: "secondary_keywords", label: "Secondary Keywords", type: "textarea", placeholder: "e.g., blog optimization, SEO writing, content refresh", required: false },
       { id: "rewrite_goal", label: "Rewrite Goal", type: "select", required: true, options: rewriteGoalOptions },
+      { id: "rewrite_length", label: "Rewrite Length", type: "select", required: true, options: rewriteLengthOptions },
       { id: "audience", label: "Audience", type: "select", required: true, options: audienceOptions },
       { id: "tone", label: "Tone", type: "select", required: true, options: toneOptions },
-      { id: "brand_or_context", label: "Brand / Extra Context", type: "textarea", placeholder: "Optional: brand voice, internal links, claims to preserve, facts to verify, forbidden phrases, or source notes.", required: false },
+      { id: "brand_or_context", label: "Brand / Extra Context", type: "textarea", placeholder: "Optional: brand voice, claims to preserve, facts to verify, forbidden phrases, or source notes.", required: false },
     ],
   },
   {
