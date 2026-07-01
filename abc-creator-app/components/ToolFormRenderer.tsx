@@ -6,6 +6,7 @@ import { PresetBlogOutputPanel } from "./PresetBlogOutputPanel";
 import { ThemeIcon } from "./ThemeIcon";
 import { EditableBlogOutlinePanel } from "./EditableBlogOutlinePanel";
 import { ImageToInstagramCaptionPanel } from "./ImageToInstagramCaptionPanel";
+import { PremiumEditableTextOutputPanel } from "./PremiumEditableTextOutputPanel";
 import type { Tool } from "@/lib/tools/public-tools";
 import { getToolCreditEstimate } from "@/lib/tools/credit-costs";
 
@@ -16,6 +17,7 @@ interface ToolFormRendererProps {
 const BLOG_OUTLINE_HANDOFF_KEY = "abc_creator_blog_outline_handoff";
 const CALENDAR_CUSTOM_FREQUENCY_OPTION = "Custom frequency in context";
 const IMAGE_CAPTION_TOOL = "image-to-instagram-caption";
+const premiumSocialBioTools = new Set(["instagram-page-name-bio-generator", "social-media-bio-generator"]);
 const presetBlogEditorTools = new Set(["quick-1-click-blog-post", "human-style-blog-post", "seo-optimized-blog-post", "advanced-blog-post"]);
 
 function wait(ms: number) {
@@ -31,6 +33,22 @@ function fileToDataUrl(file: File) {
   });
 }
 
+function socialPanelCopy(toolSlug: string) {
+  if (toolSlug === "instagram-page-name-bio-generator") {
+    return {
+      title: "Instagram profile names and bios you can edit",
+      subtitle: "Drag from the left handle, edit names or bios, delete weak options, and copy only the strongest profile package.",
+      emptyState: "Generate Instagram page names and bios. The premium editable profile studio will appear here with drag handles, edit controls, copy, and download.",
+    };
+  }
+
+  return {
+    title: "Platform-ready social bios you can edit",
+    subtitle: "Reorder, rewrite, delete, or add bio options before copying the final profile text.",
+    emptyState: "Generate social media bio options. The premium editable bio studio will appear here with drag handles, edit controls, copy, and download.",
+  };
+}
+
 export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -42,7 +60,9 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
   const showEditableOutline = tool.slug === "blog-outline" && Boolean(output.trim()) && !isLoading && !isErrorOutput;
   const usePresetEditor = presetBlogEditorTools.has(tool.slug);
   const useImageCaptionEditor = tool.slug === IMAGE_CAPTION_TOOL;
+  const usePremiumSocialBioEditor = premiumSocialBioTools.has(tool.slug);
   const showCalendarCustomPostCount = tool.slug === "blog-content-calendar" && formData.posting_frequency === CALENDAR_CUSTOM_FREQUENCY_OPTION;
+  const socialPanel = socialPanelCopy(tool.slug);
 
   useEffect(() => {
     if (tool.slug !== "blog-content") return;
@@ -223,6 +243,8 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
           <EditableBlogOutlinePanel output={output} inputs={formData} />
         ) : useImageCaptionEditor ? (
           <ImageToInstagramCaptionPanel isLoading={isLoading} output={output} inputs={formData} />
+        ) : usePremiumSocialBioEditor ? (
+          <PremiumEditableTextOutputPanel isLoading={isLoading} output={output} title={socialPanel.title} subtitle={socialPanel.subtitle} emptyState={socialPanel.emptyState} downloadFileBaseName={`${tool.slug}-output`} />
         ) : usePresetEditor ? (
           <PresetBlogOutputPanel isLoading={isLoading} output={output} recommendedNextActions={tool.nextActions} downloadFileBaseName={`${tool.slug}-output`} toolSlug={tool.slug} inputs={formData} />
         ) : (
