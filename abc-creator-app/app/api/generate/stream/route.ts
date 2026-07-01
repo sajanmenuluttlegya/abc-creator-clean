@@ -3,7 +3,7 @@ import { randomUUID } from "crypto";
 import {
   getServerPrompt,
   validateToolInputs,
-} from "@/lib/tools/server-prompts";
+} from "@/lib/tools/server-prompt-registry";
 import { preprocessToolInputs } from "@/lib/tools/preprocess-inputs";
 import { buildResearchContext } from "@/lib/tools/research-context";
 import { calculateToolCreditCost } from "@/lib/tools/credit-costs";
