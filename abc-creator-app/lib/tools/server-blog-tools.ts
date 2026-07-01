@@ -42,6 +42,17 @@ Length and depth rules:
 - Longer selections must create visibly more substance, not padding. Expand through mechanisms, examples, caveats, steps, comparisons, frameworks, reader decisions, and implementation notes.
 - If a topic is narrow, spend more detail on the most relevant sections instead of adding generic filler.`;
 
+const articleRewriteLengthRules = `
+Article rewrite length rules:
+- The selected rewrite_length is mandatory and controls the rewritten article size.
+- Short rewrite (800-1,200 words): concise, tighter, cleaner, and complete.
+- Standard rewrite (1,200-1,800 words): balanced article rewrite with clear sections and natural keyword integration.
+- Long rewrite (1,800-2,500 words): deeper rewrite with stronger explanations, examples, and structure.
+- Very long rewrite (2,500-3,500 words): premium long-form rewrite with expanded useful detail, examples, and FAQs when helpful.
+- Premium rewrite (3,500-5,000 words): substantial pillar-style rewrite with polished section architecture and practical depth.
+- Authority rewrite (5,000-10,000 words): deep authority rewrite with strong structure and depth, but never filler.
+- Preserve the original article's factual boundaries. Expand only through explanation, clarity, examples, caveats, and placeholders, not invented facts.`;
+
 const presetVisualRules = `
 Premium visual planning rules:
 - Before adding any image, table, chart, diagram, graph, or flowchart, decide the exact reader job for that section. If the visual does not make the nearby section clearer, do not add it.
@@ -136,12 +147,13 @@ ${presetVisualRules}`,
       "Return a detailed Markdown expert blog package scaled to the selected word_count option. Include: 1) SEO-aware H1, 2) executive summary or reader promise, 3) detailed long-form article with deep H2/H3 sections, 4) frameworks or decision criteria, 5) examples according to examples_needed, 6) FAQs, 7) SEO metadata suggestions and internal-link placeholders, and 8) a concise factual verification checklist. Add strong tables, coded diagrams, charts, flowcharts, framework visuals, and optional image prompts only when they are relevant to the exact section placement.",
   },
   "rewrite-article-with-keywords": {
-    creditCost: 5,
+    creditCost: 3,
     requiredInputs: [
       { id: "article", label: "Existing article", required: true, minLength: 40, maxLength: 18000 },
       { id: "primary_keyword", label: "Primary keyword", required: true, minLength: 2, maxLength: 180 },
       { id: "secondary_keywords", label: "Secondary keywords", required: false, maxLength: 1500 },
       { id: "rewrite_goal", label: "Rewrite goal", required: true, minLength: 2, maxLength: 160 },
+      { id: "rewrite_length", label: "Rewrite length", required: true, minLength: 2, maxLength: 120 },
       { id: "audience", label: "Audience", required: true, minLength: 2, maxLength: 120 },
       { id: "tone", label: "Tone", required: true, minLength: 2, maxLength: 80 },
       { id: "brand_or_context", label: "Brand / extra context", required: false, maxLength: 5000 },
@@ -149,14 +161,18 @@ ${presetVisualRules}`,
     system: `You are ABC Creator's specialist for Article Rewriter.${commonBlogToolRules}
 
 Article Rewriter rules:
-- Rewrite the user's supplied article into a cleaner, more premium, reader-friendly version while preserving the core meaning and factual boundaries of the source draft.
+- Rewrite the user's supplied article into a cleaner, more premium, reader-friendly article while preserving the core meaning and factual boundaries of the source draft.
+- Follow rewrite_length exactly as the output-size control and make the rewritten article visibly match the selected range without padding.
 - Improve structure, headline flow, transitions, clarity, scannability, and keyword alignment.
-- Use the primary keyword naturally in the title/H1, introduction, at least one H2 where appropriate, body copy, and metadata suggestions.
+- Use the primary keyword naturally in the title/H1, introduction, at least one H2 where appropriate, body copy, and conclusion.
 - Use secondary keywords only where they fit naturally.
-- Do not add new statistics, named studies, customer results, legal/medical/financial claims, or citations unless supplied by the user.
-- If the original article is thin, add practical detail, examples, and placeholders without inventing source-backed claims.`,
+- Do not add new statistics, named studies, customer results, legal/medical/financial claims, citations, metadata, internal links, changelogs, or verification tables unless supplied by the user.
+- If the original article is thin, add practical detail, examples, caveats, and placeholders without inventing source-backed claims.
+- Place FAQs before the conclusion when FAQs are useful. The conclusion must be the final section.
+- Do not output anything after the final Conclusion section.
+${articleRewriteLengthRules}`,
     outputGuide:
-      "Return a premium Markdown rewrite package. Include: 1) improved SEO title/H1, 2) rewritten article with H2/H3 structure, 3) natural keyword integration, 4) improved intro and conclusion, 5) optional FAQs when helpful, 6) meta title/meta description/slug suggestions, 7) internal-link placeholder ideas, 8) a short change log explaining what improved, and 9) a verification checklist for factual claims.",
+      "Return only the rewritten article in premium Markdown. Use this structure: 1) improved SEO-aware H1, 2) polished introduction, 3) rewritten article with clean H2/H3 sections, 4) natural keyword integration inside the article, 5) optional FAQ section only when helpful, and 6) final Conclusion as the last section. Do not include meta title, meta description, slug, internal links, change log, verification checklist, notes, appendices, or anything after Conclusion.",
   },
   "quick-1-click-blog-post": {
     creditCost: 8,
