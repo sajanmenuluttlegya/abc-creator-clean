@@ -40,8 +40,43 @@ function splitDiagramBlocks(markdown: string) {
   return segments.length ? segments : [{ type: "markdown", content: markdown, id: "md-1" }];
 }
 
+function looksLikeLooseHeading(line: string) {
+  const text = line.trim();
+  if (!text || text.length > 120) return false;
+  if (/^(#{1,6}|[-*+]|\d+\.|>|```|\||<)/.test(text)) return false;
+  if (/[.!?]$/.test(text)) return false;
+  if (/^\*\*.+\*\*:?$/.test(text)) return true;
+  return /^[A-Z][\w\s/&+–—,:()'-]{2,}$/.test(text);
+}
+
+function normalizeLooseHeadings(markdown: string) {
+  const lines = markdown.replace(/\r\n/g, "\n").split("\n");
+  const firstContentIndex = lines.findIndex((line) => line.trim());
+
+  return lines.map((line, index) => {
+    const trimmed = line.trim();
+    if (!trimmed || /^#{1,6}\s+/.test(trimmed)) return line;
+
+    const prevBlank = index === 0 || !lines[index - 1]?.trim();
+    const nextBlank = index === lines.length - 1 || !lines[index + 1]?.trim();
+    const unwrapped = trimmed.replace(/^\*\*(.+?)\*\*:?$/, "$1").trim();
+
+    if (index === firstContentIndex && looksLikeLooseHeading(trimmed)) return `# ${unwrapped}`;
+
+    if (prevBlank && nextBlank && looksLikeLooseHeading(trimmed)) {
+      const lower = unwrapped.toLowerCase();
+      if (lower === "introduction" || lower === "conclusion" || lower.includes("overview") || lower.includes("framework") || lower.includes("strategy") || lower.includes("risk") || lower.includes("faq")) {
+        return `## ${unwrapped}`;
+      }
+      return `### ${unwrapped}`;
+    }
+
+    return line;
+  }).join("\n");
+}
+
 function splitBlocks(markdown: string) {
-  return markdown.split(/\n{2,}/).map((block) => block.trim()).filter(Boolean);
+  return normalizeLooseHeadings(markdown).split(/\n{2,}/).map((block) => block.trim()).filter(Boolean);
 }
 
 function headingLevel(block: string) {
@@ -116,12 +151,12 @@ function tableMarkdown(block: string, toolSlug: string) {
 
 function visualKind(block: string) {
   const text = plain(block, 520).toLowerCase();
+  if (/flow of|moves from|traffic|money|value|data flow|source|destination|allocation/.test(text)) return "sankey";
   if (/flow|process|workflow|step|pipeline|journey|sequence|decision|how it works/.test(text)) return "flowchart";
   if (/trend|timeline|over time|history|roadmap|phase|milestone|cycle|forecast|growth|decline/.test(text)) return "line-chart";
   if (/compare|versus|vs\.?|alternative|option|pros|cons|matrix|priority|choice|tradeoff/.test(text)) return "bar-chart";
   if (/category|type|taxonomy|class|segment|pillar|cluster|hierarchy|level/.test(text)) return "taxonomy";
   if (/relationship|network|dependency|entity|stakeholder|ecosystem|connected|causal|influence/.test(text)) return "knowledge-graph";
-  if (/flow of|moves from|traffic|money|value|data flow|source|destination|allocation/.test(text)) return "sankey";
   if (/system|architecture|infrastructure|component|database|deployment|stack/.test(text)) return "architecture-diagram";
   return "concept-map";
 }
@@ -136,11 +171,7 @@ function visualSpec(block: string, inputs: Record<string, string>): DiagramSpec 
       type: "sankey",
       title: `Value flow for ${topic}`,
       caption: "Qualitative flow map based on the nearby section. Replace placeholder values with verified data when available.",
-      flows: [
-        ["Source", "Main channel", 1],
-        ["Main channel", "Outcome", 1],
-        ["Main channel", "Secondary effect", 1],
-      ],
+      flows: [["Source", "Main channel", 1], ["Main channel", "Outcome", 1], ["Main channel", "Secondary effect", 1]],
     };
   }
 
@@ -167,12 +198,7 @@ function visualSpec(block: string, inputs: Record<string, string>): DiagramSpec 
       title: `Category map for ${topic}`,
       caption: `Organizes the section idea: ${context}`,
       nodes: ["Core idea", "Category A", "Category B", "Category C", "Decision point"],
-      edges: [
-        ["Core idea", "Category A"],
-        ["Core idea", "Category B"],
-        ["Core idea", "Category C"],
-        ["Category B", "Decision point"],
-      ],
+      edges: [["Core idea", "Category A"], ["Core idea", "Category B"], ["Core idea", "Category C"], ["Category B", "Decision point"]],
     };
   }
 
@@ -182,12 +208,7 @@ function visualSpec(block: string, inputs: Record<string, string>): DiagramSpec 
       title: `System view for ${topic}`,
       caption: `Shows the main components implied by this section: ${context}`,
       nodes: ["Input", "Core system", "Decision layer", "Output", "Feedback"],
-      edges: [
-        ["Input", "Core system"],
-        ["Core system", "Decision layer"],
-        ["Decision layer", "Output"],
-        ["Output", "Feedback"],
-      ],
+      edges: [["Input", "Core system"], ["Core system", "Decision layer"], ["Decision layer", "Output"], ["Output", "Feedback"]],
     };
   }
 
@@ -197,12 +218,7 @@ function visualSpec(block: string, inputs: Record<string, string>): DiagramSpec 
       title: `Relationship map for ${topic}`,
       caption: `Maps the key relationships around: ${context}`,
       nodes: ["Core idea", "Driver", "Constraint", "Stakeholder", "Outcome"],
-      edges: [
-        ["Driver", "Core idea"],
-        ["Constraint", "Core idea"],
-        ["Core idea", "Stakeholder"],
-        ["Stakeholder", "Outcome"],
-      ],
+      edges: [["Driver", "Core idea"], ["Constraint", "Core idea"], ["Core idea", "Stakeholder"], ["Stakeholder", "Outcome"]],
     };
   }
 
@@ -211,12 +227,7 @@ function visualSpec(block: string, inputs: Record<string, string>): DiagramSpec 
     title: `Process visual for ${topic}`,
     caption: `Turns the nearby section into a practical flow: ${context}`,
     nodes: ["Start", "Assess context", "Choose path", "Apply action", "Review outcome"],
-    edges: [
-      ["Start", "Assess context"],
-      ["Assess context", "Choose path"],
-      ["Choose path", "Apply action"],
-      ["Apply action", "Review outcome"],
-    ],
+    edges: [["Start", "Assess context"], ["Assess context", "Choose path"], ["Choose path", "Apply action"], ["Apply action", "Review outcome"]],
   };
 }
 
@@ -282,14 +293,7 @@ function EditableMarkdown({ markdown, toolSlug, inputs, idPrefix }: Props & { ma
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{block}</ReactMarkdown>
 
                 {level ? (
-                  <button
-                    type="button"
-                    title="Delete this heading and its content"
-                    aria-label="Delete this heading and its content"
-                    onClick={() => setDeletedHeadingStarts((current) => ({ ...current, [index]: true }))}
-                    data-export-ignore="true"
-                    className="absolute right-1 top-1 inline-flex h-7 w-7 items-center justify-center rounded-full border border-red-400/25 bg-red-500/10 text-red-200 opacity-0 transition hover:bg-red-500/20 hover:text-red-100 group-hover/line:opacity-100"
-                  >
+                  <button type="button" title="Delete this heading and its content" aria-label="Delete this heading and its content" onClick={() => setDeletedHeadingStarts((current) => ({ ...current, [index]: true }))} data-export-ignore="true" className="absolute right-1 top-1 inline-flex h-7 w-7 items-center justify-center rounded-full border border-red-400/25 bg-red-500/10 text-red-200 opacity-0 transition hover:bg-red-500/20 hover:text-red-100 group-hover/line:opacity-100">
                     <TrashIcon />
                   </button>
                 ) : null}
