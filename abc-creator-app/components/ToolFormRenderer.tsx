@@ -5,6 +5,7 @@ import { OutputPanel } from "./OutputPanel";
 import { PresetBlogOutputPanel } from "./PresetBlogOutputPanel";
 import { ThemeIcon } from "./ThemeIcon";
 import { EditableBlogOutlinePanel } from "./EditableBlogOutlinePanel";
+import { ImageToInstagramCaptionPanel } from "./ImageToInstagramCaptionPanel";
 import type { Tool } from "@/lib/tools/public-tools";
 import { getToolCreditEstimate } from "@/lib/tools/credit-costs";
 
@@ -14,30 +15,34 @@ interface ToolFormRendererProps {
 
 const BLOG_OUTLINE_HANDOFF_KEY = "abc_creator_blog_outline_handoff";
 const CALENDAR_CUSTOM_FREQUENCY_OPTION = "Custom frequency in context";
-const presetBlogEditorTools = new Set([
-  "quick-1-click-blog-post",
-  "human-style-blog-post",
-  "seo-optimized-blog-post",
-  "advanced-blog-post",
-]);
+const IMAGE_CAPTION_TOOL = "image-to-instagram-caption";
+const presetBlogEditorTools = new Set(["quick-1-click-blog-post", "human-style-blog-post", "seo-optimized-blog-post", "advanced-blog-post"]);
 
 function wait(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+function fileToDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("Could not read the selected file."));
+    reader.readAsDataURL(file);
+  });
 }
 
 export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [output, setOutput] = useState<string>("");
-  const creditEstimate = getToolCreditEstimate(tool.slug, formData);
+  const rawCreditEstimate = getToolCreditEstimate(tool.slug, formData);
+  const creditEstimate = tool.slug === IMAGE_CAPTION_TOOL ? { credits: tool.displayCreditCost, isDynamic: false, label: `${tool.displayCreditCost} credits` } : rawCreditEstimate;
   const creditCost = creditEstimate.credits;
   const isErrorOutput = /^(error:|not enough credits)/i.test(output.trim());
-  const showEditableOutline =
-    tool.slug === "blog-outline" && Boolean(output.trim()) && !isLoading && !isErrorOutput;
+  const showEditableOutline = tool.slug === "blog-outline" && Boolean(output.trim()) && !isLoading && !isErrorOutput;
   const usePresetEditor = presetBlogEditorTools.has(tool.slug);
-  const showCalendarCustomPostCount =
-    tool.slug === "blog-content-calendar" &&
-    formData.posting_frequency === CALENDAR_CUSTOM_FREQUENCY_OPTION;
+  const useImageCaptionEditor = tool.slug === IMAGE_CAPTION_TOOL;
+  const showCalendarCustomPostCount = tool.slug === "blog-content-calendar" && formData.posting_frequency === CALENDAR_CUSTOM_FREQUENCY_OPTION;
 
   useEffect(() => {
     if (tool.slug !== "blog-content") return;
@@ -46,20 +51,13 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
       try {
         const stored = window.sessionStorage.getItem(BLOG_OUTLINE_HANDOFF_KEY);
         if (!stored) return;
-
-        const handoff = JSON.parse(stored) as {
-          outline?: string;
-          title?: string;
-          keywords?: string;
-        };
-
+        const handoff = JSON.parse(stored) as { outline?: string; title?: string; keywords?: string };
         setFormData((current) => ({
           ...current,
           ...(handoff.outline && !current.outline ? { outline: handoff.outline } : {}),
           ...(handoff.title && !current.title ? { title: handoff.title } : {}),
           ...(handoff.keywords && !current.keywords ? { keywords: handoff.keywords } : {}),
         }));
-
         window.sessionStorage.removeItem(BLOG_OUTLINE_HANDOFF_KEY);
       } catch {
         window.sessionStorage.removeItem(BLOG_OUTLINE_HANDOFF_KEY);
@@ -69,32 +67,45 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
     return () => window.clearTimeout(timer);
   }, [tool.slug]);
 
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-  ) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { id, value } = e.target;
     setFormData((prev) => {
       if (tool.slug === "blog-content-calendar" && id === "posting_frequency" && value !== CALENDAR_CUSTOM_FREQUENCY_OPTION) {
         const { custom_post_count: _customPostCount, ...rest } = prev;
         return { ...rest, [id]: value };
       }
-
       return { ...prev, [id]: value };
     });
   };
 
+  const handleFileInput = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, files } = e.target;
+    const file = files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/") || file.size > 4 * 1024 * 1024) {
+      setOutput("Error:\nPlease choose an image file under 4 MB.");
+      return;
+    }
+
+    try {
+      const dataUrl = await fileToDataUrl(file);
+      setFormData((prev) => ({ ...prev, [id]: dataUrl, image_name: file.name }));
+      setOutput("");
+    } catch (error) {
+      setOutput(`Error:\n${error instanceof Error ? error.message : "Could not read image."}`);
+    }
+  };
+
   const revealChunk = async (currentOutput: string, chunk: string) => {
     if (!chunk) return currentOutput;
-
     let nextOutput = currentOutput;
     const stepSize = chunk.length > 800 ? 28 : chunk.length > 240 ? 18 : 10;
-
     for (let index = 0; index < chunk.length; index += stepSize) {
       nextOutput += chunk.slice(index, index + stepSize);
       setOutput(nextOutput);
       await wait(12);
     }
-
     return nextOutput;
   };
 
@@ -104,7 +115,8 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
     setOutput("");
 
     try {
-      const res = await fetch("/api/generate/stream", {
+      const endpoint = tool.slug === IMAGE_CAPTION_TOOL ? "/api/generate/image-caption" : "/api/generate/stream";
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ toolSlug: tool.slug, inputs: formData }),
@@ -112,30 +124,18 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
 
       if (!res.ok) {
         const text = await res.text();
-
         try {
           const data = JSON.parse(text);
-
           if (res.status === 402 || data.code === "INSUFFICIENT_CREDITS") {
             const requiredCredits = Number(data.requiredCredits ?? creditCost);
             const currentCredits = Number(data.currentCredits ?? 0);
-
-            setOutput(
-`Not enough credits
-
-This request needs ${requiredCredits} credits.
-You currently have ${currentCredits} credit${currentCredits === 1 ? "" : "s"}.
-
-Get more credits: /pricing`
-            );
+            setOutput(`Not enough credits\n\nThis request needs ${requiredCredits} credits.\nYou currently have ${currentCredits} credit${currentCredits === 1 ? "" : "s"}.\n\nGet more credits: /pricing`);
             return;
           }
-
           setOutput(`Error:\n${data.error || "Generation failed."}\n\n${data.details || ""}`);
         } catch {
           setOutput(`Error:\n${text || "Generation failed."}`);
         }
-
         return;
       }
 
@@ -147,19 +147,13 @@ Get more credits: /pricing`
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let finalOutput = "";
-
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
-        const chunk = decoder.decode(value, { stream: true });
-        finalOutput = await revealChunk(finalOutput, chunk);
+        finalOutput = await revealChunk(finalOutput, decoder.decode(value, { stream: true }));
       }
     } catch (error) {
-      setOutput(
-        `Error:\nCould not reach /api/generate/stream.\n\n${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
+      setOutput(`Error:\nCould not reach the generation endpoint.\n\n${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setIsLoading(false);
     }
@@ -171,9 +165,7 @@ Get more credits: /pricing`
         <div>
           <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-xl font-semibold text-white">Create Your Content</h2>
-            <span className="inline-flex w-fit items-center rounded-full border border-emerald-400/25 bg-emerald-400/10 px-4 py-1.5 text-xs font-semibold text-emerald-200">
-              {creditEstimate.label}
-            </span>
+            <span className="inline-flex w-fit items-center rounded-full border border-emerald-400/25 bg-emerald-400/10 px-4 py-1.5 text-xs font-semibold text-emerald-200">{creditEstimate.label}</span>
           </div>
 
           <form onSubmit={handleSubmit} className="rounded-2xl border border-purple-500/20 bg-white/5 p-8 backdrop-blur-sm transition-all duration-200 hover:border-purple-500/40">
@@ -184,76 +176,34 @@ Get more credits: /pricing`
                     {input.label}{input.required && <span className="ml-1 text-pink-400">*</span>}
                   </label>
 
-                  {input.type === "textarea" ? (
-                    <textarea
-                      id={input.id}
-                      placeholder={input.placeholder}
-                      value={formData[input.id] || ""}
-                      onChange={handleInputChange}
-                      required={input.required}
-                      className="h-28 w-full resize-none rounded-xl border border-purple-500/20 bg-white/5 px-4 py-3 text-white placeholder-gray-500 transition-all duration-200 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    />
+                  {input.type === "image" ? (
+                    <div className="rounded-2xl border border-dashed border-pink-300/25 bg-pink-400/5 p-4">
+                      <input id={input.id} type="file" accept="image/*" onChange={handleFileInput} required={input.required && !formData[input.id]} className="w-full cursor-pointer rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white file:mr-4 file:rounded-full file:border-0 file:bg-pink-500/20 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-pink-100" />
+                      {formData[input.id] ? <p className="mt-3 text-xs text-pink-100">Image ready: {formData.image_name || "uploaded image"}</p> : <p className="mt-3 text-xs text-slate-400">Choose a clear image under 4 MB.</p>}
+                    </div>
+                  ) : input.type === "textarea" ? (
+                    <textarea id={input.id} placeholder={input.placeholder} value={formData[input.id] || ""} onChange={handleInputChange} required={input.required} className="h-28 w-full resize-none rounded-xl border border-purple-500/20 bg-white/5 px-4 py-3 text-white placeholder-gray-500 transition-all duration-200 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-purple-500" />
                   ) : input.type === "select" ? (
-                    <select
-                      id={input.id}
-                      value={formData[input.id] || ""}
-                      onChange={handleInputChange}
-                      required={input.required}
-                      className="w-full cursor-pointer appearance-none rounded-xl border border-purple-500/20 bg-white/5 px-4 py-3 text-white transition-all duration-200 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    >
+                    <select id={input.id} value={formData[input.id] || ""} onChange={handleInputChange} required={input.required} className="w-full cursor-pointer appearance-none rounded-xl border border-purple-500/20 bg-white/5 px-4 py-3 text-white transition-all duration-200 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-purple-500">
                       <option value="" className="bg-black text-white">Select an option</option>
-                      {input.options?.map((option) => (
-                        <option key={option} value={option} className="bg-black text-white">{option}</option>
-                      ))}
+                      {input.options?.map((option) => <option key={option} value={option} className="bg-black text-white">{option}</option>)}
                     </select>
                   ) : (
-                    <input
-                      id={input.id}
-                      type="text"
-                      placeholder={input.placeholder}
-                      value={formData[input.id] || ""}
-                      onChange={handleInputChange}
-                      required={input.required}
-                      className="w-full rounded-xl border border-purple-500/20 bg-white/5 px-4 py-3 text-white placeholder-gray-500 transition-all duration-200 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    />
+                    <input id={input.id} type="text" placeholder={input.placeholder} value={formData[input.id] || ""} onChange={handleInputChange} required={input.required} className="w-full rounded-xl border border-purple-500/20 bg-white/5 px-4 py-3 text-white placeholder-gray-500 transition-all duration-200 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-purple-500" />
                   )}
                 </div>
               ))}
 
               {showCalendarCustomPostCount ? (
                 <div className="space-y-3">
-                  <label htmlFor="custom_post_count" className="block text-sm font-semibold text-white">
-                    How many posts? <span className="ml-1 text-pink-400">*</span>
-                    <span className="ml-2 text-xs font-medium text-gray-400">1–19 only</span>
-                  </label>
-                  <input
-                    id="custom_post_count"
-                    type="number"
-                    min={1}
-                    max={19}
-                    step={1}
-                    placeholder="Enter a number under 20"
-                    value={formData.custom_post_count || ""}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full rounded-xl border border-purple-500/20 bg-white/5 px-4 py-3 text-white placeholder-gray-500 transition-all duration-200 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  />
+                  <label htmlFor="custom_post_count" className="block text-sm font-semibold text-white">How many posts? <span className="ml-1 text-pink-400">*</span><span className="ml-2 text-xs font-medium text-gray-400">1–19 only</span></label>
+                  <input id="custom_post_count" type="number" min={1} max={19} step={1} placeholder="Enter a number under 20" value={formData.custom_post_count || ""} onChange={handleInputChange} required className="w-full rounded-xl border border-purple-500/20 bg-white/5 px-4 py-3 text-white placeholder-gray-500 transition-all duration-200 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-purple-500" />
                 </div>
               ) : null}
             </div>
 
             <button type="submit" disabled={isLoading} className="mt-8 flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-3 font-semibold text-white shadow-lg shadow-purple-500/20 transition-all duration-200 hover:from-indigo-700 hover:to-purple-700 hover:shadow-purple-500/40 disabled:from-indigo-600/50 disabled:to-purple-600/50">
-              {isLoading ? (
-                <>
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <ThemeIcon name="spark" size="xs" />
-                  Generate — {creditCost} credits
-                </>
-              )}
+              {isLoading ? <><span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />Generating...</> : <><ThemeIcon name="spark" size="xs" />Generate — {creditCost} credits</>}
             </button>
           </form>
         </div>
@@ -267,49 +217,17 @@ Get more credits: /pricing`
             <li className="flex gap-4"><span className="min-w-6 font-semibold text-purple-400">4.</span><span>Copy, download, or continue with the current result when it is ready.</span></li>
           </ol>
         </div>
-
-        <div className="rounded-2xl border border-blue-500/30 bg-blue-500/10 p-7 backdrop-blur-sm">
-          <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-blue-300">
-            <ThemeIcon name="idea" size="xs" className="text-amber-300 drop-shadow-[0_0_10px_rgba(251,191,36,0.65)]" />
-            Pro Tips
-          </h3>
-          <ul className="space-y-3 text-sm leading-relaxed text-blue-200">
-            <li>• Be specific in your inputs for better results.</li>
-            <li>• Longer or more complex outputs can cost more credits.</li>
-            <li>• Run another generation when testing a different angle.</li>
-          </ul>
-        </div>
-
-        <div className="rounded-2xl border border-purple-500/20 bg-purple-500/10 p-7 backdrop-blur-sm">
-          <h3 className="mb-3 flex items-center gap-2 text-lg font-semibold text-purple-200">
-            <ThemeIcon name="bolt" size="xs" />
-            Live AI Generation
-          </h3>
-          <p className="text-sm leading-relaxed text-purple-100/80">Creator streams text output into this page. Review factual claims before publishing.</p>
-        </div>
       </div>
 
       <div className="space-y-6 lg:sticky lg:top-28">
         {showEditableOutline ? (
           <EditableBlogOutlinePanel output={output} inputs={formData} />
+        ) : useImageCaptionEditor ? (
+          <ImageToInstagramCaptionPanel isLoading={isLoading} output={output} inputs={formData} />
         ) : usePresetEditor ? (
-          <PresetBlogOutputPanel
-            isLoading={isLoading}
-            output={output}
-            recommendedNextActions={tool.nextActions}
-            downloadFileBaseName={`${tool.slug}-output`}
-            toolSlug={tool.slug}
-            inputs={formData}
-          />
+          <PresetBlogOutputPanel isLoading={isLoading} output={output} recommendedNextActions={tool.nextActions} downloadFileBaseName={`${tool.slug}-output`} toolSlug={tool.slug} inputs={formData} />
         ) : (
-          <OutputPanel
-            isLoading={isLoading}
-            output={output}
-            recommendedNextActions={tool.nextActions}
-            downloadFileBaseName={`${tool.slug}-output`}
-            toolSlug={tool.slug}
-            inputs={formData}
-          />
+          <OutputPanel isLoading={isLoading} output={output} recommendedNextActions={tool.nextActions} downloadFileBaseName={`${tool.slug}-output`} toolSlug={tool.slug} inputs={formData} />
         )}
       </div>
     </div>
