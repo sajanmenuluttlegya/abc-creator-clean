@@ -1,10 +1,27 @@
 import { getServerPrompt as getBaseServerPrompt, validateToolInputs as validateBaseToolInputs } from "./server-prompts";
 import { serverSocialTools } from "./server-social-tools";
+import { serverGeneralTools } from "./server-general-tools";
 
 type ValidationResult = { ok: true } | { ok: false; field?: string; error: string };
 
-function validateSocialTool(toolSlug: string, inputs: Record<string, string>): ValidationResult {
-  const tool = serverSocialTools[toolSlug];
+type ToolFieldRule = {
+  id: string;
+  label: string;
+  required?: boolean;
+  minLength?: number;
+  maxLength?: number;
+};
+
+type RegisteredServerTool = {
+  requiredInputs: ToolFieldRule[];
+};
+
+function getRegisteredTool(toolSlug: string): RegisteredServerTool | undefined {
+  return serverSocialTools[toolSlug] || serverGeneralTools[toolSlug];
+}
+
+function validateRegisteredTool(toolSlug: string, inputs: Record<string, string>): ValidationResult {
+  const tool = getRegisteredTool(toolSlug);
   if (!tool) return { ok: false, error: `Unknown tool: ${toolSlug}` };
 
   for (const field of tool.requiredInputs) {
@@ -28,9 +45,9 @@ function validateSocialTool(toolSlug: string, inputs: Record<string, string>): V
 }
 
 export function getServerPrompt(toolSlug: string) {
-  return serverSocialTools[toolSlug] || getBaseServerPrompt(toolSlug);
+  return serverSocialTools[toolSlug] || serverGeneralTools[toolSlug] || getBaseServerPrompt(toolSlug);
 }
 
 export function validateToolInputs(toolSlug: string, inputs: Record<string, string>): ValidationResult {
-  return serverSocialTools[toolSlug] ? validateSocialTool(toolSlug, inputs) : validateBaseToolInputs(toolSlug, inputs);
+  return getRegisteredTool(toolSlug) ? validateRegisteredTool(toolSlug, inputs) : validateBaseToolInputs(toolSlug, inputs);
 }
