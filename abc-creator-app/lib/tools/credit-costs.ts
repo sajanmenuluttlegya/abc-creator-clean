@@ -8,16 +8,30 @@ export type CreditEstimate = {
   label: string;
 };
 
-export const IMAGE_CREDITS_PER_IMAGE = 0;
+export const IMAGE_CREDITS_PER_IMAGE = 1;
 export const IMAGE_EDIT_CREDITS = 1;
 
 export const IMAGE_GENERATION_TOOL_SLUGS = [
+  "blog-topic-ideas",
+  "blog-outline",
   "blog-content",
   "pro-image-brief-for-blog",
+  "blog-seo-pack",
   "quick-1-click-blog-post",
   "human-style-blog-post",
   "seo-optimized-blog-post",
   "advanced-blog-post",
+  "rewrite-article-with-keywords",
+  "blog-content-calendar",
+  "blog-title-generator",
+  "blog-intro-generator",
+  "blog-conclusion-generator",
+  "faq-generator",
+  "facebook-ad-copy",
+  "product-description",
+  "image-to-instagram-caption",
+  "instagram-page-name-bio-generator",
+  "social-media-bio-generator",
 ] as const;
 
 const BASE_TOOL_CREDITS: Record<string, number> = {
