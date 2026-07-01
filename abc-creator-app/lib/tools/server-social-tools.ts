@@ -25,6 +25,15 @@ Social media rules:
 - Keep hashtags relevant and non-spammy.
 - Write clean Markdown that can be edited, copied, or reordered in the output panel.`;
 
+const bioCommonRules = `
+Profile and bio rules:
+- Do not claim a username, handle, domain, or page name is available unless an availability checker was actually used.
+- Do not promise follower growth, verification, blue ticks, reach, ranking, revenue, or conversion results.
+- Keep bios platform-native, concise, memorable, and easy to paste.
+- Include CTA options only when useful or supplied by the user.
+- Avoid fake awards, certifications, locations, guarantees, and metrics.
+- Output clean Markdown with ## sections and ### item headings for the editable output panel.`;
+
 export const serverSocialTools: Record<string, ServerPrompt> = {
   "image-to-instagram-caption": {
     creditCost: 3,
@@ -58,5 +67,59 @@ Instagram caption rules:
 - Output must be easy for the editor to split into movable blocks: use clear ## sections and ### item headings.`,
     outputGuide:
       "Return a premium Instagram caption package in Markdown. Use this structure: # Instagram Caption Package; ## Source Read; ## Caption Strategy; ## Caption Variations with each option as ### Caption 1, ### Caption 2, etc.; ## Best Pick; ## CTA Variations; ## Hashtag Sets only if hashtags are requested; ## Alt Text or Suggested Visual Direction; ## Avoid / Verify Notes. For each caption include the caption text, angle, best use case, and a short reason it works. Do not invent visible details, pricing, claims, location, or results.",
+  },
+  "instagram-page-name-bio-generator": {
+    creditCost: 1,
+    requiredInputs: [
+      { id: "brand_or_creator_name", label: "Brand / creator name", required: true, minLength: 2, maxLength: 140 },
+      { id: "niche", label: "Niche / industry", required: true, minLength: 2, maxLength: 200 },
+      { id: "audience", label: "Audience", required: true, minLength: 2, maxLength: 120 },
+      { id: "profile_goal", label: "Profile goal", required: true, minLength: 2, maxLength: 120 },
+      { id: "tone", label: "Tone", required: true, minLength: 2, maxLength: 120 },
+      { id: "bio_style", label: "Bio style", required: true, minLength: 2, maxLength: 120 },
+      { id: "keywords", label: "Keywords", required: false, maxLength: 300 },
+      { id: "cta", label: "CTA / link direction", required: false, maxLength: 180 },
+      { id: "language", label: "Language", required: true, minLength: 2, maxLength: 80 },
+      { id: "avoid", label: "Words / claims to avoid", required: false, maxLength: 1200 },
+    ],
+    system: `You are ABC Creator's premium Instagram profile strategist. You create polished Instagram page names, handle ideas, and bio options that feel professional, memorable, and platform-native.
+
+${bioCommonRules}
+
+Instagram profile rules:
+- Generate page name ideas, handle ideas, bio variations, CTA lines, and positioning notes.
+- Keep handle ideas practical and brandable, but clearly state that availability is not checked.
+- Make bios concise enough for Instagram and avoid overstuffing keywords.
+- Use emojis only if they match the selected tone and style.
+- Make each option distinct, not repetitive.`,
+    outputGuide:
+      "Return a premium Instagram profile package in Markdown. Use this structure: # Instagram Page Name & Bio Package; ## Profile Positioning; ## Premium Page Name Ideas with each as ### Name Idea 1, etc.; ## Username / Handle Ideas; ## Instagram Bio Variations with sections for short, professional, creator-style, sales-focused, and minimal aesthetic bios; ## CTA Options; ## Best Pick; ## Avoid / Verify Notes. Clearly state that username availability was not checked.",
+  },
+  "social-media-bio-generator": {
+    creditCost: 1,
+    requiredInputs: [
+      { id: "name_or_brand", label: "Name / brand", required: true, minLength: 2, maxLength: 140 },
+      { id: "platform", label: "Platform", required: true, minLength: 2, maxLength: 80 },
+      { id: "niche", label: "Niche / industry", required: true, minLength: 2, maxLength: 200 },
+      { id: "audience", label: "Audience", required: true, minLength: 2, maxLength: 120 },
+      { id: "main_offer", label: "Main offer / identity", required: true, minLength: 10, maxLength: 1200 },
+      { id: "tone", label: "Tone", required: true, minLength: 2, maxLength: 120 },
+      { id: "bio_length", label: "Bio length", required: true, minLength: 2, maxLength: 80 },
+      { id: "cta", label: "CTA", required: false, maxLength: 180 },
+      { id: "keywords", label: "Keywords", required: false, maxLength: 300 },
+      { id: "language", label: "Language", required: true, minLength: 2, maxLength: 80 },
+      { id: "avoid", label: "Words / claims to avoid", required: false, maxLength: 1200 },
+    ],
+    system: `You are ABC Creator's premium social profile copywriter. You create polished bios that fit the selected platform, audience, identity, CTA, and tone.
+
+${bioCommonRules}
+
+Social bio rules:
+- Adapt the structure to the selected platform instead of using one generic bio for every platform.
+- Keep each option distinct: professional, creator, friendly, sales-focused, and minimal when useful.
+- For LinkedIn, make it credible and professional. For TikTok/Instagram, make it punchier. For X, make it compact. For YouTube, make it channel-positioned.
+- Do not claim platform-specific limits are exact unless the user supplied them. Keep options practical and concise.`,
+    outputGuide:
+      "Return a premium social media bio package in Markdown. Use this structure: # Social Media Bio Package; ## Platform Strategy; ## Bio Variations with each option as ### Bio 1, ### Bio 2, etc.; ## CTA Variations; ## Keyword / Positioning Notes; ## Best Pick; ## Avoid / Verify Notes. Include concise reasons for why the strongest options work. Do not claim availability, guaranteed growth, verification, ranking, or metrics.",
   },
 };
