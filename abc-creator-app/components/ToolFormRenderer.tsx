@@ -17,6 +17,19 @@ const BLOG_OUTLINE_HANDOFF_KEY = "abc_creator_blog_outline_handoff";
 const CALENDAR_CUSTOM_FREQUENCY_OPTION = "Custom frequency in context";
 const IMAGE_CAPTION_TOOL = "image-to-instagram-caption";
 const presetBlogEditorTools = new Set(["quick-1-click-blog-post", "human-style-blog-post", "seo-optimized-blog-post", "advanced-blog-post"]);
+const blogOutputSideImageTools = new Set([
+  "blog-topic-ideas",
+  "blog-outline",
+  "blog-content",
+  "pro-image-brief-for-blog",
+  "blog-seo-pack",
+  "blog-content-calendar",
+  "blog-title-generator",
+  "blog-intro-generator",
+  "blog-conclusion-generator",
+  "faq-generator",
+  "rewrite-article-with-keywords",
+]);
 
 function wait(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
@@ -42,6 +55,7 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
   const showEditableOutline = tool.slug === "blog-outline" && Boolean(output.trim()) && !isLoading && !isErrorOutput;
   const usePresetEditor = presetBlogEditorTools.has(tool.slug);
   const useImageCaptionEditor = tool.slug === IMAGE_CAPTION_TOOL;
+  const allowOutputSideImages = blogOutputSideImageTools.has(tool.slug) || usePresetEditor;
   const showCalendarCustomPostCount = tool.slug === "blog-content-calendar" && formData.posting_frequency === CALENDAR_CUSTOM_FREQUENCY_OPTION;
 
   useEffect(() => {
@@ -218,7 +232,10 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
         </div>
       </div>
 
-      <div className="space-y-6 lg:sticky lg:top-28">
+      <div className={`space-y-6 lg:sticky lg:top-28 ${allowOutputSideImages ? "" : "hide-output-side-image-controls"}`}>
+        {!allowOutputSideImages ? (
+          <style>{`.hide-output-side-image-controls button[aria-label="Add image beside this output section"]{display:none!important;}`}</style>
+        ) : null}
         {showEditableOutline ? (
           <EditableBlogOutlinePanel output={output} inputs={formData} />
         ) : useImageCaptionEditor ? (
