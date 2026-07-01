@@ -26,10 +26,7 @@ type PublicSocialTool = {
   inputs: PublicSocialToolInput[];
 };
 
-const sourceModeOptions = [
-  "Analyze uploaded image",
-  "Write from text/context only",
-];
+const sourceModeOptions = ["Analyze uploaded image", "Write from text/context only"];
 
 const audienceOptions = [
   "General audience",
@@ -42,16 +39,7 @@ const audienceOptions = [
   "Professionals",
 ];
 
-const languageOptions = [
-  "English",
-  "Hindi",
-  "Hinglish",
-  "Spanish",
-  "French",
-  "German",
-  "Portuguese",
-  "Arabic",
-];
+const languageOptions = ["English", "Hindi", "Hinglish", "Spanish", "French", "German", "Portuguese", "Arabic"];
 
 const instagramToneOptions = [
   "Premium and polished",
@@ -75,32 +63,44 @@ const instagramGoalOptions = [
   "Event or announcement",
 ];
 
-const captionLengthOptions = [
-  "Short captions",
-  "Medium captions",
-  "Long storytelling captions",
-  "Mixed lengths",
+const captionLengthOptions = ["Short captions", "Medium captions", "Long storytelling captions", "Mixed lengths"];
+const captionCountOptions = ["5 caption variations", "8 caption variations", "12 caption variations"];
+const hashtagModeOptions = ["No hashtags", "Light hashtags", "Balanced hashtags", "Hashtag sets by intent"];
+const emojiModeOptions = ["No emojis", "Light emojis", "Balanced emojis", "Match the image mood"];
+
+const profileGoalOptions = [
+  "Grow followers",
+  "Get profile visits",
+  "Sell a product or service",
+  "Book calls / leads",
+  "Build personal brand",
+  "Promote local business",
+  "Creator portfolio",
+  "Community building",
 ];
 
-const captionCountOptions = [
-  "5 caption variations",
-  "8 caption variations",
-  "12 caption variations",
+const bioStyleOptions = [
+  "Clean professional",
+  "Premium brand",
+  "Creator / personal brand",
+  "Sales-focused",
+  "Minimal aesthetic",
+  "Friendly and approachable",
+  "Bold and memorable",
 ];
 
-const hashtagModeOptions = [
-  "No hashtags",
-  "Light hashtags",
-  "Balanced hashtags",
-  "Hashtag sets by intent",
+const socialPlatformOptions = [
+  "Instagram",
+  "TikTok",
+  "X / Twitter",
+  "LinkedIn",
+  "Facebook",
+  "Pinterest",
+  "YouTube",
+  "General social bio",
 ];
 
-const emojiModeOptions = [
-  "No emojis",
-  "Light emojis",
-  "Balanced emojis",
-  "Match the image mood",
-];
+const bioLengthOptions = ["Very short", "Short", "Medium", "Platform-max optimized"];
 
 export const socialTools: PublicSocialTool[] = [
   {
@@ -149,6 +149,62 @@ export const socialTools: PublicSocialTool[] = [
       { id: "cta", label: "CTA / Next Step", type: "text", placeholder: "Optional: Shop now, comment YES, DM us, book a call, save this post", required: false },
       { id: "language", label: "Language", type: "select", required: true, options: languageOptions },
       { id: "avoid", label: "Words / Claims to Avoid", type: "textarea", placeholder: "Optional: banned words, claims you cannot make, competitor names, pricing, guarantees, or compliance notes.", required: false },
+    ],
+  },
+  {
+    id: "instagram-page-name-bio-generator",
+    slug: "instagram-page-name-bio-generator",
+    name: "Instagram Page Name & Bio Generator",
+    description: "Create premium Instagram page names, handle ideas, bio options, CTAs, and positioning notes.",
+    icon: "instagram",
+    detailEmoji: "✨",
+    category: "Social Media Tools",
+    displayCreditCost: 1,
+    outputType: "text",
+    aliases: ["instagram-bio-generator", "instagram-page-name-generator", "instagram-name-bio", "instagram-profile-bio"],
+    nextActions: [
+      { label: "Generate Instagram captions", href: "/tools/image-to-instagram-caption", description: "Turn the profile direction into post captions." },
+      { label: "Plan a social calendar", href: "/tools/social-media-calendar", description: "Map the profile positioning into weekly content ideas." },
+    ],
+    inputs: [
+      { id: "brand_or_creator_name", label: "Brand / Creator Name", type: "text", placeholder: "e.g., Luna Skincare, Arjun Fitness, Urban Brew", required: true },
+      { id: "niche", label: "Niche / Industry", type: "text", placeholder: "e.g., skincare for college students, fitness for busy founders", required: true },
+      { id: "audience", label: "Audience", type: "select", required: true, options: audienceOptions },
+      { id: "profile_goal", label: "Profile Goal", type: "select", required: true, options: profileGoalOptions },
+      { id: "tone", label: "Tone", type: "select", required: true, options: instagramToneOptions },
+      { id: "bio_style", label: "Bio Style", type: "select", required: true, options: bioStyleOptions },
+      { id: "keywords", label: "Keywords to Include", type: "text", placeholder: "Optional: clean beauty, meal prep, AI automation, wedding photography", required: false },
+      { id: "cta", label: "CTA / Link Direction", type: "text", placeholder: "Optional: DM START, shop below, book a call, join newsletter", required: false },
+      { id: "language", label: "Language", type: "select", required: true, options: languageOptions },
+      { id: "avoid", label: "Words / Claims to Avoid", type: "textarea", placeholder: "Optional: words, claims, emojis, or positioning you do not want.", required: false },
+    ],
+  },
+  {
+    id: "social-media-bio-generator",
+    slug: "social-media-bio-generator",
+    name: "Social Media Bio Generator",
+    description: "Generate polished platform-ready bios for Instagram, TikTok, X, LinkedIn, Facebook, Pinterest, YouTube, and more.",
+    icon: "writing-pad",
+    detailEmoji: "👤",
+    category: "Social Media Tools",
+    displayCreditCost: 1,
+    outputType: "text",
+    aliases: ["social-media-bio", "profile-bio-generator", "bio-generator", "creator-bio-generator"],
+    nextActions: [
+      { label: "Generate Instagram captions", href: "/tools/image-to-instagram-caption", description: "Create post captions after the profile bio is ready." },
+    ],
+    inputs: [
+      { id: "name_or_brand", label: "Name / Brand", type: "text", placeholder: "e.g., Priya Sharma, NorthStar Coaching, Cafe Bloom", required: true },
+      { id: "platform", label: "Platform", type: "select", required: true, options: socialPlatformOptions },
+      { id: "niche", label: "Niche / Industry", type: "text", placeholder: "e.g., personal finance, SaaS design, handmade jewelry", required: true },
+      { id: "audience", label: "Audience", type: "select", required: true, options: audienceOptions },
+      { id: "main_offer", label: "Main Offer / Identity", type: "textarea", placeholder: "What do you help people do? What do you sell, teach, create, or represent?", required: true },
+      { id: "tone", label: "Tone", type: "select", required: true, options: instagramToneOptions },
+      { id: "bio_length", label: "Bio Length", type: "select", required: true, options: bioLengthOptions },
+      { id: "cta", label: "CTA", type: "text", placeholder: "Optional: DM me, subscribe, shop, book, download, join", required: false },
+      { id: "keywords", label: "Keywords", type: "text", placeholder: "Optional: founder, luxury travel, keto recipes, B2B sales", required: false },
+      { id: "language", label: "Language", type: "select", required: true, options: languageOptions },
+      { id: "avoid", label: "Words / Claims to Avoid", type: "textarea", placeholder: "Optional: banned words, claims, tone notes, emojis to avoid.", required: false },
     ],
   },
 ];
