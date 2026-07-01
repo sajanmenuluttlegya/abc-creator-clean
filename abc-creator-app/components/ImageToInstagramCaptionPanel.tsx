@@ -24,16 +24,22 @@ function cleanTitle(value: string) {
   return value.replace(/^#+\s*/, "").replace(/[*_`]/g, "").trim() || "Untitled block";
 }
 
+function finishBlock(block: CaptionBlock | null): CaptionBlock | null {
+  if (!block) return null;
+  return { id: block.id, level: block.level, title: block.title, body: block.body.trim(), enabled: block.enabled };
+}
+
 function parseCaptionBlocks(markdown: string): CaptionBlock[] {
   const lines = markdown.replace(/\r\n/g, "\n").split("\n");
   const blocks: CaptionBlock[] = [];
   let current: CaptionBlock | null = null;
 
-  lines.forEach((line) => {
+  for (const line of lines) {
     const heading = /^(#{1,3})\s+(.+)$/.exec(line.trim());
 
     if (heading) {
-      if (current) blocks.push({ ...current, body: current.body.trim() });
+      const finished = finishBlock(current);
+      if (finished) blocks.push(finished);
       current = {
         id: makeId(),
         level: Math.min(heading[1].length, 3) as 1 | 2 | 3,
@@ -41,7 +47,7 @@ function parseCaptionBlocks(markdown: string): CaptionBlock[] {
         body: "",
         enabled: true,
       };
-      return;
+      continue;
     }
 
     if (!current) {
@@ -55,9 +61,11 @@ function parseCaptionBlocks(markdown: string): CaptionBlock[] {
     }
 
     current.body += `${line}\n`;
-  });
+  }
 
-  if (current) blocks.push({ ...current, body: current.body.trim() });
+  const finished = finishBlock(current);
+  if (finished) blocks.push(finished);
+
   return blocks.length ? blocks : [{ id: makeId(), level: 2, title: "Generated Instagram Captions", body: markdown.trim(), enabled: true }];
 }
 
