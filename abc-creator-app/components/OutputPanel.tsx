@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { Components } from "react-markdown";
@@ -22,6 +22,11 @@ type OutputPanelDownloadFormat = OutputDownloadFormat | "html";
 type MarkdownDiagramSegment =
   | { type: "markdown"; content: string; id: string }
   | { type: "diagram"; id: string; spec: DiagramSpec | null };
+
+type DeletableOutputBlock = {
+  id: string;
+  content: string;
+};
 
 interface OutputPanelProps {
   isLoading: boolean;
@@ -113,14 +118,18 @@ const markdownComponents: Components = {
   ),
 };
 
-function isRemovedBlogSectionHeading(line: string) {
-  const normalized = line
+function normalizeHeadingLabel(line: string) {
+  return line
     .replace(/^#{1,6}\s*/, "")
     .replace(/^\d+[.)]\s*/, "")
     .replace(/[*_`]/g, "")
     .replace(/:$/, "")
     .trim()
     .toLowerCase();
+}
+
+function isRemovedBlogSectionHeading(line: string) {
+  const normalized = normalizeHeadingLabel(line);
 
   return (
     normalized === "verify before publishing notes" ||
@@ -128,7 +137,17 @@ function isRemovedBlogSectionHeading(line: string) {
     normalized === "final on-page seo checklist" ||
     normalized === "on-page seo checklist" ||
     normalized === "final seo checklist" ||
-    normalized === "publisher notes"
+    normalized === "publisher notes" ||
+    normalized === "meta data suggestions" ||
+    normalized === "metadata suggestions" ||
+    normalized === "meta title" ||
+    normalized === "meta description" ||
+    normalized === "slug" ||
+    normalized === "internal link placeholder ideas" ||
+    normalized === "internal-link placeholder ideas" ||
+    normalized === "change log" ||
+    normalized === "verification checklist" ||
+    normalized === "verification checklist for factual claims"
   );
 }
 
@@ -152,6 +171,33 @@ function cleanOutputForDisplay(value: string) {
   }
 
   return kept.join("\n").replace(/\n{4,}/g, "\n\n\n").trim();
+}
+
+function splitOutputIntoDeletableBlocks(markdown: string): DeletableOutputBlock[] {
+  const lines = markdown.replace(/\r\n/g, "\n").split("\n");
+  const blocks: DeletableOutputBlock[] = [];
+  let current: string[] = [];
+  let blockIndex = 0;
+  let inFence = false;
+
+  const pushCurrent = () => {
+    const content = current.join("\n").trim();
+    if (!content) return;
+    blockIndex += 1;
+    blocks.push({ id: `output-block-${blockIndex}`, content });
+    current = [];
+  };
+
+  for (const line of lines) {
+    if (line.trim().startsWith("```")) inFence = !inFence;
+    const isSectionHeading = !inFence && /^#{1,3}\s+/.test(line.trim());
+
+    if (isSectionHeading && current.length > 0) pushCurrent();
+    current.push(line);
+  }
+
+  pushCurrent();
+  return blocks.length ? blocks : [{ id: "output-block-1", content: markdown.trim() }];
 }
 
 function splitMarkdownIntoDiagramSegments(markdown: string, prefix: string): MarkdownDiagramSegment[] {
@@ -234,19 +280,33 @@ export function OutputPanel({
   const [copied, setCopied] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState("");
+  const [deletedBlockIds, setDeletedBlockIds] = useState<Set<string>>(() => new Set());
   const exportContentRef = useRef<HTMLDivElement | null>(null);
   const displayOutput = useMemo(() => cleanOutputForDisplay(output), [output]);
+  const outputBlocks = useMemo(() => splitOutputIntoDeletableBlocks(displayOutput), [displayOutput]);
+  const visibleOutputBlocks = useMemo(
+    () => outputBlocks.filter((block) => !deletedBlockIds.has(block.id)),
+    [outputBlocks, deletedBlockIds]
+  );
+  const exportOutput = useMemo(
+    () => visibleOutputBlocks.map((block) => block.content).join("\n\n").trim(),
+    [visibleOutputBlocks]
+  );
   const hasOutput = Boolean(displayOutput.trim());
+  const hasVisibleOutput = Boolean(exportOutput.trim());
   const isStreamingVisible = isLoading && hasOutput;
   const isErrorOutput = /^(error:|not enough credits)/i.test(displayOutput.trim());
   const showNextActions =
-    hasOutput && !isLoading && !isErrorOutput && recommendedNextActions.length > 0;
-  const outputSegments = useMemo(() => splitOutputIntoImageSegments(displayOutput), [displayOutput]);
+    hasVisibleOutput && !isLoading && !isErrorOutput && recommendedNextActions.length > 0;
   const autoGenerateBlogImages = shouldAutoGenerateBlogImages(toolSlug, inputs, isLoading);
+
+  useEffect(() => {
+    setDeletedBlockIds(new Set());
+  }, [displayOutput]);
 
   const fallbackCopy = () => {
     const textarea = document.createElement("textarea");
-    textarea.value = displayOutput;
+    textarea.value = exportOutput;
     textarea.setAttribute("readonly", "true");
     textarea.style.position = "fixed";
     textarea.style.left = "-9999px";
@@ -259,10 +319,10 @@ export function OutputPanel({
   };
 
   const copyOutput = async () => {
-    if (!displayOutput) return;
+    if (!exportOutput) return;
 
     try {
-      if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(displayOutput);
+      if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(exportOutput);
       else fallbackCopy();
 
       setCopied(true);
@@ -295,7 +355,7 @@ export function OutputPanel({
 
     const outputField = document.createElement("textarea");
     outputField.name = "output";
-    outputField.value = displayOutput;
+    outputField.value = exportOutput;
     form.appendChild(outputField);
 
     const fileNameField = document.createElement("input");
@@ -319,14 +379,14 @@ export function OutputPanel({
   };
 
   const handleDownload = async (format: OutputPanelDownloadFormat) => {
-    if (!format || !displayOutput || isDownloading) return;
+    if (!format || !exportOutput || isDownloading) return;
 
     setIsDownloading(true);
     setDownloadError("");
 
     try {
       if (format === "html") {
-        downloadHtmlOutput(displayOutput, downloadFileBaseName, exportContentRef.current);
+        downloadHtmlOutput(exportOutput, downloadFileBaseName, exportContentRef.current);
         setIsDownloading(false);
         return;
       }
@@ -339,7 +399,7 @@ export function OutputPanel({
 
       await downloadOutput(
         format,
-        displayOutput,
+        exportOutput,
         downloadFileBaseName,
         exportContentRef.current
       );
@@ -352,6 +412,14 @@ export function OutputPanel({
       );
       setIsDownloading(false);
     }
+  };
+
+  const deleteOutputBlock = (blockId: string) => {
+    setDeletedBlockIds((current) => {
+      const next = new Set(current);
+      next.add(blockId);
+      return next;
+    });
   };
 
   return (
@@ -379,7 +447,7 @@ export function OutputPanel({
           ) : null}
         </div>
 
-        {hasOutput ? (
+        {hasVisibleOutput ? (
           <div className="flex flex-wrap items-center gap-3">
             <button
               type="button"
@@ -429,20 +497,41 @@ export function OutputPanel({
       {hasOutput ? (
         <>
           <div ref={exportContentRef} className="creator-output-scroll max-h-[78vh] overflow-y-auto overflow-x-hidden rounded-2xl border border-purple-500/15 bg-black/70 p-6 text-gray-200">
-            {outputSegments.map((segment) =>
-              segment.type === "image" ? (
-                <InlineImageBlock
-                  key={segment.id}
-                  blockId={segment.id}
-                  markdown={segment.content}
-                  prompt={segment.prompt}
-                  toolSlug={toolSlug}
-                  inputs={inputs}
-                  autoGenerate={autoGenerateBlogImages}
-                />
-              ) : (
-                <div key={segment.id}>{renderMarkdownWithDiagrams(segment.content, segment.id)}</div>
-              )
+            {visibleOutputBlocks.length ? (
+              visibleOutputBlocks.map((block) => (
+                <div key={block.id} className="group relative rounded-2xl border border-transparent p-1 transition hover:border-red-300/20 hover:bg-white/[0.015]">
+                  <button
+                    type="button"
+                    aria-label="Delete this output section"
+                    title="Delete this output section"
+                    onClick={() => deleteOutputBlock(block.id)}
+                    className="absolute right-2 top-2 z-10 inline-flex h-8 w-8 items-center justify-center rounded-full border border-red-300/30 bg-red-500/15 text-sm text-red-100 opacity-0 shadow-lg shadow-red-950/20 transition hover:bg-red-500/25 group-hover:opacity-100"
+                  >
+                    🗑
+                  </button>
+                  <div className="pr-8">
+                    {splitOutputIntoImageSegments(block.content).map((segment) =>
+                      segment.type === "image" ? (
+                        <InlineImageBlock
+                          key={segment.id}
+                          blockId={segment.id}
+                          markdown={segment.content}
+                          prompt={segment.prompt}
+                          toolSlug={toolSlug}
+                          inputs={inputs}
+                          autoGenerate={autoGenerateBlogImages}
+                        />
+                      ) : (
+                        <div key={segment.id}>{renderMarkdownWithDiagrams(segment.content, segment.id)}</div>
+                      )
+                    )}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="rounded-2xl border border-red-300/20 bg-red-500/10 p-5 text-sm text-red-100">
+                All output sections were deleted. Run the tool again to regenerate the output.
+              </div>
             )}
 
             {isStreamingVisible ? (
