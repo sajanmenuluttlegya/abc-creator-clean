@@ -38,6 +38,13 @@ type SpendReservationResult =
   | { ok: true }
   | { ok: false; response: Response };
 
+const articleStructureTools = new Set([
+  "human-style-blog-post",
+  "seo-optimized-blog-post",
+  "advanced-blog-post",
+  "quick-1-click-blog-post",
+]);
+
 function env(name: string, fallback = "") {
   return process.env[name] || fallback;
 }
@@ -67,6 +74,12 @@ function getOpenRouterModels() {
     env("OPENROUTER_DEEPSEEK_FLASH_MODEL", "deepseek/deepseek-v4-flash"),
     env("OPENROUTER_GEMINI_PRO_MODEL", "google/gemini-2.5-pro"),
   ]);
+}
+
+function buildArticleStructureInstructions(toolSlug: string) {
+  if (!articleStructureTools.has(toolSlug)) return "";
+
+  return `\n\nMandatory article structure guard:\n- Use real Markdown headings, never plain standalone section labels.\n- Start with exactly one # H1 article title.\n- Use ## H2 for major sections and ### H3 for subsections.\n- Do not use bold text as a fake heading.\n- Do not output bare labels like Introduction, Conclusion, FAQ, Framework, Strategy, or Overview without ## or ###.\n- Tables must be valid GitHub-flavored Markdown tables with a header row, separator row, and complete body rows.\n- Do not output broken tables, half-empty rows, huge unreadable cells, or paragraph text pretending to be a table.\n- Keep all tables concise, useful, aligned with the section, and professional.`;
 }
 
 function formatInputs(inputs: Record<string, string>) {
@@ -401,6 +414,7 @@ export async function POST(req: NextRequest) {
     const researchInstructions = researchContext
       ? `\n\nSource/research context:\n${researchContext}\n\nResearch instructions:\nUse the source/research context above for data-backed insights and coded visuals. Do not invent numeric claims beyond supplied or fetched context.`
       : "";
+    const structureInstructions = buildArticleStructureInstructions(toolSlug);
 
     const messages: ChatMessage[] = [
       {
@@ -417,7 +431,7 @@ User inputs:
 ${formatInputs(inputs)}${researchInstructions}
 
 Output requirements:
-${prompt.outputGuide}`,
+${prompt.outputGuide}${structureInstructions}`,
       },
     ];
 
@@ -438,20 +452,13 @@ ${prompt.outputGuide}`,
 
           if (!response.ok) {
             const raw = await response.text();
-            failures.push(
-              `${model} key#${keyIndex}: HTTP ${response.status} ${raw.slice(
-                0,
-                300
-              )}`
-            );
+            failures.push(`${model} key#${keyIndex}: HTTP ${response.status} ${raw.slice(0, 300)}`);
             continue;
           }
 
           const spend = await spendReservation("openrouter", model);
 
-          if (!spend.ok) {
-            return spend.response;
-          }
+          if (!spend.ok) return spend.response;
 
           return new Response(makeTextStreamFromOpenRouter(response), {
             headers: {
@@ -464,11 +471,7 @@ ${prompt.outputGuide}`,
             },
           });
         } catch (error) {
-          failures.push(
-            `${model} key#${keyIndex}: ${
-              error instanceof Error ? error.message : String(error)
-            }`
-          );
+          failures.push(`${model} key#${keyIndex}: ${error instanceof Error ? error.message : String(error)}`);
         }
       }
     }
@@ -483,9 +486,7 @@ ${prompt.outputGuide}`,
 
       const spend = await spendReservation(fallback.provider, fallback.model);
 
-      if (!spend.ok) {
-        return spend.response;
-      }
+      if (!spend.ok) return spend.response;
 
       return new Response(makeTextStreamFromText(fallback.text), {
         headers: {
@@ -505,14 +506,8 @@ ${prompt.outputGuide}`,
           ok: false,
           error: "All AI generation attempts failed.",
           details: [
-            failures.length
-              ? `Streaming attempts:\n${failures.join("\n")}`
-              : "No OpenRouter streaming attempts were available.",
-            `Fallback error:\n${
-              fallbackError instanceof Error
-                ? fallbackError.message
-                : String(fallbackError)
-            }`,
+            failures.length ? `Streaming attempts:\n${failures.join("\n")}` : "No OpenRouter streaming attempts were available.",
+            `Fallback error:\n${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`,
           ].join("\n\n"),
         },
         { status: 500 }
