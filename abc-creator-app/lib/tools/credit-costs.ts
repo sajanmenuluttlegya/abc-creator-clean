@@ -32,6 +32,9 @@ export const IMAGE_GENERATION_TOOL_SLUGS = [
   "image-to-instagram-caption",
   "instagram-page-name-bio-generator",
   "social-media-bio-generator",
+  "business-name-generator",
+  "long-tail-keyword-generator",
+  "ai-prompt-generator",
 ] as const;
 
 const BASE_TOOL_CREDITS: Record<string, number> = {
@@ -44,6 +47,9 @@ const BASE_TOOL_CREDITS: Record<string, number> = {
   "image-to-instagram-caption": 3,
   "instagram-page-name-bio-generator": 1,
   "social-media-bio-generator": 1,
+  "business-name-generator": 1,
+  "long-tail-keyword-generator": 2,
+  "ai-prompt-generator": 1,
   "facebook-ad-copy": 4,
   "product-description": 3,
 };
