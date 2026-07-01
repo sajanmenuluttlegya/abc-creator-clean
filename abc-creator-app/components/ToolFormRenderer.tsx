@@ -13,6 +13,7 @@ interface ToolFormRendererProps {
 }
 
 const BLOG_OUTLINE_HANDOFF_KEY = "abc_creator_blog_outline_handoff";
+const CALENDAR_CUSTOM_FREQUENCY_OPTION = "Custom frequency in context";
 const presetBlogEditorTools = new Set([
   "quick-1-click-blog-post",
   "human-style-blog-post",
@@ -34,6 +35,9 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
   const showEditableOutline =
     tool.slug === "blog-outline" && Boolean(output.trim()) && !isLoading && !isErrorOutput;
   const usePresetEditor = presetBlogEditorTools.has(tool.slug);
+  const showCalendarCustomPostCount =
+    tool.slug === "blog-content-calendar" &&
+    formData.posting_frequency === CALENDAR_CUSTOM_FREQUENCY_OPTION;
 
   useEffect(() => {
     if (tool.slug !== "blog-content") return;
@@ -69,7 +73,14 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { id, value } = e.target;
-    setFormData((prev) => ({ ...prev, [id]: value }));
+    setFormData((prev) => {
+      if (tool.slug === "blog-content-calendar" && id === "posting_frequency" && value !== CALENDAR_CUSTOM_FREQUENCY_OPTION) {
+        const { custom_post_count: _customPostCount, ...rest } = prev;
+        return { ...rest, [id]: value };
+      }
+
+      return { ...prev, [id]: value };
+    });
   };
 
   const revealChunk = async (currentOutput: string, chunk: string) => {
@@ -208,6 +219,27 @@ Get more credits: /pricing`
                   )}
                 </div>
               ))}
+
+              {showCalendarCustomPostCount ? (
+                <div className="space-y-3">
+                  <label htmlFor="custom_post_count" className="block text-sm font-semibold text-white">
+                    How many posts? <span className="ml-1 text-pink-400">*</span>
+                    <span className="ml-2 text-xs font-medium text-gray-400">1–19 only</span>
+                  </label>
+                  <input
+                    id="custom_post_count"
+                    type="number"
+                    min={1}
+                    max={19}
+                    step={1}
+                    placeholder="Enter a number under 20"
+                    value={formData.custom_post_count || ""}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full rounded-xl border border-purple-500/20 bg-white/5 px-4 py-3 text-white placeholder-gray-500 transition-all duration-200 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
+              ) : null}
             </div>
 
             <button type="submit" disabled={isLoading} className="mt-8 flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-3 font-semibold text-white shadow-lg shadow-purple-500/20 transition-all duration-200 hover:from-indigo-700 hover:to-purple-700 hover:shadow-purple-500/40 disabled:from-indigo-600/50 disabled:to-purple-600/50">
