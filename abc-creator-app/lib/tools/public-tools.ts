@@ -1,4 +1,5 @@
 import { blogTools } from "./public-blog-tools";
+import { socialTools } from "./public-social-tools";
 
 export interface RecommendedNextAction {
   label: string;
@@ -24,7 +25,7 @@ export interface Tool {
 export interface ToolInput {
   id: string;
   label: string;
-  type: "text" | "textarea" | "select";
+  type: "text" | "textarea" | "select" | "image";
   placeholder?: string;
   required: boolean;
   options?: string[];
@@ -333,6 +334,7 @@ export const publicTools: Tool[] = [
     ],
   },
   ...blogTools,
+  ...socialTools,
   {
     id: "facebook-ad-copy",
     slug: "facebook-ad-copy",
