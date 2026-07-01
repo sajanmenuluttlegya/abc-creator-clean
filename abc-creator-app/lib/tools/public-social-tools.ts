@@ -26,6 +26,11 @@ type PublicSocialTool = {
   inputs: PublicSocialToolInput[];
 };
 
+const sourceModeOptions = [
+  "Analyze uploaded image",
+  "Write from text/context only",
+];
+
 const audienceOptions = [
   "General audience",
   "Potential customers",
@@ -101,18 +106,21 @@ export const socialTools: PublicSocialTool[] = [
   {
     id: "image-to-instagram-caption",
     slug: "image-to-instagram-caption",
-    name: "Image to Instagram Caption Generator",
-    description: "Analyze an uploaded image and generate premium Instagram captions, CTAs, hashtags, alt text, and safety notes.",
+    name: "Instagram Caption Generator",
+    description: "Generate premium Instagram captions from either an uploaded image or a written text brief.",
     icon: "instagram",
     detailEmoji: "📸",
     category: "Social Media Tools",
     displayCreditCost: 3,
     outputType: "text",
     aliases: [
+      "image-to-instagram-caption",
       "instagram-caption-from-image",
       "ai-instagram-caption-from-image",
       "instagram-caption-generator-image",
       "image-caption-for-instagram",
+      "instagram-caption-generator",
+      "instagram-caption-pro",
     ],
     nextActions: [
       {
@@ -127,9 +135,10 @@ export const socialTools: PublicSocialTool[] = [
       },
     ],
     inputs: [
-      { id: "image_data", label: "Upload Image", type: "image", placeholder: "Upload the image you want captioned", required: true },
+      { id: "source_mode", label: "Caption Source", type: "select", required: true, options: sourceModeOptions },
+      { id: "image_data", label: "Upload Image", type: "image", placeholder: "Upload an image only when using image-analysis mode", required: false },
       { id: "brand_name", label: "Brand / Page Name", type: "text", placeholder: "e.g., Luna Skincare, Urban Brew, your creator name", required: false },
-      { id: "image_context", label: "Image / Product Context", type: "textarea", placeholder: "Optional: product details, location, campaign idea, what matters in the image, or anything the AI should know but cannot see.", required: false },
+      { id: "image_context", label: "Image / Text Brief / Product Context", type: "textarea", placeholder: "For image mode: add product, offer, campaign, or what matters in the image. For text mode: describe the post, product, scene, or idea you want captions for.", required: false },
       { id: "audience", label: "Audience", type: "select", required: true, options: audienceOptions },
       { id: "goal", label: "Post Goal", type: "select", required: true, options: instagramGoalOptions },
       { id: "tone", label: "Caption Tone", type: "select", required: true, options: instagramToneOptions },
