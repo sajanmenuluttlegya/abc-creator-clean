@@ -3,14 +3,15 @@
 import { useMemo, useState, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { DiagramRenderer, parseDiagramSpec } from "./diagrams/DiagramRendererClean";
+import { DiagramRenderer, parseDiagramSpec, type DiagramSpec } from "./diagrams/DiagramRendererClean";
 import { InlineImageBlock, splitOutputIntoImageSegments } from "./InlineImageBlocks";
 
 type InsertedBlock = {
   id: string;
-  type: "image" | "table";
+  type: "image" | "table" | "visual";
   markdown: string;
   prompt?: string;
+  spec?: DiagramSpec;
 };
 
 type Props = {
@@ -113,6 +114,116 @@ function tableMarkdown(block: string, toolSlug: string) {
   return `### Added Quick Table\n\n| Key point | Simple explanation | Action step |\n|---|---|---|\n| Context | ${context} | Apply this idea |\n| Takeaway | Keep it concise | Turn it into a practical step |`;
 }
 
+function visualKind(block: string) {
+  const text = plain(block, 520).toLowerCase();
+  if (/flow|process|workflow|step|pipeline|journey|sequence|decision|how it works/.test(text)) return "flowchart";
+  if (/trend|timeline|over time|history|roadmap|phase|milestone|cycle|forecast|growth|decline/.test(text)) return "line-chart";
+  if (/compare|versus|vs\.?|alternative|option|pros|cons|matrix|priority|choice|tradeoff/.test(text)) return "bar-chart";
+  if (/category|type|taxonomy|class|segment|pillar|cluster|hierarchy|level/.test(text)) return "taxonomy";
+  if (/relationship|network|dependency|entity|stakeholder|ecosystem|connected|causal|influence/.test(text)) return "knowledge-graph";
+  if (/flow of|moves from|traffic|money|value|data flow|source|destination|allocation/.test(text)) return "sankey";
+  if (/system|architecture|infrastructure|component|database|deployment|stack/.test(text)) return "architecture-diagram";
+  return "concept-map";
+}
+
+function visualSpec(block: string, inputs: Record<string, string>): DiagramSpec {
+  const topic = inputs.title || inputs.blog_title || inputs.topic || inputs.primary_keyword || "Article concept";
+  const context = plain(block, 220) || topic;
+  const kind = visualKind(block);
+
+  if (kind === "sankey") {
+    return {
+      type: "sankey",
+      title: `Value flow for ${topic}`,
+      caption: "Qualitative flow map based on the nearby section. Replace placeholder values with verified data when available.",
+      flows: [
+        ["Source", "Main channel", 1],
+        ["Main channel", "Outcome", 1],
+        ["Main channel", "Secondary effect", 1],
+      ],
+    };
+  }
+
+  if (kind === "line-chart" || kind === "bar-chart") {
+    return {
+      type: kind,
+      title: `Visual comparison for ${topic}`,
+      caption: "Qualitative chart based on the nearby section; exact numbers should be replaced with verified data if needed.",
+      metric: "Relative importance",
+      xAxisLabel: "Key factors",
+      yAxisLabel: "Relative weight",
+      nodes: [
+        { id: "factor-1", label: "Context", value: 45 },
+        { id: "factor-2", label: "Risk", value: 62 },
+        { id: "factor-3", label: "Opportunity", value: 70 },
+        { id: "factor-4", label: "Action", value: 54 },
+      ],
+    };
+  }
+
+  if (kind === "taxonomy") {
+    return {
+      type: "taxonomy",
+      title: `Category map for ${topic}`,
+      caption: `Organizes the section idea: ${context}`,
+      nodes: ["Core idea", "Category A", "Category B", "Category C", "Decision point"],
+      edges: [
+        ["Core idea", "Category A"],
+        ["Core idea", "Category B"],
+        ["Core idea", "Category C"],
+        ["Category B", "Decision point"],
+      ],
+    };
+  }
+
+  if (kind === "architecture-diagram") {
+    return {
+      type: "architecture-diagram",
+      title: `System view for ${topic}`,
+      caption: `Shows the main components implied by this section: ${context}`,
+      nodes: ["Input", "Core system", "Decision layer", "Output", "Feedback"],
+      edges: [
+        ["Input", "Core system"],
+        ["Core system", "Decision layer"],
+        ["Decision layer", "Output"],
+        ["Output", "Feedback"],
+      ],
+    };
+  }
+
+  if (kind === "knowledge-graph") {
+    return {
+      type: "knowledge-graph",
+      title: `Relationship map for ${topic}`,
+      caption: `Maps the key relationships around: ${context}`,
+      nodes: ["Core idea", "Driver", "Constraint", "Stakeholder", "Outcome"],
+      edges: [
+        ["Driver", "Core idea"],
+        ["Constraint", "Core idea"],
+        ["Core idea", "Stakeholder"],
+        ["Stakeholder", "Outcome"],
+      ],
+    };
+  }
+
+  return {
+    type: "flowchart",
+    title: `Process visual for ${topic}`,
+    caption: `Turns the nearby section into a practical flow: ${context}`,
+    nodes: ["Start", "Assess context", "Choose path", "Apply action", "Review outcome"],
+    edges: [
+      ["Start", "Assess context"],
+      ["Assess context", "Choose path"],
+      ["Choose path", "Apply action"],
+      ["Apply action", "Review outcome"],
+    ],
+  };
+}
+
+function visualMarkdown(spec: DiagramSpec) {
+  return `\`\`\`abc-diagram\n${JSON.stringify(spec)}\n\`\`\``;
+}
+
 function TrashIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -163,6 +274,7 @@ function EditableMarkdown({ markdown, toolSlug, inputs, idPrefix }: Props & { ma
         const table = isTable(block);
         const level = headingLevel(block);
         const img = imagePrompt(block, toolSlug, inputs);
+        const spec = visualSpec(block, inputs);
         return (
           <div key={key} className="group/line relative rounded-xl transition hover:bg-white/[0.025]">
             {!(table && deletedTables[key]) ? (
@@ -200,6 +312,9 @@ function EditableMarkdown({ markdown, toolSlug, inputs, idPrefix }: Props & { ma
                 <button type="button" onClick={() => add(key, { id: `${key}-table-${Date.now()}`, type: "table", markdown: tableMarkdown(block, toolSlug) })} className="rounded-full border border-blue-300/30 bg-blue-400/10 px-3 py-1.5 text-xs font-semibold text-blue-100 transition hover:bg-blue-400/20">
                   Add Table After
                 </button>
+                <button type="button" onClick={() => add(key, { id: `${key}-visual-${Date.now()}`, type: "visual", markdown: visualMarkdown(spec), spec })} className="rounded-full border border-fuchsia-300/30 bg-fuchsia-400/10 px-3 py-1.5 text-xs font-semibold text-fuchsia-100 transition hover:bg-fuchsia-400/20">
+                  Add Visual After
+                </button>
               </div>
             </div>
 
@@ -207,12 +322,14 @@ function EditableMarkdown({ markdown, toolSlug, inputs, idPrefix }: Props & { ma
               <div key={item.id} className="group/inserted relative rounded-2xl border border-white/10 bg-black/30 p-3">
                 {item.type === "image" ? (
                   <InlineImageBlock blockId={item.id} markdown={item.markdown} prompt={item.prompt || item.markdown} toolSlug={toolSlug} inputs={inputs} autoGenerate={false} />
+                ) : item.type === "visual" && item.spec ? (
+                  <DiagramRenderer spec={item.spec} />
                 ) : (
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>{item.markdown}</ReactMarkdown>
                 )}
                 <div data-export-ignore="true" className="pointer-events-none absolute right-3 top-3 opacity-0 transition group-hover/inserted:opacity-100">
                   <button type="button" onClick={() => remove(key, item.id)} className="pointer-events-auto rounded-full border border-red-300/30 bg-black/75 px-3 py-1.5 text-xs font-semibold text-red-100 backdrop-blur-md transition hover:bg-red-500/20">
-                    {item.type === "image" ? "Delete Image" : "Delete Table"}
+                    {item.type === "image" ? "Delete Image" : item.type === "visual" ? "Delete Visual" : "Delete Table"}
                   </button>
                 </div>
               </div>
