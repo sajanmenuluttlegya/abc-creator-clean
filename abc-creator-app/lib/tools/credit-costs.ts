@@ -35,6 +35,9 @@ export const IMAGE_GENERATION_TOOL_SLUGS = [
   "business-name-generator",
   "long-tail-keyword-generator",
   "ai-prompt-generator",
+  "ai-paraphrasing-tool",
+  "ai-paragraph-generator",
+  "ai-report-writing",
 ] as const;
 
 const BASE_TOOL_CREDITS: Record<string, number> = {
@@ -50,6 +53,9 @@ const BASE_TOOL_CREDITS: Record<string, number> = {
   "business-name-generator": 1,
   "long-tail-keyword-generator": 2,
   "ai-prompt-generator": 1,
+  "ai-paraphrasing-tool": 2,
+  "ai-paragraph-generator": 2,
+  "ai-report-writing": 5,
   "facebook-ad-copy": 4,
   "product-description": 3,
 };
@@ -114,6 +120,13 @@ const QUICK_BLOG_LENGTH_CREDITS: Array<[string, number]> = [
   ["standard", 6],
   ["short", 4],
   ["Very short", 3],
+];
+
+const REPORT_LENGTH_CREDITS: Array<[string, number]> = [
+  ["Premium report", 14],
+  ["Detailed report", 10],
+  ["Standard report", 8],
+  ["Short report", 5],
 ];
 
 const IMAGE_BRIEF_COUNT_CREDITS: Array<[string, number]> = [
@@ -201,6 +214,8 @@ export function calculateToolCreditCost(toolSlug: string, inputs: ToolInputs = {
       return matchCredit(inputs.rewrite_length, ARTICLE_REWRITE_LENGTH_CREDITS, 3);
     case "quick-1-click-blog-post":
       return matchCredit(inputs.article_length, QUICK_BLOG_LENGTH_CREDITS, 6);
+    case "ai-report-writing":
+      return matchCredit(inputs.report_length, REPORT_LENGTH_CREDITS, 5);
     case "pro-image-brief-for-blog": {
       if (includes(inputs.image_count_guidance, "Custom image count")) {
         return calculateCustomImageBriefCredits(inputs.custom_image_count);
@@ -223,6 +238,7 @@ const DYNAMIC_TOOLS = [
   "rewrite-article-with-keywords",
   "quick-1-click-blog-post",
   "pro-image-brief-for-blog",
+  "ai-report-writing",
 ];
 
 export function getToolCreditEstimate(toolSlug: string, inputs: ToolInputs = {}): CreditEstimate {
@@ -244,5 +260,6 @@ export function getToolCreditLabel(toolSlug: string) {
   if (toolSlug === "rewrite-article-with-keywords") return "From 3 credits";
   if (toolSlug === "quick-1-click-blog-post") return "From 4 credits";
   if (toolSlug === "pro-image-brief-for-blog") return "From 1 credit";
+  if (toolSlug === "ai-report-writing") return "From 5 credits";
   return `${BASE_TOOL_CREDITS[toolSlug] ?? 1} credit${(BASE_TOOL_CREDITS[toolSlug] ?? 1) === 1 ? "" : "s"}`;
 }
