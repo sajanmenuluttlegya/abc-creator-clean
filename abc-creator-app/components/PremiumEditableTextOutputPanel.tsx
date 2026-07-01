@@ -172,6 +172,47 @@ export function PremiumEditableTextOutputPanel({ isLoading, output, title, subti
     setMessage("Text download started.");
   };
 
+  const downloadPdf = () => {
+    if (!selectedOutput.trim()) {
+      setMessage("Select at least one block before downloading.");
+      return;
+    }
+
+    const iframeName = `abc_pdf_export_${Date.now()}`;
+    const iframe = document.createElement("iframe");
+    iframe.name = iframeName;
+    iframe.style.display = "none";
+    document.body.appendChild(iframe);
+
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = "/api/export/pdf";
+    form.target = iframeName;
+    form.style.display = "none";
+
+    const outputField = document.createElement("textarea");
+    outputField.name = "output";
+    outputField.value = selectedOutput;
+    form.appendChild(outputField);
+
+    const fileNameField = document.createElement("input");
+    fileNameField.type = "hidden";
+    fileNameField.name = "fileBaseName";
+    fileNameField.value = downloadFileBaseName;
+    form.appendChild(fileNameField);
+
+    const imagesField = document.createElement("textarea");
+    imagesField.name = "images";
+    imagesField.value = "[]";
+    form.appendChild(imagesField);
+
+    document.body.appendChild(form);
+    form.submit();
+    form.remove();
+    window.setTimeout(() => iframe.remove(), 60000);
+    setMessage("PDF download started.");
+  };
+
   return (
     <div className="rounded-3xl border border-cyan-400/25 bg-black/50 p-7 shadow-2xl shadow-cyan-950/25 backdrop-blur-2xl">
       <div className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
@@ -185,6 +226,7 @@ export function PremiumEditableTextOutputPanel({ isLoading, output, title, subti
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={addBlock} className="rounded-full border border-blue-300/25 bg-blue-400/10 px-4 py-2 text-sm font-semibold text-blue-100 transition hover:bg-blue-400/20">+ Add Block</button>
             <button type="button" onClick={copyOutput} className="rounded-full border border-cyan-300/25 bg-cyan-400/10 px-4 py-2 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-400/20">Copy Selected</button>
+            <button type="button" onClick={downloadPdf} className="rounded-full border border-emerald-300/25 bg-emerald-400/10 px-4 py-2 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-400/20">Download PDF</button>
             <button type="button" onClick={downloadTxt} className="rounded-full border border-purple-300/25 bg-purple-400/10 px-4 py-2 text-sm font-semibold text-purple-100 transition hover:bg-purple-400/20">Download TXT</button>
           </div>
         ) : null}
