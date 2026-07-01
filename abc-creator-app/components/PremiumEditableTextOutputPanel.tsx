@@ -125,8 +125,10 @@ export function PremiumEditableTextOutputPanel({ isLoading, output, title, subti
       const fromIndex = current.findIndex((block) => block.id === fromId);
       const toIndex = current.findIndex((block) => block.id === toId);
       if (fromIndex < 0 || toIndex < 0) return current;
+      const item = current[fromIndex];
+      if (!item) return current;
       const next = [...current];
-      const [item] = next.splice(fromIndex, 1);
+      next.splice(fromIndex, 1);
       next.splice(toIndex, 0, item);
       return next;
     });
