@@ -7,4 +7,5 @@ export const SEO_BATCH_TOOL_CREDIT_COSTS: Record<string, number> = {
   "topical-authority-map": 3,
   "content-gap-analyzer": 4,
   "schema-markup-generator": 2,
+  "poem-generator": 2,
 };
