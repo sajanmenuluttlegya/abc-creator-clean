@@ -342,7 +342,7 @@ export const publicTools: Tool[] = [
     description: "Create compelling Facebook ad copy that drives clicks and conversions.",
     icon: "ad-copy",
     detailEmoji: "📢",
-    category: "Advertising Tools",
+    category: "Ad Copy",
     displayCreditCost: 4,
     outputType: "text",
     inputs: [
