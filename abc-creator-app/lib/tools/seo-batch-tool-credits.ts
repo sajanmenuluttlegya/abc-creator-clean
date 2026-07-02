@@ -9,4 +9,9 @@ export const SEO_BATCH_TOOL_CREDIT_COSTS: Record<string, number> = {
   "schema-markup-generator": 2,
   "poem-generator": 2,
   "slogan-generator": 2,
+  "tagline-generator": 2,
+  "name-generator": 2,
+  "headline-generator": 2,
+  "cta-generator": 1,
+  "universal-prompt-enhancer": 2,
 };
