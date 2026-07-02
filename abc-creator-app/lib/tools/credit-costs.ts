@@ -19,7 +19,7 @@ function creditText(credits: number) {
 }
 
 export const IMAGE_CREDITS_PER_IMAGE = scaleCreditAmount(1);
-export const IMAGE_EDIT_CREDITS = scaleCreditAmount(1);
+export const IMAGE_EDIT_CREDITS = 4;
 
 export const IMAGE_GENERATION_TOOL_SLUGS = [
   "blog-content",
