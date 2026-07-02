@@ -1,7 +1,7 @@
 type PublicWritingBatchToolInput = {
   id: string;
   label: string;
-  type: "text" | "textarea" | "select" | "image";
+  type: "text" | "textarea" | "select" | "image" | "media";
   placeholder?: string;
   required: boolean;
   options?: string[];
@@ -30,6 +30,7 @@ const countOptions = ["1 version", "3 versions", "5 versions", "10 versions"];
 const scriptLengthOptions = ["30 seconds", "60 seconds", "2 minutes", "5 minutes", "10 minutes"];
 const slideCountOptions = ["5 slides", "8 slides", "10 slides", "15 slides"];
 const paragraphCountOptions = ["1 paragraph", "3 paragraphs", "5 paragraphs", "10 paragraphs"];
+const transcriptSourceModeOptions = ["Paste text / transcript", "YouTube URL", "Upload audio/video"];
 
 function transformInputs(label = "Source Text"): PublicWritingBatchToolInput[] {
   return [
@@ -46,6 +47,21 @@ function transformInputs(label = "Source Text"): PublicWritingBatchToolInput[] {
 function writerInputs(label = "Topic / Brief"): PublicWritingBatchToolInput[] {
   return [
     { id: "topic_or_brief", label, type: "textarea", placeholder: "Describe what you want written. Include facts, context, audience, and required points.", required: true },
+    { id: "audience", label: "Audience", type: "select", required: true, options: audienceOptions },
+    { id: "tone", label: "Tone", type: "select", required: true, options: toneOptions },
+    { id: "output_length", label: "Output Length", type: "select", required: true, options: lengthOptions },
+    { id: "must_include", label: "Must Include", type: "textarea", placeholder: "Optional facts, sections, keywords, examples, or CTA to include.", required: false },
+    { id: "avoid", label: "Avoid / Constraints", type: "textarea", placeholder: "Optional claims, words, examples, or style notes to avoid.", required: false },
+    { id: "language", label: "Language", type: "select", required: true, options: languageOptions },
+  ];
+}
+
+function transcriptWriterInputs(label: string): PublicWritingBatchToolInput[] {
+  return [
+    { id: "source_mode", label: "Source Mode", type: "select", required: true, options: transcriptSourceModeOptions },
+    { id: "source_url", label: "YouTube URL", type: "text", placeholder: "Paste a YouTube video URL only when using YouTube URL mode.", required: false },
+    { id: "media_upload", label: "Upload Audio/Video", type: "media", placeholder: "Upload an audio/video file only when using Upload audio/video mode.", required: false },
+    { id: "topic_or_brief", label, type: "textarea", placeholder: "Paste text/transcript here, or leave blank when using YouTube URL or uploaded audio/video.", required: true },
     { id: "audience", label: "Audience", type: "select", required: true, options: audienceOptions },
     { id: "tone", label: "Tone", type: "select", required: true, options: toneOptions },
     { id: "output_length", label: "Output Length", type: "select", required: true, options: lengthOptions },
@@ -111,6 +127,6 @@ export const writingBatchTools: PublicWritingBatchTool[] = [
     { id: "language", label: "Language", type: "select", required: true, options: languageOptions },
   ]),
   tool("article-to-video-script-converter", "Article to Video Script Converter", "Turn an article or blog post into a structured video script.", "🎞️", 2, writerInputs("Article / Blog Post")),
-  tool("video-to-article-converter", "Video to Article Converter", "Turn a pasted video transcript or notes into a structured article.", "📰", 3, writerInputs("Video Transcript / Notes")),
-  tool("summarize-pro", "Summarize Pro", "Summarize long text, notes, transcripts, or pasted source material into polished summaries.", "🧠", 2, writerInputs("Text / Notes / Transcript")),
+  tool("video-to-article-converter", "Video to Article Converter", "Turn a pasted video transcript, YouTube transcript, or uploaded audio/video into a structured article.", "📰", 3, transcriptWriterInputs("Video Transcript / Notes")),
+  tool("summarize-pro", "Summarize Pro", "Summarize long text, notes, transcripts, YouTube videos, or uploaded audio/video into polished summaries.", "🧠", 2, transcriptWriterInputs("Text / Notes / Transcript")),
 ];
