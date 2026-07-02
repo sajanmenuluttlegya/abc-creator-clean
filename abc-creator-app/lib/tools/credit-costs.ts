@@ -52,16 +52,16 @@ const BLOG_OUTLINE_WORD_COUNT_CREDITS: Array<[string, number]> = [["Authority pi
 const BLOG_CONTENT_WORD_COUNT_CREDITS: Array<[string, number]> = [["Authority pillar article", 49], ["Premium pillar article", 39], ["Very long article", 27], ["Long article", 15], ["Standard article", 9], ["Short article", 7]];
 const BLOG_CONTENT_SECTION_FLOORS: Array<[string, number]> = [["Very long", 0], ["Long", 0], ["Medium", 0], ["Short", 0], ["Very short", 0], ["2 paragraphs", 0]];
 const PRESET_BLOG_WORD_COUNT_CREDITS: Array<[string, number]> = [["Authority pillar article", 32], ["Premium pillar article", 16], ["Very long article", 13], ["Long article", 10], ["Standard article", 8], ["Short article", 6]];
-const ARTICLE_REWRITE_LENGTH_CREDITS: Array<[string, number]> = [["Authority rewrite", 3], ["Premium rewrite", 3], ["Very long rewrite", 3], ["Long rewrite", 3], ["Standard rewrite", 2], ["Short rewrite", 1]];
+const ARTICLE_REWRITE_LENGTH_CREDITS: Array<[string, number]> = [["Authority rewrite", 5], ["Premium rewrite", 5], ["Very long rewrite", 5], ["Long rewrite", 5], ["Standard rewrite", 2], ["Short rewrite", 1]];
 const QUICK_BLOG_LENGTH_CREDITS: Array<[string, number]> = [["authority", 20], ["very long", 10], ["long", 8], ["standard", 6], ["short", 4], ["Very short", 3]];
-const REPORT_LENGTH_CREDITS: Array<[string, number]> = [["Premium report", 3], ["Detailed report", 3], ["Standard report", 2], ["Short report", 1]];
+const REPORT_LENGTH_CREDITS: Array<[string, number]> = [["Premium report", 5], ["Detailed report", 5], ["Standard report", 2], ["Short report", 1]];
 const IMAGE_BRIEF_COUNT_CREDITS: Array<[string, number]> = [["7 images", 3], ["5 images", 2], ["3 images", 2], ["1 image", 1]];
 const VARIATION_COUNT_CREDITS: Array<[string, number]> = [["10 variations", 5], ["5 variations", 2], ["3 variations", 1]];
-const WRITING_OUTPUT_LENGTH_CREDITS: Array<[string, number]> = [["Detailed", 3], ["Long", 3], ["Medium", 2], ["Short", 1]];
-const SCRIPT_LENGTH_CREDITS: Array<[string, number]> = [["10 minutes", 3], ["5 minutes", 3], ["2 minutes", 2], ["60 seconds", 1], ["30 seconds", 1]];
-const SLIDE_COUNT_CREDITS: Array<[string, number]> = [["15 slides", 3], ["10 slides", 2], ["8 slides", 2], ["5 slides", 1]];
-const PARAGRAPH_COUNT_CREDITS: Array<[string, number]> = [["10 paragraphs", 3], ["5 paragraphs", 2], ["3 paragraphs", 2], ["1 paragraph", 1]];
-const QUOTE_COUNT_CREDITS: Array<[string, number]> = [["10 versions", 3], ["5 versions", 2], ["3 versions", 1], ["1 version", 1]];
+const WRITING_OUTPUT_LENGTH_CREDITS: Array<[string, number]> = [["Detailed", 5], ["Long", 5], ["Medium", 2], ["Short", 1]];
+const SCRIPT_LENGTH_CREDITS: Array<[string, number]> = [["10 minutes", 5], ["5 minutes", 5], ["2 minutes", 2], ["60 seconds", 1], ["30 seconds", 1]];
+const SLIDE_COUNT_CREDITS: Array<[string, number]> = [["15 slides", 5], ["10 slides", 2], ["8 slides", 2], ["5 slides", 1]];
+const PARAGRAPH_COUNT_CREDITS: Array<[string, number]> = [["10 paragraphs", 5], ["5 paragraphs", 2], ["3 paragraphs", 2], ["1 paragraph", 1]];
+const QUOTE_COUNT_CREDITS: Array<[string, number]> = [["10 versions", 5], ["5 versions", 2], ["3 versions", 1], ["1 version", 1]];
 
 function includes(value: string | undefined, token: string) { return (value || "").toLowerCase().includes(token.toLowerCase()); }
 function matchCredit(value: string | undefined, table: Array<[string, number]>, fallback: number) { return table.find(([token]) => includes(value, token))?.[1] ?? fallback; }
