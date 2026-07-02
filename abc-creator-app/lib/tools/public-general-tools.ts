@@ -1,29 +1,9 @@
 import { blogBatchTools } from "./public-blog-batch-tools";
+import { seoBatchTools } from "./public-seo-batch-tools";
 import { writingBatchTools } from "./public-writing-batch-tools";
 
-type PublicGeneralToolInput = {
-  id: string;
-  label: string;
-  type: "text" | "textarea" | "select" | "image" | "media";
-  placeholder?: string;
-  required: boolean;
-  options?: string[];
-};
-
-type PublicGeneralTool = {
-  id: string;
-  slug: string;
-  name: string;
-  description: string;
-  icon: string;
-  detailEmoji: string;
-  category: string;
-  displayCreditCost: number;
-  outputType?: "text";
-  aliases?: string[];
-  nextActions?: Array<{ label: string; href: string; description: string }>;
-  inputs: PublicGeneralToolInput[];
-};
+type PublicGeneralToolInput = { id: string; label: string; type: "text" | "textarea" | "select" | "image" | "media"; placeholder?: string; required: boolean; options?: string[] };
+type PublicGeneralTool = { id: string; slug: string; name: string; description: string; icon: string; detailEmoji: string; category: string; displayCreditCost: number; outputType?: "text"; aliases?: string[]; nextActions?: Array<{ label: string; href: string; description: string }>; inputs: PublicGeneralToolInput[] };
 
 const languageOptions = ["English", "Hindi", "Hinglish", "Spanish", "French", "German", "Portuguese", "Arabic"];
 const toneOptions = ["Professional", "Friendly", "Premium", "Bold", "Simple and clear", "Witty", "Technical", "Luxury"];
@@ -105,9 +85,7 @@ export const generalTools: PublicGeneralTool[] = [
     displayCreditCost: 1,
     outputType: "text",
     aliases: ["prompt-generator", "ai-prompt-maker", "chatgpt-prompt-generator", "prompt-builder"],
-    nextActions: [
-      { label: "Generate paragraphs", href: "/tools/ai-paragraph-generator", description: "Use the prompt direction to create polished paragraphs." },
-    ],
+    nextActions: [{ label: "Generate paragraphs", href: "/tools/ai-paragraph-generator", description: "Use the prompt direction to create polished paragraphs." }],
     inputs: [
       { id: "task", label: "Task / Goal", type: "textarea", placeholder: "What do you want the prompt to help create?", required: true },
       { id: "prompt_type", label: "Prompt Type", type: "select", required: true, options: promptTypeOptions },
@@ -131,9 +109,7 @@ export const generalTools: PublicGeneralTool[] = [
     displayCreditCost: 2,
     outputType: "text",
     aliases: ["ai-paraphraser", "paraphrasing-tool", "paraphrase-tool", "text-paraphraser", "content-paraphraser"],
-    nextActions: [
-      { label: "Generate paragraphs", href: "/tools/ai-paragraph-generator", description: "Turn the rewritten idea into fresh paragraphs." },
-    ],
+    nextActions: [{ label: "Generate paragraphs", href: "/tools/ai-paragraph-generator", description: "Turn the rewritten idea into fresh paragraphs." }],
     inputs: [
       { id: "source_text", label: "Text to Paraphrase", type: "textarea", placeholder: "Paste the sentence, paragraph, or content you want rephrased.", required: true },
       { id: "paraphrase_mode", label: "Paraphrase Mode", type: "select", required: true, options: paraphraseModeOptions },
@@ -155,9 +131,7 @@ export const generalTools: PublicGeneralTool[] = [
     displayCreditCost: 2,
     outputType: "text",
     aliases: ["paragraph-generator", "paragraph-writer", "ai-paragraph-writer", "generate-paragraphs"],
-    nextActions: [
-      { label: "Write a report", href: "/tools/ai-report-writing", description: "Expand strong paragraphs into a structured report." },
-    ],
+    nextActions: [{ label: "Write a report", href: "/tools/ai-report-writing", description: "Expand strong paragraphs into a structured report." }],
     inputs: [
       { id: "topic", label: "Topic / Paragraph Brief", type: "textarea", placeholder: "Describe what the paragraph should explain, sell, introduce, or conclude.", required: true },
       { id: "paragraph_type", label: "Paragraph Type", type: "select", required: true, options: paragraphTypeOptions },
@@ -197,6 +171,7 @@ export const generalTools: PublicGeneralTool[] = [
       { id: "language", label: "Language", type: "select", required: true, options: languageOptions },
     ],
   },
+  ...seoBatchTools,
   ...blogBatchTools,
   ...writingBatchTools,
 ];
