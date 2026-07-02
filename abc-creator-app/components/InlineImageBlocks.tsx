@@ -222,7 +222,7 @@ export function InlineImageBlock({ blockId, markdown, prompt, toolSlug = "", inp
   const exportFrame = (inputs.export_image_frame || "boxed").toLowerCase();
   const isBorderlessExport = exportFrame.includes("borderless");
   const shouldKeepPromptVisible = toolSlug === "pro-image-brief-for-blog";
-  const shouldAutoGenerate = (autoGenerate || isAutoImageTool(toolSlug)) && isAutoImageTool(toolSlug);
+  const shouldAutoGenerate = autoGenerate && isAutoImageTool(toolSlug);
 
   const callImageRoute = async (operation: "generate" | "edit") => {
     const editing = operation === "edit";
@@ -243,26 +243,13 @@ export function InlineImageBlock({ blockId, markdown, prompt, toolSlug = "", inp
       const response = await fetch("/api/generate/image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          operation,
-          toolSlug,
-          inputs,
-          sourceText: markdown,
-          prompt: editing ? `${controlledImagePrompt}\n\nEdit instruction: ${editPrompt.trim()}` : controlledImagePrompt,
-          aspectRatio,
-          imageCount: 1,
-          sourceImageDataUrl: image?.dataUrl || "",
-          imageBlockId: blockId,
-        }),
+        body: JSON.stringify({ operation, toolSlug, inputs, sourceText: markdown, prompt: editing ? `${controlledImagePrompt}\n\nEdit instruction: ${editPrompt.trim()}` : controlledImagePrompt, aspectRatio, imageCount: 1, sourceImageDataUrl: image?.dataUrl || "", imageBlockId: blockId }),
       });
       const data = (await response.json()) as ImageResponse;
 
       if (!response.ok || !data.ok) {
-        if (response.status === 402 || data.code === "INSUFFICIENT_CREDITS") {
-          setError(`Not enough credits. This request needs ${data.requiredCredits ?? (editing ? IMAGE_EDIT_CREDITS : IMAGE_CREDITS_PER_IMAGE)} credits. You currently have ${data.currentCredits ?? 0} credits.`);
-        } else {
-          setError(`${data.error || "Image generation failed."}${data.details ? `\n${data.details}` : ""}`);
-        }
+        if (response.status === 402 || data.code === "INSUFFICIENT_CREDITS") setError(`Not enough credits. This request needs ${data.requiredCredits ?? (editing ? IMAGE_EDIT_CREDITS : IMAGE_CREDITS_PER_IMAGE)} credits. You currently have ${data.currentCredits ?? 0} credits.`);
+        else setError(`${data.error || "Image generation failed."}${data.details ? `\n${data.details}` : ""}`);
         return;
       }
 
@@ -356,72 +343,27 @@ export function InlineImageBlock({ blockId, markdown, prompt, toolSlug = "", inp
 
     return (
       <section className="my-6" data-abc-image-block={blockId} data-abc-image-placement={placement} style={imageBlockLayoutStyle(placement)}>
-        {shouldKeepPromptVisible ? (
-          <div className="mb-4 rounded-2xl border border-emerald-400/20 bg-black/35 p-5">
-            <div className="prose prose-invert max-w-none prose-p:text-gray-200 prose-strong:text-white prose-headings:text-white prose-code:text-emerald-100">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{markdown}</ReactMarkdown>
-            </div>
-          </div>
-        ) : null}
-
+        {shouldKeepPromptVisible ? <div className="mb-4 rounded-2xl border border-emerald-400/20 bg-black/35 p-5"><div className="prose prose-invert max-w-none prose-p:text-gray-200 prose-strong:text-white prose-headings:text-white prose-code:text-emerald-100"><ReactMarkdown remarkPlugins={[remarkGfm]}>{markdown}</ReactMarkdown></div></div> : null}
         <div className="group relative" style={imageFrameStyle(placement, widthPercent)}>
           <figure className={isBorderlessExport ? "overflow-hidden rounded-2xl border border-transparent transition group-hover:border-emerald-400/20" : "overflow-hidden rounded-2xl border border-transparent bg-black/40 p-3 shadow-lg shadow-emerald-950/20 transition group-hover:border-emerald-400/20"}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={image.dataUrl} alt={extractPrompt(markdown) || "Generated blog image"} className={isBorderlessExport ? "w-full rounded-2xl object-cover" : "w-full rounded-xl object-cover"} data-generated-blog-image="true" />
           </figure>
-
           <button type="button" title="Delete image" aria-label="Delete image" onClick={() => setIsDeleted(true)} data-export-ignore="true" className="absolute right-3 top-3 z-20 h-8 w-8 rounded-full border border-red-300/30 bg-black/75 text-sm text-red-100 opacity-0 shadow-lg shadow-black/30 backdrop-blur-md transition hover:bg-red-500/25 group-hover:opacity-100">🗑</button>
-
-          {showHorizontalResize ? (
-            <button type="button" title="Drag to resize image" aria-label="Drag to resize image" onPointerDown={startResize} data-export-ignore="true" className="absolute right-0 top-0 z-10 h-full w-4 cursor-ew-resize bg-emerald-300/5 opacity-0 transition hover:bg-emerald-300/20 group-hover:opacity-100" />
-          ) : null}
-
-          <div data-export-ignore="true" className="pointer-events-none absolute inset-0 flex items-start justify-end p-4 opacity-0 transition duration-200 group-hover:opacity-100">
-            <div className="pointer-events-auto mr-10 flex flex-wrap gap-2 rounded-2xl border border-white/15 bg-black/75 p-2 backdrop-blur-md">
-              <button type="button" onClick={() => { setError(""); setIsEditModalOpen(true); }} className="rounded-full border border-emerald-300/30 bg-emerald-400/10 px-4 py-2 text-xs font-semibold text-emerald-100 transition hover:bg-emerald-400/20">Edit Image</button>
-              <button type="button" onClick={() => uploadInputRef.current?.click()} className="rounded-full border border-amber-300/30 bg-amber-400/10 px-4 py-2 text-xs font-semibold text-amber-100 transition hover:bg-amber-400/20">Upload Image</button>
-              {previousImage ? <button type="button" onClick={undoEdit} className="rounded-full border border-purple-300/30 bg-purple-400/10 px-4 py-2 text-xs font-semibold text-purple-100 transition hover:bg-purple-400/20">{hoverUndoLabel}</button> : null}
-              <input ref={uploadInputRef} type="file" accept="image/*" onChange={handleUploadImage} className="hidden" aria-label="Upload replacement image" />
-            </div>
-          </div>
+          {showHorizontalResize ? <button type="button" title="Drag to resize image" aria-label="Drag to resize image" onPointerDown={startResize} data-export-ignore="true" className="absolute right-0 top-0 z-10 h-full w-4 cursor-ew-resize bg-emerald-300/5 opacity-0 transition hover:bg-emerald-300/20 group-hover:opacity-100" /> : null}
+          <div data-export-ignore="true" className="pointer-events-none absolute inset-0 flex items-start justify-end p-4 opacity-0 transition duration-200 group-hover:opacity-100"><div className="pointer-events-auto mr-10 flex flex-wrap gap-2 rounded-2xl border border-white/15 bg-black/75 p-2 backdrop-blur-md"><button type="button" onClick={() => { setError(""); setIsEditModalOpen(true); }} className="rounded-full border border-emerald-300/30 bg-emerald-400/10 px-4 py-2 text-xs font-semibold text-emerald-100 transition hover:bg-emerald-400/20">Edit Image</button><button type="button" onClick={() => uploadInputRef.current?.click()} className="rounded-full border border-amber-300/30 bg-amber-400/10 px-4 py-2 text-xs font-semibold text-amber-100 transition hover:bg-amber-400/20">Upload Image</button>{previousImage ? <button type="button" onClick={undoEdit} className="rounded-full border border-purple-300/30 bg-purple-400/10 px-4 py-2 text-xs font-semibold text-purple-100 transition hover:bg-purple-400/20">{hoverUndoLabel}</button> : null}<input ref={uploadInputRef} type="file" accept="image/*" onChange={handleUploadImage} className="hidden" aria-label="Upload replacement image" /></div></div>
         </div>
-
         {error ? <div data-export-ignore="true" className="mt-3 whitespace-pre-wrap rounded-xl border border-red-400/25 bg-red-500/10 p-3 text-sm text-red-100">{error}</div> : null}
-
-        {isEditModalOpen ? (
-          <div data-export-ignore="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
-            <div className="w-full max-w-xl rounded-3xl border border-emerald-400/20 bg-[#04110e] p-6 shadow-2xl shadow-black/40">
-              <div className="mb-4">
-                <h3 className="text-lg font-semibold text-white">Edit generated image</h3>
-                <p className="mt-1 text-sm text-gray-400">Describe what to change. Editing uses {IMAGE_EDIT_CREDITS} credit{IMAGE_EDIT_CREDITS === 1 ? "" : "s"}.</p>
-              </div>
-              {error ? <div className="mb-4 whitespace-pre-wrap rounded-xl border border-red-400/25 bg-red-500/10 p-3 text-sm text-red-100">{error}</div> : null}
-              <textarea value={editPrompt} onChange={(event) => setEditPrompt(event.currentTarget.value)} placeholder="Example: make it more cinematic, reduce text, make it darker, improve composition." className="h-32 w-full resize-none rounded-2xl border border-emerald-400/20 bg-black/40 px-4 py-3 text-sm text-white placeholder-gray-500 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-400" />
-              <div className="mt-5 flex flex-wrap gap-2">
-                <button type="button" onClick={() => void callImageRoute("edit")} disabled={isEditing || !editPrompt.trim()} className="rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:from-emerald-600 hover:to-teal-600 disabled:cursor-not-allowed disabled:opacity-60">{isEditing ? "Editing..." : `Apply Edit — ${IMAGE_EDIT_CREDITS} credit${IMAGE_EDIT_CREDITS === 1 ? "" : "s"}`}</button>
-                <button type="button" onClick={undoEdit} disabled={!previousImage || isEditing} className="rounded-full border border-purple-300/30 bg-purple-400/10 px-5 py-2.5 text-sm font-semibold text-purple-100 transition hover:bg-purple-400/20 disabled:cursor-not-allowed disabled:opacity-50">Undo</button>
-                <button type="button" onClick={() => { setIsEditModalOpen(false); setEditPrompt(""); setError(""); }} disabled={isEditing} className="rounded-full border border-white/15 bg-white/5 px-5 py-2.5 text-sm font-semibold text-gray-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60">Close</button>
-              </div>
-            </div>
-          </div>
-        ) : null}
+        {isEditModalOpen ? <div data-export-ignore="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm"><div className="w-full max-w-xl rounded-3xl border border-emerald-400/20 bg-[#04110e] p-6 shadow-2xl shadow-black/40"><div className="mb-4"><h3 className="text-lg font-semibold text-white">Edit generated image</h3><p className="mt-1 text-sm text-gray-400">Describe what to change. Editing uses {IMAGE_EDIT_CREDITS} credit{IMAGE_EDIT_CREDITS === 1 ? "" : "s"}.</p></div>{error ? <div className="mb-4 whitespace-pre-wrap rounded-xl border border-red-400/25 bg-red-500/10 p-3 text-sm text-red-100">{error}</div> : null}<textarea value={editPrompt} onChange={(event) => setEditPrompt(event.currentTarget.value)} placeholder="Example: make it more cinematic, reduce text, make it darker, improve composition." className="h-32 w-full resize-none rounded-2xl border border-emerald-400/20 bg-black/40 px-4 py-3 text-sm text-white placeholder-gray-500 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-400" /><div className="mt-5 flex flex-wrap gap-2"><button type="button" onClick={() => void callImageRoute("edit")} disabled={isEditing || !editPrompt.trim()} className="rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:from-emerald-600 hover:to-teal-600 disabled:cursor-not-allowed disabled:opacity-60">{isEditing ? "Editing..." : `Apply Edit — ${IMAGE_EDIT_CREDITS} credit${IMAGE_EDIT_CREDITS === 1 ? "" : "s"}`}</button><button type="button" onClick={undoEdit} disabled={!previousImage || isEditing} className="rounded-full border border-purple-300/30 bg-purple-400/10 px-5 py-2.5 text-sm font-semibold text-purple-100 transition hover:bg-purple-400/20 disabled:cursor-not-allowed disabled:opacity-50">Undo</button><button type="button" onClick={() => { setIsEditModalOpen(false); setEditPrompt(""); setError(""); }} disabled={isEditing} className="rounded-full border border-white/15 bg-white/5 px-5 py-2.5 text-sm font-semibold text-gray-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60">Close</button></div></div></div> : null}
       </section>
     );
   }
 
   return (
     <section className="my-6 rounded-2xl border border-transparent bg-emerald-500/10 p-5 transition hover:border-emerald-400/20" data-abc-image-block={blockId} data-abc-image-placement={placement}>
-      {shouldKeepPromptVisible ? (
-        <div className="prose prose-invert max-w-none prose-p:text-gray-200 prose-strong:text-white prose-headings:text-white">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{markdown}</ReactMarkdown>
-        </div>
-      ) : null}
-
+      {shouldKeepPromptVisible ? <div className="prose prose-invert max-w-none prose-p:text-gray-200 prose-strong:text-white prose-headings:text-white"><ReactMarkdown remarkPlugins={[remarkGfm]}>{markdown}</ReactMarkdown></div> : null}
       <div data-export-ignore="true" className={shouldKeepPromptVisible ? "mt-4 flex flex-col gap-3 rounded-2xl border border-emerald-300/20 bg-black/35 p-4" : "flex flex-col gap-3 rounded-2xl border border-emerald-300/20 bg-black/35 p-4"}>
         {error ? <div className="whitespace-pre-wrap rounded-xl border border-red-400/25 bg-red-500/10 p-3 text-sm text-red-100">{error}</div> : null}
-        <button type="button" onClick={() => void callImageRoute("generate")} disabled={isGenerating || isEditing} className="rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-emerald-500/20 transition hover:from-emerald-600 hover:to-teal-600 disabled:cursor-not-allowed disabled:opacity-60">
-          {isGenerating ? (shouldAutoGenerate ? "Auto-generating image..." : "Generating image...") : `Generate Image — ${IMAGE_CREDITS_PER_IMAGE} credit${IMAGE_CREDITS_PER_IMAGE === 1 ? "" : "s"}`}
-        </button>
+        <button type="button" onClick={() => void callImageRoute("generate")} disabled={isGenerating || isEditing} className="rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-emerald-500/20 transition hover:from-emerald-600 hover:to-teal-600 disabled:cursor-not-allowed disabled:opacity-60">{isGenerating ? (shouldAutoGenerate ? "Auto-generating image..." : "Generating image...") : `Generate Image — ${IMAGE_CREDITS_PER_IMAGE} credit${IMAGE_CREDITS_PER_IMAGE === 1 ? "" : "s"}`}</button>
       </div>
     </section>
   );
