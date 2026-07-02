@@ -33,8 +33,10 @@ const blogOutputSideImageTools = new Set([
 
 const blogOutputVisualStyles = `
 .blog-output-visual-upgrade figure figcaption[data-export-ignore="true"]{display:none!important;}
-.blog-output-visual-upgrade figure:has(img[data-generated-blog-image="true"]){border-color:transparent!important;}
-.blog-output-visual-upgrade figure:has(img[data-generated-blog-image="true"]):hover{border-color:rgba(52,211,153,.22)!important;}
+.blog-output-visual-upgrade figure:has(img[data-generated-blog-image="true"]){border-color:transparent!important;outline:0!important;box-shadow:none!important;}
+.blog-output-visual-upgrade figure:has(img[data-generated-blog-image="true"]):hover{border-color:rgba(52,211,153,.22)!important;box-shadow:none!important;}
+.blog-output-visual-upgrade [data-abc-image-block]{border-color:transparent!important;outline:0!important;box-shadow:none!important;}
+.blog-output-visual-upgrade [data-abc-image-block]:hover{border-color:rgba(52,211,153,.22)!important;}
 .hide-output-side-image-controls button[aria-label="Add image beside this output section"]{display:none!important;}
 `;
 
