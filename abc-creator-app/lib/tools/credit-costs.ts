@@ -37,6 +37,7 @@ export const IMAGE_GENERATION_TOOL_SLUGS = [
   "blog-to-email",
   "blog-to-reels-script",
   "blog-to-youtube-script",
+  "youtube-video-to-blog-post",
 ] as const;
 
 const BASE_TOOL_CREDITS: Record<string, number> = {
