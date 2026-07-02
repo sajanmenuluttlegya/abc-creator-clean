@@ -127,9 +127,9 @@ const IMAGE_BRIEF_COUNT_CREDITS: Array<[string, number]> = [
 ];
 
 const VARIATION_COUNT_CREDITS: Array<[string, number]> = [
-  ["10 variations", 10],
-  ["5 variations", 5],
-  ["3 variations", 3],
+  ["10 variations", 5],
+  ["5 variations", 2],
+  ["3 variations", 1],
 ];
 
 function includes(value: string | undefined, token: string) {
@@ -170,7 +170,7 @@ function calculateFullBlogPresetCredits(toolSlug: string, inputs: ToolInputs) {
 }
 
 function calculateVariationToolCredits(value: string | undefined) {
-  return matchCredit(value, VARIATION_COUNT_CREDITS, 3);
+  return matchCredit(value, VARIATION_COUNT_CREDITS, 1);
 }
 
 export function supportsImageGeneration(toolSlug: string) {
@@ -267,6 +267,6 @@ export function getToolCreditLabel(toolSlug: string) {
   if (toolSlug === "quick-1-click-blog-post") return "From 4 credits";
   if (toolSlug === "pro-image-brief-for-blog") return "From 1 credit";
   if (toolSlug === "ai-report-writing") return "3 credits";
-  if (["blog-to-social-posts", "blog-to-email", "blog-to-reels-script"].includes(toolSlug)) return "From 3 credits";
+  if (["blog-to-social-posts", "blog-to-email", "blog-to-reels-script"].includes(toolSlug)) return "From 1 credit";
   return `${BASE_TOOL_CREDITS[toolSlug] ?? 1} credit${(BASE_TOOL_CREDITS[toolSlug] ?? 1) === 1 ? "" : "s"}`;
 }
