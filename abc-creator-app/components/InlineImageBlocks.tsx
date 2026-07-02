@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
@@ -26,6 +26,8 @@ type ImageResponse = {
   currentCredits?: number;
   images?: GeneratedImageResult[];
 };
+
+type ImagePlacement = "left" | "right" | "center";
 
 export type OutputSegment =
   | { type: "markdown"; content: string; id: string }
@@ -88,6 +90,56 @@ function extractPrompt(block: string) {
   }
 
   return block.replace(/^#{1,4}\s+/gm, "").trim();
+}
+
+function imagePlacementOf(block: string): ImagePlacement {
+  const lower = block.toLowerCase();
+  const placementLine = block
+    .split("\n")
+    .map((line) => line.trim())
+    .find((line) => /^[-*]?\s*placement\s*[:\-–]/i.test(line));
+  const placementText = (placementLine || lower).toLowerCase();
+
+  if (/\b(left|left beside|beside left|image left)\b/.test(placementText)) return "left";
+  if (/\b(right|right beside|beside right|image right)\b/.test(placementText)) return "right";
+  return "center";
+}
+
+function imageBlockLayoutStyle(placement: ImagePlacement): CSSProperties {
+  if (placement === "left") {
+    return {
+      display: "flex",
+      alignItems: "flex-start",
+      justifyContent: "flex-start",
+      gap: 20,
+      width: "100%",
+    };
+  }
+
+  if (placement === "right") {
+    return {
+      display: "flex",
+      alignItems: "flex-start",
+      justifyContent: "flex-end",
+      gap: 20,
+      width: "100%",
+    };
+  }
+
+  return { display: "block", width: "100%" };
+}
+
+function imageFrameStyle(placement: ImagePlacement, widthPercent: number): CSSProperties {
+  if (placement === "center") {
+    return { width: `${widthPercent}%`, margin: "0 auto" };
+  }
+
+  return {
+    width: `${Math.min(widthPercent, 48)}%`,
+    minWidth: 220,
+    maxWidth: 520,
+    flexShrink: 0,
+  };
 }
 
 export function splitOutputIntoImageSegments(output: string): OutputSegment[] {
@@ -173,15 +225,6 @@ Image brief to generate:
 ${basePrompt}`;
 }
 
-function downloadImage(image: GeneratedImageResult) {
-  const link = document.createElement("a");
-  link.href = image.dataUrl;
-  link.download = image.filename || `abc-creator-image-${image.index}.png`;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-}
-
 function uploadedFilename(file: File) {
   const fallbackExtension = file.type.split("/")[1] || "png";
   const rawName = file.name || `uploaded-blog-image.${fallbackExtension}`;
@@ -218,6 +261,7 @@ export function InlineImageBlock({
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
 
   const aspectRatio = inputs.image_ratio || "16:9 landscape";
+  const placement = useMemo(() => imagePlacementOf(markdown), [markdown]);
   const imagePrompt = useMemo(() => prompt.trim() || markdown.trim(), [prompt, markdown]);
   const controlledImagePrompt = useMemo(
     () => buildControlledImagePrompt(imagePrompt, inputs),
@@ -383,7 +427,12 @@ export function InlineImageBlock({
     const hoverUndoLabel = image.provider === "user-upload" ? "Undo Upload" : "Undo";
 
     return (
-      <section className="my-6" data-abc-image-block={blockId}>
+      <section
+        className="my-6"
+        data-abc-image-block={blockId}
+        data-abc-image-placement={placement}
+        style={imageBlockLayoutStyle(placement)}
+      >
         {shouldKeepPromptVisible ? (
           <div className="mb-4 rounded-2xl border border-emerald-400/20 bg-black/35 p-5">
             <div className="prose prose-invert max-w-none prose-p:text-gray-200 prose-strong:text-white prose-headings:text-white prose-code:text-emerald-100">
@@ -392,19 +441,19 @@ export function InlineImageBlock({
           </div>
         ) : null}
 
-        <div className="group relative mx-auto" style={{ width: `${widthPercent}%` }}>
+        <div className="group relative" style={imageFrameStyle(placement, widthPercent)}>
           <figure
             className={
               isBorderlessExport
-                ? "overflow-hidden"
-                : "overflow-hidden rounded-2xl border border-emerald-400/20 bg-black/40 p-3 shadow-lg shadow-emerald-950/20"
+                ? "overflow-hidden rounded-2xl border border-transparent transition group-hover:border-emerald-400/20"
+                : "overflow-hidden rounded-2xl border border-transparent bg-black/40 p-3 shadow-lg shadow-emerald-950/20 transition group-hover:border-emerald-400/20"
             }
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={image.dataUrl}
               alt={extractPrompt(markdown) || "Generated blog image"}
-              className={isBorderlessExport ? "w-full object-cover" : "w-full rounded-xl object-cover"}
+              className={isBorderlessExport ? "w-full rounded-2xl object-cover" : "w-full rounded-xl object-cover"}
               data-generated-blog-image="true"
             />
           </figure>
@@ -437,7 +486,6 @@ export function InlineImageBlock({
               <button type="button" onClick={() => { setError(""); setIsEditModalOpen(true); }} className="rounded-full border border-emerald-300/30 bg-emerald-400/10 px-4 py-2 text-xs font-semibold text-emerald-100 transition hover:bg-emerald-400/20">Edit Image</button>
               <button type="button" onClick={() => uploadInputRef.current?.click()} className="rounded-full border border-amber-300/30 bg-amber-400/10 px-4 py-2 text-xs font-semibold text-amber-100 transition hover:bg-amber-400/20">Upload Image</button>
               {previousImage ? <button type="button" onClick={undoEdit} className="rounded-full border border-purple-300/30 bg-purple-400/10 px-4 py-2 text-xs font-semibold text-purple-100 transition hover:bg-purple-400/20">{hoverUndoLabel}</button> : null}
-              <button type="button" onClick={() => downloadImage(image)} className="rounded-full border border-blue-300/30 bg-blue-400/10 px-4 py-2 text-xs font-semibold text-blue-100 transition hover:bg-blue-400/20">Download Image</button>
               <input ref={uploadInputRef} type="file" accept="image/*" onChange={handleUploadImage} className="hidden" aria-label="Upload replacement image" />
             </div>
           </div>
@@ -467,7 +515,7 @@ export function InlineImageBlock({
   }
 
   return (
-    <section className="my-6 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-5" data-abc-image-block={blockId}>
+    <section className="my-6 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-5" data-abc-image-block={blockId} data-abc-image-placement={placement}>
       {shouldKeepPromptVisible ? (
         <div className="prose prose-invert max-w-none prose-p:text-gray-200 prose-strong:text-white prose-headings:text-white">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{markdown}</ReactMarkdown>
