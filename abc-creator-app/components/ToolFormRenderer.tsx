@@ -31,6 +31,13 @@ const blogOutputSideImageTools = new Set([
   "rewrite-article-with-keywords",
 ]);
 
+const blogOutputVisualStyles = `
+.blog-output-visual-upgrade figure figcaption[data-export-ignore="true"]{display:none!important;}
+.blog-output-visual-upgrade figure:has(img[data-generated-blog-image="true"]){border-color:transparent!important;}
+.blog-output-visual-upgrade figure:has(img[data-generated-blog-image="true"]):hover{border-color:rgba(52,211,153,.22)!important;}
+.hide-output-side-image-controls button[aria-label="Add image beside this output section"]{display:none!important;}
+`;
+
 function wait(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
@@ -269,7 +276,7 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
       </div>
 
       <div className={`space-y-6 lg:sticky lg:top-28 ${allowOutputSideImages ? "blog-output-visual-upgrade" : "hide-output-side-image-controls"}`}>
-        <style>{`.blog-output-visual-upgrade figure figcaption[data-export-ignore="true"]{display:none!important;}.hide-output-side-image-controls button[aria-label="Add image beside this output section"]{display:none!important;}`}</style>
+        <style>{blogOutputVisualStyles}</style>
         {showEditableOutline ? (
           <EditableBlogOutlinePanel output={blogOutput} inputs={formData} />
         ) : useImageCaptionEditor ? (
