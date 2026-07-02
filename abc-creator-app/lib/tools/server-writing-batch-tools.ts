@@ -55,8 +55,8 @@ function writerPrompt(name: string, creditCost: number, instruction: string): Se
 }
 
 export const serverWritingBatchTools: Record<string, ServerPrompt> = {
-  "listicle-writer": writerPrompt("Listicle Writer", 4, "Write a list-style article with strong introduction, numbered points, examples, and a useful conclusion."),
-  "how-to-article-writer": writerPrompt("How-To Article Writer", 4, "Write a step-by-step how-to article with prerequisites, steps, tips, mistakes to avoid, and conclusion."),
+  "listicle-writer": writerPrompt("Listicle Writer", 3, "Write a list-style article with strong introduction, numbered points, examples, and a useful conclusion."),
+  "how-to-article-writer": writerPrompt("How-To Article Writer", 3, "Write a step-by-step how-to article with prerequisites, steps, tips, mistakes to avoid, and conclusion."),
   "extreme-rewrite": transformPrompt("Extreme Rewrite", 3, "Rewrite the source into a fresh structure and style while preserving meaning and important facts."),
   "text-improver": transformPrompt("Text Improver", 2, "Improve clarity, grammar, flow, structure, and readability without changing the core meaning."),
   "content-simplifier": transformPrompt("Content Simplifier", 2, "Make the source easier to understand for the selected audience."),
@@ -76,11 +76,11 @@ export const serverWritingBatchTools: Record<string, ServerPrompt> = {
     system: `You are ABC Creator's tasteful emoji copy editor.${writingRules}\n\nAdd emojis naturally without making the text childish, spammy, or hard to read.`,
     outputGuide: "Return Markdown with: # Emoji-Enhanced Text; ## Final Version; ## Lighter Option if useful.",
   },
-  "ai-research-paper-writer": writerPrompt("AI Research Paper Writer", 8, "Draft a structured research-style paper only from supplied notes and references; use placeholders where evidence is missing."),
-  "kids-video-script-generator": writerPrompt("Kids Video Script Generator", 4, "Write age-appropriate scripts for young audiences with safe, friendly language and clear scene/narration cues."),
-  "whiteboard-animation-script": writerPrompt("Whiteboard Animation Script", 4, "Write narration plus visual drawing cues for a whiteboard-style explainer."),
-  "live-streaming-script": writerPrompt("Live Streaming Script", 3, "Create a live stream run-of-show with intro, segments, transitions, engagement prompts, and closing CTA."),
-  "television-broadcast-script": writerPrompt("Television Broadcast Script", 5, "Write a polished broadcast script with anchor copy, segment cues, transitions, and closing."),
+  "ai-research-paper-writer": writerPrompt("AI Research Paper Writer", 3, "Draft a structured research-style paper only from supplied notes and references; use placeholders where evidence is missing."),
+  "kids-video-script-generator": writerPrompt("Kids Video Script Generator", 2, "Write age-appropriate scripts for young audiences with safe, friendly language and clear scene/narration cues."),
+  "whiteboard-animation-script": writerPrompt("Whiteboard Animation Script", 2, "Write narration plus visual drawing cues for a whiteboard-style explainer."),
+  "live-streaming-script": writerPrompt("Live Streaming Script", 2, "Create a live stream run-of-show with intro, segments, transitions, engagement prompts, and closing CTA."),
+  "television-broadcast-script": writerPrompt("Television Broadcast Script", 3, "Write a polished broadcast script with anchor copy, segment cues, transitions, and closing."),
   "quotes-generator": {
     creditCost: 1,
     requiredInputs: [
@@ -93,7 +93,7 @@ export const serverWritingBatchTools: Record<string, ServerPrompt> = {
     outputGuide: "Return Markdown with: # Original Quotes; ## Quote Options; ## Best Picks. Return the requested count.",
   },
   "presentation-slides-text-generator": {
-    creditCost: 4,
+    creditCost: 2,
     requiredInputs: [
       { id: "presentation_topic", label: "Presentation topic", required: true, minLength: 10, maxLength: 8000 },
       { id: "slide_count", label: "Slide count", required: true, minLength: 2, maxLength: 80 },
@@ -104,13 +104,13 @@ export const serverWritingBatchTools: Record<string, ServerPrompt> = {
     system: `You are ABC Creator's presentation copywriter.${writingRules}\n\nGenerate slide text only, not a slide deck file.`,
     outputGuide: "Return Markdown with: # Presentation Slide Text; ## Slide-by-Slide Outline; include slide title, bullet points, and speaker notes for each slide.",
   },
-  "paper-writer": writerPrompt("Paper Writer", 6, "Write a structured paper from the supplied brief and notes."),
+  "paper-writer": writerPrompt("Paper Writer", 3, "Write a structured paper from the supplied brief and notes."),
   "essay-outline-generator": writerPrompt("Essay Outline Generator", 2, "Create a clear essay outline with thesis, sections, supporting points, and conclusion direction."),
-  "essay-writer": writerPrompt("Essay Writer", 5, "Write a structured essay from the supplied brief, thesis, and notes."),
-  "story-maker": writerPrompt("Story Maker", 4, "Create an original story using the user's brief, genre, tone, and constraints."),
-  "document-writer": writerPrompt("Document Writer", 4, "Draft a structured document, memo, brief, or formal written material."),
-  "report-writer": writerPrompt("Report Writer", 5, "Write a structured report with summary, context, findings, recommendations, and next steps."),
-  "speech-writer": writerPrompt("Speech Writer", 4, "Write a polished speech with opening, main points, transitions, and closing."),
+  "essay-writer": writerPrompt("Essay Writer", 3, "Write a structured essay from the supplied brief, thesis, and notes."),
+  "story-maker": writerPrompt("Story Maker", 3, "Create an original story using the user's brief, genre, tone, and constraints."),
+  "document-writer": writerPrompt("Document Writer", 3, "Draft a structured document, memo, brief, or formal written material."),
+  "report-writer": writerPrompt("Report Writer", 3, "Write a structured report with summary, context, findings, recommendations, and next steps."),
+  "speech-writer": writerPrompt("Speech Writer", 2, "Write a polished speech with opening, main points, transitions, and closing."),
   "personal-message-writer": writerPrompt("Personal Message Writer", 1, "Write a personal message that matches the user's relationship, purpose, and tone."),
   "letter-writer": writerPrompt("Letter Writer", 2, "Write a formal, informal, business, complaint, request, or personal letter."),
   "paragraph-generator": {
@@ -125,7 +125,7 @@ export const serverWritingBatchTools: Record<string, ServerPrompt> = {
     system: `You are ABC Creator's premium paragraph writer.${writingRules}`,
     outputGuide: "Return Markdown with: # Generated Paragraphs; ## Paragraph Options; ## Best Pick. Return the requested count.",
   },
-  "article-to-video-script-converter": writerPrompt("Article to Video Script Converter", 4, "Convert the source article into a structured video script with hook, sections, narration, and CTA."),
-  "video-to-article-converter": writerPrompt("Video to Article Converter", 4, "Convert the pasted video transcript or notes into a structured article. Do not claim to watch a video."),
-  "summarize-pro": writerPrompt("Summarize Pro", 3, "Summarize pasted text, notes, transcripts, or source material into a clear, polished summary."),
+  "article-to-video-script-converter": writerPrompt("Article to Video Script Converter", 2, "Convert the source article into a structured video script with hook, sections, narration, and CTA."),
+  "video-to-article-converter": writerPrompt("Video to Article Converter", 3, "Convert the pasted video transcript or notes into a structured article. Do not claim to watch a video."),
+  "summarize-pro": writerPrompt("Summarize Pro", 2, "Summarize pasted text, notes, transcripts, or source material into a clear, polished summary."),
 };
