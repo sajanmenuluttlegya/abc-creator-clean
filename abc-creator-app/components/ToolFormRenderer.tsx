@@ -6,7 +6,7 @@ import { PresetBlogOutputPanel } from "./PresetBlogOutputPanel";
 import { ThemeIcon } from "./ThemeIcon";
 import { EditableBlogOutlinePanel } from "./EditableBlogOutlinePanel";
 import { ImageToInstagramCaptionPanel } from "./ImageToInstagramCaptionPanel";
-import type { Tool } from "@/lib/tools/public-tools";
+import type { Tool, ToolInput } from "@/lib/tools/public-tools";
 import { getToolCreditEstimate } from "@/lib/tools/credit-costs";
 
 interface ToolFormRendererProps {
@@ -16,7 +16,11 @@ interface ToolFormRendererProps {
 const BLOG_OUTLINE_HANDOFF_KEY = "abc_creator_blog_outline_handoff";
 const CALENDAR_CUSTOM_FREQUENCY_OPTION = "Custom frequency in context";
 const IMAGE_CAPTION_TOOL = "image-to-instagram-caption";
+const SOURCE_MODE_PASTE = "Paste text / transcript";
+const SOURCE_MODE_YOUTUBE = "YouTube URL";
+const SOURCE_MODE_UPLOAD = "Upload audio/video";
 const presetBlogEditorTools = new Set(["quick-1-click-blog-post", "human-style-blog-post", "seo-optimized-blog-post", "advanced-blog-post"]);
+const transcriptSourceTools = new Set(["summarize-pro", "video-to-article-converter", "youtube-video-to-blog-post"]);
 const blogOutputSideImageTools = new Set([
   "blog-topic-ideas",
   "blog-outline",
@@ -29,6 +33,13 @@ const blogOutputSideImageTools = new Set([
   "blog-conclusion-generator",
   "faq-generator",
   "rewrite-article-with-keywords",
+  "blog-section-writer",
+  "comparison-blog-writer",
+  "blog-to-social-posts",
+  "blog-to-email",
+  "blog-to-reels-script",
+  "blog-to-youtube-script",
+  "youtube-video-to-blog-post",
 ]);
 
 const blogOutputVisualStyles = `
@@ -85,8 +96,21 @@ function withAutomaticBlogImage(output: string, toolSlug: string, inputs: Record
   return [...paragraphs.slice(0, insertAt), marker, ...paragraphs.slice(insertAt)].join("\n\n");
 }
 
+function transcriptPrimaryField(toolSlug: string) {
+  return toolSlug === "youtube-video-to-blog-post" ? "source_content" : "topic_or_brief";
+}
+
+function transcriptSourceModeOf(inputs: Record<string, string>) {
+  return inputs.source_mode || SOURCE_MODE_PASTE;
+}
+
+function isTranscriptPrimaryInput(toolSlug: string, input: ToolInput) {
+  return transcriptSourceTools.has(toolSlug) && input.id === transcriptPrimaryField(toolSlug);
+}
+
 export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
   const [formData, setFormData] = useState<Record<string, string>>({});
+  const [mediaFiles, setMediaFiles] = useState<Record<string, File | null>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [output, setOutput] = useState<string>("");
   const rawCreditEstimate = getToolCreditEstimate(tool.slug, formData);
@@ -156,6 +180,102 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
     }
   };
 
+  const handleMediaInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, files } = e.target;
+    const file = files?.[0] || null;
+
+    if (!file) {
+      setMediaFiles((prev) => ({ ...prev, [id]: null }));
+      setFormData((prev) => ({ ...prev, [`${id}_name`]: "" }));
+      return;
+    }
+
+    if (!file.type.startsWith("audio/") && !file.type.startsWith("video/")) {
+      setOutput("Error:\nPlease choose an audio or video file.");
+      return;
+    }
+
+    if (file.size > 50 * 1024 * 1024) {
+      setOutput("Error:\nPlease choose an audio/video file under 50 MB, or paste the transcript manually.");
+      return;
+    }
+
+    setMediaFiles((prev) => ({ ...prev, [id]: file }));
+    setFormData((prev) => ({ ...prev, [`${id}_name`]: file.name }));
+    setOutput("");
+  };
+
+  const isInputRequired = (input: ToolInput) => {
+    if (!transcriptSourceTools.has(tool.slug)) return input.required;
+
+    const sourceMode = transcriptSourceModeOf(formData);
+    if (isTranscriptPrimaryInput(tool.slug, input)) return input.required && sourceMode === SOURCE_MODE_PASTE;
+    if (input.id === "source_url") return sourceMode === SOURCE_MODE_YOUTUBE;
+    if (input.id === "media_upload") return sourceMode === SOURCE_MODE_UPLOAD;
+
+    return input.required;
+  };
+
+  const buildInputsForGeneration = async () => {
+    if (!transcriptSourceTools.has(tool.slug)) return formData;
+
+    const sourceMode = transcriptSourceModeOf(formData);
+    const primaryField = transcriptPrimaryField(tool.slug);
+
+    if (sourceMode === SOURCE_MODE_PASTE) return formData;
+
+    const payload = new FormData();
+    payload.append("toolSlug", tool.slug);
+    payload.append("sourceMode", sourceMode);
+
+    if (sourceMode === SOURCE_MODE_YOUTUBE) {
+      const youtubeUrl = (formData.source_url || "").trim();
+      if (!youtubeUrl) throw new Error("Paste a YouTube URL or choose another source mode.");
+      payload.append("youtubeUrl", youtubeUrl);
+    }
+
+    if (sourceMode === SOURCE_MODE_UPLOAD) {
+      const file = mediaFiles.media_upload;
+      if (!file) throw new Error("Upload an audio/video file or choose another source mode.");
+      payload.append("media", file, file.name);
+    }
+
+    setOutput("Extracting transcript...\n\nTranscript extraction uses separate transcript credits. The final output will be based on transcript/source only.");
+
+    const res = await fetch("/api/transcript/extract", {
+      method: "POST",
+      body: payload,
+    });
+
+    const data = await res.json().catch(() => null) as { transcript?: string; error?: string; details?: string; requiredCredits?: number; currentCredits?: number } | null;
+
+    if (!res.ok || !data?.transcript) {
+      if (res.status === 402) {
+        throw new Error(`Not enough credits for transcript extraction. This needs ${data?.requiredCredits ?? "more"} transcript credits. You currently have ${data?.currentCredits ?? 0}.`);
+      }
+      throw new Error(data?.error || "Transcript extraction failed.");
+    }
+
+    const transcriptSourceLabel = sourceMode === SOURCE_MODE_YOUTUBE ? "YouTube captions/transcript" : "uploaded audio/video transcript";
+    const transcriptForPrompt = [
+      `Source mode: ${transcriptSourceLabel}.`,
+      "Use this transcript/source as the factual backbone. State that the output is based on the transcript/source when relevant. Do not claim to have watched the video.",
+      "",
+      "Transcript:",
+      data.transcript,
+    ].join("\n");
+
+    const nextInputs = {
+      ...formData,
+      [primaryField]: transcriptForPrompt,
+      transcript_source_mode: sourceMode,
+    };
+
+    setFormData((current) => ({ ...current, [primaryField]: transcriptForPrompt, transcript_source_mode: sourceMode }));
+    setOutput("");
+    return nextInputs;
+  };
+
   const revealChunk = async (currentOutput: string, chunk: string) => {
     if (!chunk) return currentOutput;
     let nextOutput = currentOutput;
@@ -174,10 +294,11 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
     setOutput("");
 
     try {
+      const generationInputs = await buildInputsForGeneration();
       const res = await fetch("/api/generate/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ toolSlug: tool.slug, inputs: formData }),
+        body: JSON.stringify({ toolSlug: tool.slug, inputs: generationInputs }),
       });
 
       if (!res.ok) {
@@ -211,7 +332,7 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
         finalOutput = await revealChunk(finalOutput, decoder.decode(value, { stream: true }));
       }
     } catch (error) {
-      setOutput(`Error:\nCould not reach the generation endpoint.\n\n${error instanceof Error ? error.message : String(error)}`);
+      setOutput(`Error:\n${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setIsLoading(false);
     }
@@ -231,23 +352,28 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
               {tool.inputs.map((input) => (
                 <div key={input.id} className="space-y-3">
                   <label htmlFor={input.id} className="block text-sm font-semibold text-white">
-                    {input.label}{input.required && <span className="ml-1 text-pink-400">*</span>}
+                    {input.label}{isInputRequired(input) && <span className="ml-1 text-pink-400">*</span>}
                   </label>
 
-                  {input.type === "image" ? (
+                  {input.type === "media" ? (
+                    <div className="rounded-2xl border border-dashed border-cyan-300/25 bg-cyan-400/5 p-4">
+                      <input id={input.id} type="file" accept="audio/*,video/*" onChange={handleMediaInput} required={isInputRequired(input) && !mediaFiles[input.id]} className="w-full cursor-pointer rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white file:mr-4 file:rounded-full file:border-0 file:bg-cyan-500/20 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-cyan-100" />
+                      {mediaFiles[input.id] ? <p className="mt-3 text-xs text-cyan-100">Media ready: {mediaFiles[input.id]?.name}</p> : <p className="mt-3 text-xs text-slate-400">Audio/video is transcribed first and charged separately. Max 50 MB.</p>}
+                    </div>
+                  ) : input.type === "image" ? (
                     <div className="rounded-2xl border border-dashed border-pink-300/25 bg-pink-400/5 p-4">
-                      <input id={input.id} type="file" accept="image/*" onChange={handleFileInput} required={input.required && !formData[input.id]} className="w-full cursor-pointer rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white file:mr-4 file:rounded-full file:border-0 file:bg-pink-500/20 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-pink-100" />
+                      <input id={input.id} type="file" accept="image/*" onChange={handleFileInput} required={isInputRequired(input) && !formData[input.id]} className="w-full cursor-pointer rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white file:mr-4 file:rounded-full file:border-0 file:bg-pink-500/20 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-pink-100" />
                       {formData[input.id] ? <p className="mt-3 text-xs text-pink-100">Image ready: {formData.image_name || "uploaded image"}</p> : <p className="mt-3 text-xs text-slate-400">Choose a clear image under 4 MB when using image-analysis mode.</p>}
                     </div>
                   ) : input.type === "textarea" ? (
-                    <textarea id={input.id} placeholder={input.placeholder} value={formData[input.id] || ""} onChange={handleInputChange} required={input.required} className="h-28 w-full resize-none rounded-xl border border-purple-500/20 bg-white/5 px-4 py-3 text-white placeholder-gray-500 transition-all duration-200 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-purple-500" />
+                    <textarea id={input.id} placeholder={input.placeholder} value={formData[input.id] || ""} onChange={handleInputChange} required={isInputRequired(input)} className="h-28 w-full resize-none rounded-xl border border-purple-500/20 bg-white/5 px-4 py-3 text-white placeholder-gray-500 transition-all duration-200 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-purple-500" />
                   ) : input.type === "select" ? (
-                    <select id={input.id} value={formData[input.id] || ""} onChange={handleInputChange} required={input.required} className="w-full cursor-pointer appearance-none rounded-xl border border-purple-500/20 bg-white/5 px-4 py-3 text-white transition-all duration-200 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    <select id={input.id} value={formData[input.id] || ""} onChange={handleInputChange} required={isInputRequired(input)} className="w-full cursor-pointer appearance-none rounded-xl border border-purple-500/20 bg-white/5 px-4 py-3 text-white transition-all duration-200 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-purple-500">
                       <option value="" className="bg-black text-white">Select an option</option>
                       {input.options?.map((option) => <option key={option} value={option} className="bg-black text-white">{option}</option>)}
                     </select>
                   ) : (
-                    <input id={input.id} type="text" placeholder={input.placeholder} value={formData[input.id] || ""} onChange={handleInputChange} required={input.required} className="w-full rounded-xl border border-purple-500/20 bg-white/5 px-4 py-3 text-white placeholder-gray-500 transition-all duration-200 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-purple-500" />
+                    <input id={input.id} type="text" placeholder={input.placeholder} value={formData[input.id] || ""} onChange={handleInputChange} required={isInputRequired(input)} className="w-full rounded-xl border border-purple-500/20 bg-white/5 px-4 py-3 text-white placeholder-gray-500 transition-all duration-200 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-purple-500" />
                   )}
                 </div>
               ))}
