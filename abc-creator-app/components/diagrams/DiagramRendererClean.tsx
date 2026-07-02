@@ -1,6 +1,6 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import { useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 
 type NodeSpec = { id?: string; label?: string; level?: number; value?: number; score?: number; weight?: number };
 type EdgeSpec = { from?: string; to?: string; source?: string; target?: string; label?: string };
@@ -236,10 +236,37 @@ function visualFamily(spec: DiagramSpec): "sankey" | "entities" | "network" | "c
 export function DiagramRenderer({ spec, mode = "screen" }: { spec: DiagramSpec; mode?: Mode }) {
   const family = visualFamily(spec);
   const theme = mode === "export" ? exportTheme : screenTheme;
+  const [deleted, setDeleted] = useState(false);
+  const [widthPercent, setWidthPercent] = useState(100);
+
+  if (deleted) return null;
+
+  const startResize = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    const startX = event.clientX;
+    const startWidth = widthPercent;
+
+    const onMove = (moveEvent: PointerEvent) => {
+      const delta = (moveEvent.clientX - startX) / 7;
+      setWidthPercent(Math.min(100, Math.max(42, Math.round(startWidth + delta))));
+    };
+
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  };
 
   return (
-    <div data-abc-diagram="true" style={{ ...theme, margin: "28px 0", background: mode === "export" ? "#fff" : "linear-gradient(135deg, rgba(34,211,238,.08), rgba(168,85,247,.08), rgba(236,72,153,.06))", border: "1px solid var(--abc-diagram-border)", borderRadius: 22, padding: 18 }}>
-      {family === "sankey" ? <Sankey spec={spec} /> : family === "entities" ? <Entities spec={spec} /> : family === "network" ? <Network spec={spec} /> : <Chart spec={spec} />}
+    <div className="group/diagram relative mx-auto" style={{ width: `${widthPercent}%` }}>
+      <div data-abc-diagram="true" style={{ ...theme, margin: "28px 0", background: mode === "export" ? "#fff" : "linear-gradient(135deg, rgba(34,211,238,.08), rgba(168,85,247,.08), rgba(236,72,153,.06))", border: "1px solid var(--abc-diagram-border)", borderRadius: 22, padding: 18 }}>
+        {family === "sankey" ? <Sankey spec={spec} /> : family === "entities" ? <Entities spec={spec} /> : family === "network" ? <Network spec={spec} /> : <Chart spec={spec} />}
+      </div>
+      <button type="button" title="Delete graph or flowchart" aria-label="Delete graph or flowchart" onClick={() => setDeleted(true)} data-export-ignore="true" className="absolute right-3 top-10 z-20 h-8 w-8 rounded-full border border-red-300/30 bg-black/75 text-sm text-red-100 opacity-0 shadow-lg shadow-black/30 backdrop-blur-md transition hover:bg-red-500/25 group-hover/diagram:opacity-100">🗑</button>
+      <button type="button" title="Drag to resize graph or flowchart" aria-label="Drag to resize graph or flowchart" onPointerDown={startResize} data-export-ignore="true" className="absolute right-0 top-7 z-10 h-[calc(100%-56px)] w-4 cursor-ew-resize bg-cyan-300/5 opacity-0 transition hover:bg-cyan-300/20 group-hover/diagram:opacity-100" />
     </div>
   );
 }
