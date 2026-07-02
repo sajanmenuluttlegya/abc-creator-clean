@@ -14,4 +14,5 @@ export const SEO_BATCH_TOOL_CREDIT_COSTS: Record<string, number> = {
   "headline-generator": 2,
   "cta-generator": 1,
   "universal-prompt-enhancer": 2,
+  "fiction-episode-builder": 3,
 };
