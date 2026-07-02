@@ -1,7 +1,7 @@
 type PublicBlogBatchToolInput = {
   id: string;
   label: string;
-  type: "text" | "textarea" | "select" | "image";
+  type: "text" | "textarea" | "select" | "image" | "media";
   placeholder?: string;
   required: boolean;
   options?: string[];
@@ -30,10 +30,28 @@ const outputCountOptions = ["3 variations", "5 variations", "10 variations"];
 const emailTypeOptions = ["Newsletter", "Promotional email", "Educational email", "Product update", "Nurture email", "Plain-text email"];
 const socialPlatformOptions = ["Instagram", "LinkedIn", "X / Twitter", "Facebook", "TikTok", "Pinterest", "Multi-platform"];
 const scriptLengthOptions = ["30 seconds", "60 seconds", "2 minutes", "5 minutes", "10 minutes"];
+const articleLengthOptions = ["Short article", "Standard article", "Long article", "Detailed article"];
+const transcriptSourceModeOptions = ["Paste text / transcript", "YouTube URL", "Upload audio/video"];
 
 function commonInputs(primaryLabel: string): PublicBlogBatchToolInput[] {
   return [
     { id: "source_content", label: primaryLabel, type: "textarea", placeholder: "Paste the source blog, section, outline, article notes, or brief.", required: true },
+    { id: "audience", label: "Audience", type: "select", required: true, options: audienceOptions },
+    { id: "tone", label: "Tone", type: "select", required: true, options: toneOptions },
+    { id: "primary_keyword", label: "Primary Keyword", type: "text", placeholder: "Optional main keyword or topic", required: false },
+    { id: "must_include", label: "Must Include", type: "textarea", placeholder: "Optional facts, CTA, offer, product details, examples, or points to include.", required: false },
+    { id: "avoid", label: "Avoid / Constraints", type: "textarea", placeholder: "Optional words, claims, topics, or style notes to avoid.", required: false },
+    { id: "language", label: "Language", type: "select", required: true, options: languageOptions },
+  ];
+}
+
+function transcriptBlogInputs(primaryLabel: string): PublicBlogBatchToolInput[] {
+  return [
+    { id: "source_mode", label: "Source Mode", type: "select", required: true, options: transcriptSourceModeOptions },
+    { id: "source_url", label: "YouTube URL", type: "text", placeholder: "Paste a YouTube video URL only when using YouTube URL mode.", required: false },
+    { id: "media_upload", label: "Upload Audio/Video", type: "media", placeholder: "Upload an audio/video file only when using Upload audio/video mode.", required: false },
+    { id: "source_content", label: primaryLabel, type: "textarea", placeholder: "Paste a transcript/source notes here, or leave blank when using YouTube URL or uploaded audio/video.", required: true },
+    { id: "article_length", label: "Article Length", type: "select", required: true, options: articleLengthOptions },
     { id: "audience", label: "Audience", type: "select", required: true, options: audienceOptions },
     { id: "tone", label: "Tone", type: "select", required: true, options: toneOptions },
     { id: "primary_keyword", label: "Primary Keyword", type: "text", placeholder: "Optional main keyword or topic", required: false },
@@ -96,4 +114,5 @@ export const blogBatchTools: PublicBlogBatchTool[] = [
     { id: "script_length", label: "Script Length", type: "select", required: true, options: scriptLengthOptions },
     { id: "video_style", label: "Video Style", type: "select", required: true, options: ["Educational", "Explainer", "Tutorial", "Commentary", "Storytelling", "Listicle"] },
   ]),
+  tool("youtube-video-to-blog-post", "YouTube Video to Blog Post", "Turn a pasted transcript, YouTube captions, or uploaded audio/video into a polished blog post.", "🎥", 4, transcriptBlogInputs("Video Transcript / Source Notes"), ["youtube-to-blog-post", "video-to-blog-post", "youtube-video-to-article"]),
 ];
