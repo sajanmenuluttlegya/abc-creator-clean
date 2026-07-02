@@ -35,6 +35,7 @@ const BLOG_OUTPUT_IMAGE_TOOLS = new Set([
   "blog-to-email",
   "blog-to-reels-script",
   "blog-to-youtube-script",
+  "youtube-video-to-blog-post",
 ]);
 
 type GenerateImageBody = {
