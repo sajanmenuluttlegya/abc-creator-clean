@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { OutputPanel } from "./OutputPanel";
 import { PresetBlogOutputPanel } from "./PresetBlogOutputPanel";
 import { ThemeIcon } from "./ThemeIcon";
@@ -44,6 +44,38 @@ function fileToDataUrl(file: File) {
   });
 }
 
+function cleanVisualText(value: string, maxLength = 520) {
+  const text = value.replace(/```[\s\S]*?```/g, " ").replace(/[#*_`>|\[\]()]/g, " ").replace(/\s+/g, " ").trim();
+  return text.length > maxLength ? `${text.slice(0, maxLength)}...` : text;
+}
+
+function hasExistingImageMarker(value: string) {
+  return /(^|\n)#{1,4}\s+.*\bimage\b/i.test(value) || /(^|\n)\s*[-*]?\s*(image\s*)?prompt\s*[:\-–]/i.test(value);
+}
+
+function withAutomaticBlogImage(output: string, toolSlug: string, inputs: Record<string, string>) {
+  const trimmed = output.trim();
+  if (!trimmed || hasExistingImageMarker(trimmed)) return output;
+
+  const topic = inputs.title || inputs.blog_title || inputs.topic || inputs.primary_keyword || inputs.keyword || "this blog output";
+  const context = cleanVisualText(trimmed, 620);
+  const marker = [
+    "### Image: Automatic Blog Visual",
+    "",
+    "Placement: Center below the most relevant nearby text.",
+    "",
+    `Prompt: Create one premium textless editorial image for ${topic}. Use this nearby context: ${context}. Keep it clean, modern, relevant to the section, smooth rounded-frame friendly, no readable text, no watermarks, no fake logos, and no UI screenshots unless the section clearly needs a product/interface visual.`,
+    "",
+    `Alt Text: Visual support for ${topic}.`,
+  ].join("\n");
+
+  const paragraphs = trimmed.split(/\n{2,}/);
+  if (paragraphs.length <= 1) return `${trimmed}\n\n${marker}`;
+
+  const insertAt = Math.min(Math.max(1, Math.floor(paragraphs.length / 3)), paragraphs.length - 1);
+  return [...paragraphs.slice(0, insertAt), marker, ...paragraphs.slice(insertAt)].join("\n\n");
+}
+
 export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -56,6 +88,10 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
   const usePresetEditor = presetBlogEditorTools.has(tool.slug);
   const useImageCaptionEditor = tool.slug === IMAGE_CAPTION_TOOL;
   const allowOutputSideImages = blogOutputSideImageTools.has(tool.slug) || usePresetEditor;
+  const blogOutput = useMemo(
+    () => (allowOutputSideImages && !isLoading && !isErrorOutput ? withAutomaticBlogImage(output, tool.slug, formData) : output),
+    [allowOutputSideImages, formData, isErrorOutput, isLoading, output, tool.slug]
+  );
   const showCalendarCustomPostCount = tool.slug === "blog-content-calendar" && formData.posting_frequency === CALENDAR_CUSTOM_FREQUENCY_OPTION;
 
   useEffect(() => {
@@ -232,18 +268,16 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
         </div>
       </div>
 
-      <div className={`space-y-6 lg:sticky lg:top-28 ${allowOutputSideImages ? "" : "hide-output-side-image-controls"}`}>
-        {!allowOutputSideImages ? (
-          <style>{`.hide-output-side-image-controls button[aria-label="Add image beside this output section"]{display:none!important;}`}</style>
-        ) : null}
+      <div className={`space-y-6 lg:sticky lg:top-28 ${allowOutputSideImages ? "blog-output-visual-upgrade" : "hide-output-side-image-controls"}`}>
+        <style>{`.blog-output-visual-upgrade figure figcaption[data-export-ignore="true"]{display:none!important;}.hide-output-side-image-controls button[aria-label="Add image beside this output section"]{display:none!important;}`}</style>
         {showEditableOutline ? (
-          <EditableBlogOutlinePanel output={output} inputs={formData} />
+          <EditableBlogOutlinePanel output={blogOutput} inputs={formData} />
         ) : useImageCaptionEditor ? (
           <ImageToInstagramCaptionPanel isLoading={isLoading} output={output} inputs={formData} />
         ) : usePresetEditor ? (
-          <PresetBlogOutputPanel isLoading={isLoading} output={output} recommendedNextActions={tool.nextActions} downloadFileBaseName={`${tool.slug}-output`} toolSlug={tool.slug} inputs={formData} />
+          <PresetBlogOutputPanel isLoading={isLoading} output={blogOutput} recommendedNextActions={tool.nextActions} downloadFileBaseName={`${tool.slug}-output`} toolSlug={tool.slug} inputs={formData} />
         ) : (
-          <OutputPanel isLoading={isLoading} output={output} recommendedNextActions={tool.nextActions} downloadFileBaseName={`${tool.slug}-output`} toolSlug={tool.slug} inputs={formData} />
+          <OutputPanel isLoading={isLoading} output={blogOutput} recommendedNextActions={tool.nextActions} downloadFileBaseName={`${tool.slug}-output`} toolSlug={tool.slug} inputs={formData} />
         )}
       </div>
     </div>
