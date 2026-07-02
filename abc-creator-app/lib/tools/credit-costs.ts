@@ -2,6 +2,7 @@ import { BLOG_TOOL_CREDIT_COSTS } from "./blog-tool-credits";
 import { PLATFORM_TOOL_CREDIT_COSTS } from "./platform-tool-credits";
 import { CAMPAIGN_TOOL_CREDIT_COSTS } from "./campaign-tool-credits";
 import { BLOG_BATCH_TOOL_CREDIT_COSTS } from "./blog-batch-tool-credits";
+import { SEO_BATCH_TOOL_CREDIT_COSTS } from "./seo-batch-tool-credits";
 import { WRITING_BATCH_TOOL_CREDIT_COSTS } from "./writing-batch-tool-credits";
 
 export type ToolInputs = Record<string, string>;
@@ -21,16 +22,7 @@ function creditText(credits: number) {
 export const IMAGE_CREDITS_PER_IMAGE = scaleCreditAmount(1);
 export const IMAGE_EDIT_CREDITS = 4;
 
-export const IMAGE_GENERATION_TOOL_SLUGS = [
-  "blog-content",
-  "pro-image-brief-for-blog",
-  "human-style-blog-post",
-  "seo-optimized-blog-post",
-  "advanced-blog-post",
-  "quick-1-click-blog-post",
-  "comparison-blog-writer",
-  "youtube-video-to-blog-post",
-] as const;
+export const IMAGE_GENERATION_TOOL_SLUGS = ["blog-content", "pro-image-brief-for-blog", "human-style-blog-post", "seo-optimized-blog-post", "advanced-blog-post", "quick-1-click-blog-post", "comparison-blog-writer", "youtube-video-to-blog-post"] as const;
 
 const WRITING_BATCH_TOOL_SLUGS = Object.keys(WRITING_BATCH_TOOL_CREDIT_COSTS);
 const BASE_TOOL_CREDITS: Record<string, number> = {
@@ -41,6 +33,7 @@ const BASE_TOOL_CREDITS: Record<string, number> = {
   "blog-seo-pack": 5,
   ...BLOG_TOOL_CREDIT_COSTS,
   ...BLOG_BATCH_TOOL_CREDIT_COSTS,
+  ...SEO_BATCH_TOOL_CREDIT_COSTS,
   ...PLATFORM_TOOL_CREDIT_COSTS,
   ...CAMPAIGN_TOOL_CREDIT_COSTS,
   ...WRITING_BATCH_TOOL_CREDIT_COSTS,
