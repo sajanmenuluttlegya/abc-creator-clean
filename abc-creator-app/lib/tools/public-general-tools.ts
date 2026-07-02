@@ -1,3 +1,6 @@
+import { blogBatchTools } from "./public-blog-batch-tools";
+import { writingBatchTools } from "./public-writing-batch-tools";
+
 type PublicGeneralToolInput = {
   id: string;
   label: string;
@@ -194,4 +197,6 @@ export const generalTools: PublicGeneralTool[] = [
       { id: "language", label: "Language", type: "select", required: true, options: languageOptions },
     ],
   },
+  ...blogBatchTools,
+  ...writingBatchTools,
 ];
