@@ -8,4 +8,5 @@ export const SEO_BATCH_TOOL_CREDIT_COSTS: Record<string, number> = {
   "content-gap-analyzer": 4,
   "schema-markup-generator": 2,
   "poem-generator": 2,
+  "slogan-generator": 2,
 };
