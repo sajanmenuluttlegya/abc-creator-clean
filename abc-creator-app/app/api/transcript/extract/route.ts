@@ -5,6 +5,7 @@ import { calculateTranscriptCreditsFromBytes, TRANSCRIPT_YOUTUBE_CREDITS } from 
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 const TRANSCRIPT_TOOLS = new Set(["summarize-pro", "video-to-article-converter", "youtube-video-to-blog-post"]);
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
@@ -14,6 +15,13 @@ const UPLOAD_MODE = "Upload audio/video";
 type CreditReservation = { ok?: boolean; code?: string; requiredCredits?: number; currentCredits?: number; transactionId?: string };
 type CreditSpendResult = { ok?: boolean; code?: string; status?: string };
 
+type CaptionTrack = {
+  baseUrl?: string;
+  languageCode?: string;
+  kind?: string;
+  name?: { simpleText?: string; runs?: Array<{ text?: string }> };
+};
+
 function env(name: string, fallback = "") {
   return process.env[name] || fallback;
 }
@@ -21,6 +29,11 @@ function env(name: string, fallback = "") {
 function rpcErrorMessage(error: unknown) {
   if (!error) return "Unknown credit ledger error.";
   if (error instanceof Error) return error.message;
+  if (typeof error === "object") {
+    const value = error as { message?: unknown; details?: unknown; hint?: unknown; code?: unknown };
+    const parts = [value.message, value.details, value.hint, value.code].filter((item) => typeof item === "string" && item.trim()).join(" ");
+    if (parts) return parts;
+  }
   return String(error);
 }
 
@@ -46,7 +59,9 @@ function decodeEntities(value: string) {
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'");
+    .replace(/&#39;/g, "'")
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex: string) => String.fromCharCode(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, number: string) => String.fromCharCode(parseInt(number, 10)));
 }
 
 function parseTimedTextXml(raw: string) {
@@ -57,19 +72,112 @@ function parseTimedTextXml(raw: string) {
     .trim();
 }
 
+function parseJson3Transcript(raw: string) {
+  const data = JSON.parse(raw) as { events?: Array<{ segs?: Array<{ utf8?: string }> }> };
+  return (data.events || [])
+    .flatMap((event) => event.segs || [])
+    .map((segment) => segment.utf8 || "")
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function findJsonArrayAfterMarker(html: string, marker: string) {
+  const markerIndex = html.indexOf(marker);
+  if (markerIndex < 0) return null;
+  const start = html.indexOf("[", markerIndex);
+  if (start < 0) return null;
+
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let index = start; index < html.length; index += 1) {
+    const char = html[index];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (char === "\\") {
+      escaped = true;
+      continue;
+    }
+    if (char === '"') {
+      inString = !inString;
+      continue;
+    }
+    if (inString) continue;
+    if (char === "[") depth += 1;
+    if (char === "]") depth -= 1;
+    if (depth === 0) return html.slice(start, index + 1);
+  }
+
+  return null;
+}
+
+function pickBestCaptionTrack(tracks: CaptionTrack[]) {
+  return tracks.find((track) => track.languageCode?.toLowerCase().startsWith("en") && track.kind !== "asr") ||
+    tracks.find((track) => track.languageCode?.toLowerCase().startsWith("en")) ||
+    tracks.find((track) => track.kind !== "asr") ||
+    tracks[0];
+}
+
+async function fetchTranscriptUrl(rawUrl: string) {
+  const response = await fetch(rawUrl, {
+    headers: { "User-Agent": "Mozilla/5.0 ABC-Creator transcript fetcher", Accept: "application/json,text/xml,*/*" },
+    cache: "no-store",
+  });
+  if (!response.ok) return "";
+  const raw = await response.text();
+
+  try {
+    const jsonText = parseJson3Transcript(raw);
+    if (jsonText.length >= 30) return jsonText;
+  } catch {
+    // Fall back to XML timedtext parsing.
+  }
+
+  return parseTimedTextXml(raw);
+}
+
 async function fetchYouTubeTranscript(rawUrl: string) {
   const videoId = extractVideoId(rawUrl);
   if (!videoId) return { ok: false as const, error: "Please enter a valid YouTube video URL." };
 
+  const watchResponse = await fetch(`https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`, {
+    headers: { "User-Agent": "Mozilla/5.0 ABC-Creator transcript fetcher", Accept: "text/html,application/xhtml+xml" },
+    cache: "no-store",
+  });
+
+  if (watchResponse.ok) {
+    const html = await watchResponse.text();
+    const tracksJson = findJsonArrayAfterMarker(html, '\"captionTracks\"') || findJsonArrayAfterMarker(html, '"captionTracks"');
+
+    if (tracksJson) {
+      try {
+        const tracks = JSON.parse(tracksJson) as CaptionTrack[];
+        const track = pickBestCaptionTrack(tracks);
+        if (track?.baseUrl) {
+          const baseUrl = track.baseUrl.replace(/\\u0026/g, "&");
+          const transcriptUrl = baseUrl.includes("fmt=") ? baseUrl : `${baseUrl}&fmt=json3`;
+          const transcript = await fetchTranscriptUrl(transcriptUrl);
+          if (transcript.length >= 30) return { ok: true as const, transcript };
+        }
+      } catch {
+        // Fall back to the public timedtext candidates below.
+      }
+    }
+  }
+
   const candidateUrls = [
+    `https://video.google.com/timedtext?lang=en&fmt=json3&v=${encodeURIComponent(videoId)}`,
+    `https://video.google.com/timedtext?lang=en&kind=asr&fmt=json3&v=${encodeURIComponent(videoId)}`,
     `https://video.google.com/timedtext?lang=en&v=${encodeURIComponent(videoId)}`,
     `https://video.google.com/timedtext?lang=en&kind=asr&v=${encodeURIComponent(videoId)}`,
   ];
 
   for (const url of candidateUrls) {
-    const response = await fetch(url, { cache: "no-store" });
-    if (!response.ok) continue;
-    const transcript = parseTimedTextXml(await response.text());
+    const transcript = await fetchTranscriptUrl(url);
     if (transcript.length >= 30) return { ok: true as const, transcript };
   }
 
@@ -89,12 +197,7 @@ async function transcribeUploadedMedia(file: File) {
   body.append("model", model);
   body.append("response_format", "json");
 
-  const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}` },
-    body,
-  });
-
+  const response = await fetch("https://api.openai.com/v1/audio/transcriptions", { method: "POST", headers: { Authorization: `Bearer ${apiKey}` }, body });
   const text = await response.text();
   if (!response.ok) return { ok: false as const, error: "Could not transcribe the uploaded media.", details: text.slice(0, 600) };
 
@@ -140,17 +243,15 @@ export async function POST(req: NextRequest) {
 
     const requiredCredits = sourceMode === UPLOAD_MODE ? calculateTranscriptCreditsFromBytes(file?.size || 0) : TRANSCRIPT_YOUTUBE_CREDITS;
     const reserveResponse = await supabase.rpc("reserve_credits", {
-      p_tool_slug: `${toolSlug}:transcript`,
+      p_tool_slug: toolSlug,
       p_amount: requiredCredits,
-      p_idempotency_key: `${user.id}:${toolSlug}:transcript:${randomUUID()}`,
+      p_idempotency_key: `${user.id}:${toolSlug}:transcript:${sourceMode}:${randomUUID()}`,
     });
 
     if (reserveResponse.error) return Response.json({ ok: false, error: "Could not reserve transcript credits.", details: rpcErrorMessage(reserveResponse.error) }, { status: 500 });
 
     const reservation = reserveResponse.data as CreditReservation;
-    if (!reservation?.ok) {
-      return Response.json({ ok: false, error: "Not enough credits for transcript extraction.", code: reservation?.code || "INSUFFICIENT_CREDITS", requiredCredits: reservation?.requiredCredits ?? requiredCredits, currentCredits: reservation?.currentCredits ?? 0 }, { status: 402 });
-    }
+    if (!reservation?.ok) return Response.json({ ok: false, error: "Not enough credits for transcript extraction.", code: reservation?.code || "INSUFFICIENT_CREDITS", requiredCredits: reservation?.requiredCredits ?? requiredCredits, currentCredits: reservation?.currentCredits ?? 0 }, { status: 402 });
 
     reservedTransactionId = reservation.transactionId || null;
     if (!reservedTransactionId) return Response.json({ ok: false, error: "Transcript credit reservation failed.", code: "CREDIT_RESERVATION_MISSING_ID" }, { status: 500 });
@@ -164,7 +265,7 @@ export async function POST(req: NextRequest) {
     const spendResponse = await supabase.rpc("spend_reserved_credits", {
       p_transaction_id: reservedTransactionId,
       p_provider: sourceMode === YOUTUBE_MODE ? "transcript:youtube-captions" : "transcript:openai-audio",
-      p_model: sourceMode === YOUTUBE_MODE ? "youtube-captions" : env("OPENAI_TRANSCRIPTION_MODEL", "gpt-4o-mini-transcribe"),
+      p_model: sourceMode === YOUTUBE_MODE ? "youtube-captions" : modelNameForSpend(),
     });
 
     if (spendResponse.error) {
@@ -183,4 +284,8 @@ export async function POST(req: NextRequest) {
     await refundIfReserved("transcript_extraction_failed");
     return Response.json({ ok: false, error: "Transcript extraction failed.", details: error instanceof Error ? error.message : String(error) }, { status: 500 });
   }
+}
+
+function modelNameForSpend() {
+  return env("OPENAI_TRANSCRIPTION_MODEL", "gpt-4o-mini-transcribe");
 }
