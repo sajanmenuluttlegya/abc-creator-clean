@@ -1,4 +1,5 @@
 import { BLOG_TOOL_CREDIT_COSTS } from "./blog-tool-credits";
+import { PLATFORM_TOOL_CREDIT_COSTS } from "./platform-tool-credits";
 
 export type ToolInputs = Record<string, string>;
 
@@ -47,6 +48,7 @@ const BASE_TOOL_CREDITS: Record<string, number> = {
   "pro-image-brief-for-blog": 1,
   "blog-seo-pack": 5,
   ...BLOG_TOOL_CREDIT_COSTS,
+  ...PLATFORM_TOOL_CREDIT_COSTS,
   "image-to-instagram-caption": 3,
   "instagram-page-name-bio-generator": 1,
   "social-media-bio-generator": 1,
