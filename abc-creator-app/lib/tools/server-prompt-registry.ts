@@ -1,6 +1,7 @@
 import { getServerPrompt as getBaseServerPrompt, validateToolInputs as validateBaseToolInputs } from "./server-prompts";
 import { serverSocialTools } from "./server-social-tools";
 import { serverGeneralTools } from "./server-general-tools";
+import { serverPlatformTools } from "./server-platform-tools";
 
 type ValidationResult = { ok: true } | { ok: false; field?: string; error: string };
 
@@ -17,7 +18,7 @@ type RegisteredServerTool = {
 };
 
 function getRegisteredTool(toolSlug: string): RegisteredServerTool | undefined {
-  return serverSocialTools[toolSlug] || serverGeneralTools[toolSlug];
+  return serverSocialTools[toolSlug] || serverGeneralTools[toolSlug] || serverPlatformTools[toolSlug];
 }
 
 function validateRegisteredTool(toolSlug: string, inputs: Record<string, string>): ValidationResult {
@@ -45,7 +46,7 @@ function validateRegisteredTool(toolSlug: string, inputs: Record<string, string>
 }
 
 export function getServerPrompt(toolSlug: string) {
-  return serverSocialTools[toolSlug] || serverGeneralTools[toolSlug] || getBaseServerPrompt(toolSlug);
+  return serverSocialTools[toolSlug] || serverGeneralTools[toolSlug] || serverPlatformTools[toolSlug] || getBaseServerPrompt(toolSlug);
 }
 
 export function validateToolInputs(toolSlug: string, inputs: Record<string, string>): ValidationResult {
