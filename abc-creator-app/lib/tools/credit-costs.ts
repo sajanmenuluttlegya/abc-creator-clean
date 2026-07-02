@@ -1,6 +1,8 @@
 import { BLOG_TOOL_CREDIT_COSTS } from "./blog-tool-credits";
 import { PLATFORM_TOOL_CREDIT_COSTS } from "./platform-tool-credits";
 import { CAMPAIGN_TOOL_CREDIT_COSTS } from "./campaign-tool-credits";
+import { BLOG_BATCH_TOOL_CREDIT_COSTS } from "./blog-batch-tool-credits";
+import { WRITING_BATCH_TOOL_CREDIT_COSTS } from "./writing-batch-tool-credits";
 
 export type ToolInputs = Record<string, string>;
 
@@ -29,6 +31,12 @@ export const IMAGE_GENERATION_TOOL_SLUGS = [
   "blog-intro-generator",
   "blog-conclusion-generator",
   "faq-generator",
+  "blog-section-writer",
+  "comparison-blog-writer",
+  "blog-to-social-posts",
+  "blog-to-email",
+  "blog-to-reels-script",
+  "blog-to-youtube-script",
 ] as const;
 
 const BASE_TOOL_CREDITS: Record<string, number> = {
@@ -38,8 +46,10 @@ const BASE_TOOL_CREDITS: Record<string, number> = {
   "pro-image-brief-for-blog": 1,
   "blog-seo-pack": 5,
   ...BLOG_TOOL_CREDIT_COSTS,
+  ...BLOG_BATCH_TOOL_CREDIT_COSTS,
   ...PLATFORM_TOOL_CREDIT_COSTS,
   ...CAMPAIGN_TOOL_CREDIT_COSTS,
+  ...WRITING_BATCH_TOOL_CREDIT_COSTS,
   "image-to-instagram-caption": 3,
   "instagram-page-name-bio-generator": 1,
   "social-media-bio-generator": 1,
