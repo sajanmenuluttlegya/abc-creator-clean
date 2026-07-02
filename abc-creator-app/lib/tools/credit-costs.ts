@@ -29,17 +29,6 @@ export const IMAGE_GENERATION_TOOL_SLUGS = [
   "blog-intro-generator",
   "blog-conclusion-generator",
   "faq-generator",
-  "facebook-ad-copy",
-  "product-description",
-  "image-to-instagram-caption",
-  "instagram-page-name-bio-generator",
-  "social-media-bio-generator",
-  "business-name-generator",
-  "long-tail-keyword-generator",
-  "ai-prompt-generator",
-  "ai-paraphrasing-tool",
-  "ai-paragraph-generator",
-  "ai-report-writing",
 ] as const;
 
 const BASE_TOOL_CREDITS: Record<string, number> = {
