@@ -10,11 +10,8 @@ export type CreditEstimate = { credits: number; isDynamic: boolean; label: strin
 export function scaleCreditAmount(credits: number) {
   const safeCredits = Math.ceil(Number.isFinite(credits) ? Math.max(0, credits) : 0);
   if (safeCredits <= 0) return 0;
-  if (safeCredits === 1) return 2;
-  if (safeCredits === 2) return 5;
-  if (safeCredits === 3) return 5;
-  if (safeCredits === 5) return 10;
-  return safeCredits * 2;
+  const exactScale: Record<number, number> = { 1: 2, 2: 5, 3: 5, 4: 6, 5: 9, 6: 11, 7: 13, 8: 15, 9: 17 };
+  return exactScale[safeCredits] ?? safeCredits + 20;
 }
 
 function creditText(credits: number) {
@@ -36,7 +33,6 @@ export const IMAGE_GENERATION_TOOL_SLUGS = [
 ] as const;
 
 const WRITING_BATCH_TOOL_SLUGS = Object.keys(WRITING_BATCH_TOOL_CREDIT_COSTS);
-
 const BASE_TOOL_CREDITS: Record<string, number> = {
   "blog-topic-ideas": 1,
   "blog-outline": 3,
@@ -80,18 +76,10 @@ const QUOTE_COUNT_CREDITS: Array<[string, number]> = [["10 versions", 5], ["5 ve
 function includes(value: string | undefined, token: string) { return (value || "").toLowerCase().includes(token.toLowerCase()); }
 function matchCredit(value: string | undefined, table: Array<[string, number]>, fallback: number) { return table.find(([token]) => includes(value, token))?.[1] ?? fallback; }
 function yes(value: string | undefined) { return (value || "").trim().toLowerCase() === "yes"; }
-
-function parseCustomImageCount(value: string | undefined) {
-  const count = Math.floor(Number(value));
-  if (!Number.isFinite(count) || count < 1) return null;
-  return Math.min(count, 19);
-}
-
-function calculateCustomImageBriefCredits(value: string | undefined) {
-  const count = parseCustomImageCount(value);
-  if (!count) return 1;
-  return Number((count * 0.9).toFixed(1));
-}
+function parseCustomImageCount(value: string | undefined) { const count = Math.floor(Number(value)); return Number.isFinite(count) && count >= 1 ? Math.min(count, 19) : null; }
+function calculateCustomImageBriefCredits(value: string | undefined) { const count = parseCustomImageCount(value); return count ? Number((count * 0.9).toFixed(1)) : 1; }
+function calculateVariationToolCredits(value: string | undefined) { return matchCredit(value, VARIATION_COUNT_CREDITS, 1); }
+function calculateWritingLengthCredits(inputs: ToolInputs, fallback = 1) { return matchCredit(inputs.output_length, WRITING_OUTPUT_LENGTH_CREDITS, fallback); }
 
 function calculateFullBlogPresetCredits(toolSlug: string, inputs: ToolInputs) {
   let credits = matchCredit(inputs.word_count, PRESET_BLOG_WORD_COUNT_CREDITS, 8);
@@ -102,9 +90,6 @@ function calculateFullBlogPresetCredits(toolSlug: string, inputs: ToolInputs) {
   }
   return credits;
 }
-
-function calculateVariationToolCredits(value: string | undefined) { return matchCredit(value, VARIATION_COUNT_CREDITS, 1); }
-function calculateWritingLengthCredits(inputs: ToolInputs, fallback = 1) { return matchCredit(inputs.output_length, WRITING_OUTPUT_LENGTH_CREDITS, fallback); }
 
 function calculateWritingToolCredits(toolSlug: string, inputs: ToolInputs) {
   if (toolSlug === "quotes-generator") return matchCredit(inputs.quote_count, QUOTE_COUNT_CREDITS, 1);
@@ -118,7 +103,7 @@ export function supportsImageGeneration(toolSlug: string) { return IMAGE_GENERAT
 export function calculateImageGenerationCredits(imageCount: number) { const safeCount = Number.isFinite(imageCount) ? Math.min(Math.max(Math.floor(imageCount), 1), 7) : 1; return safeCount * IMAGE_CREDITS_PER_IMAGE; }
 export function calculateImageEditCredits() { return IMAGE_EDIT_CREDITS; }
 
-function calculateRawToolCreditCost(toolSlug: string, inputs: ToolInputs = {}): number {
+function calculateRawToolCreditCost(toolSlug: string, inputs: ToolInputs = {}) {
   switch (toolSlug) {
     case "blog-topic-ideas": return matchCredit(inputs.idea_count, BLOG_TOPIC_IDEA_COUNT_CREDITS, 1);
     case "blog-outline": return matchCredit(inputs.word_count, BLOG_OUTLINE_WORD_COUNT_CREDITS, 3);
@@ -145,26 +130,18 @@ function calculateRawToolCreditCost(toolSlug: string, inputs: ToolInputs = {}): 
     case "blog-to-social-posts": return calculateVariationToolCredits(inputs.post_count);
     case "blog-to-email": return calculateVariationToolCredits(inputs.email_count);
     case "blog-to-reels-script": return calculateVariationToolCredits(inputs.script_count);
-    case "pro-image-brief-for-blog": {
-      if (includes(inputs.image_count_guidance, "Custom image count")) return calculateCustomImageBriefCredits(inputs.custom_image_count);
-      return matchCredit(inputs.image_count_guidance, IMAGE_BRIEF_COUNT_CREDITS, 1);
-    }
-    default:
-      if (WRITING_BATCH_TOOL_SLUGS.includes(toolSlug)) return calculateWritingToolCredits(toolSlug, inputs);
-      return BASE_TOOL_CREDITS[toolSlug] ?? 1;
+    case "pro-image-brief-for-blog": return includes(inputs.image_count_guidance, "Custom image count") ? calculateCustomImageBriefCredits(inputs.custom_image_count) : matchCredit(inputs.image_count_guidance, IMAGE_BRIEF_COUNT_CREDITS, 1);
+    default: return WRITING_BATCH_TOOL_SLUGS.includes(toolSlug) ? calculateWritingToolCredits(toolSlug, inputs) : BASE_TOOL_CREDITS[toolSlug] ?? 1;
   }
 }
 
-export function calculateToolCreditCost(toolSlug: string, inputs: ToolInputs = {}): number {
-  return scaleCreditAmount(calculateRawToolCreditCost(toolSlug, inputs));
-}
+export function calculateToolCreditCost(toolSlug: string, inputs: ToolInputs = {}) { return scaleCreditAmount(calculateRawToolCreditCost(toolSlug, inputs)); }
 
 const DYNAMIC_TOOLS = ["blog-topic-ideas", "blog-outline", "blog-content", "human-style-blog-post", "seo-optimized-blog-post", "advanced-blog-post", "rewrite-article-with-keywords", "quick-1-click-blog-post", "pro-image-brief-for-blog", "ai-report-writing", "ai-paragraph-generator", "blog-to-social-posts", "blog-to-email", "blog-to-reels-script", ...WRITING_BATCH_TOOL_SLUGS];
 
 export function getToolCreditEstimate(toolSlug: string, inputs: ToolInputs = {}): CreditEstimate {
   const credits = calculateToolCreditCost(toolSlug, inputs);
-  const isDynamic = DYNAMIC_TOOLS.includes(toolSlug);
-  return { credits, isDynamic, label: creditText(credits) };
+  return { credits, isDynamic: DYNAMIC_TOOLS.includes(toolSlug), label: creditText(credits) };
 }
 
 export function getToolCreditLabel(toolSlug: string) {
@@ -172,12 +149,8 @@ export function getToolCreditLabel(toolSlug: string) {
   if (toolSlug === "blog-outline") return `From ${creditText(scaleCreditAmount(3))}`;
   if (toolSlug === "blog-content") return `From ${creditText(scaleCreditAmount(7))}`;
   if (["human-style-blog-post", "seo-optimized-blog-post", "advanced-blog-post"].includes(toolSlug)) return `From ${creditText(scaleCreditAmount(6))}`;
-  if (toolSlug === "rewrite-article-with-keywords") return `From ${creditText(scaleCreditAmount(1))}`;
   if (toolSlug === "quick-1-click-blog-post") return `From ${creditText(scaleCreditAmount(4))}`;
-  if (toolSlug === "pro-image-brief-for-blog") return `From ${creditText(scaleCreditAmount(1))}`;
-  if (toolSlug === "ai-report-writing") return `From ${creditText(scaleCreditAmount(1))}`;
-  if (toolSlug === "ai-paragraph-generator") return `From ${creditText(scaleCreditAmount(1))}`;
-  if (["blog-to-social-posts", "blog-to-email", "blog-to-reels-script"].includes(toolSlug)) return `From ${creditText(scaleCreditAmount(1))}`;
+  if (["rewrite-article-with-keywords", "pro-image-brief-for-blog", "ai-report-writing", "ai-paragraph-generator", "blog-to-social-posts", "blog-to-email", "blog-to-reels-script"].includes(toolSlug)) return `From ${creditText(scaleCreditAmount(1))}`;
   if (WRITING_BATCH_TOOL_SLUGS.includes(toolSlug)) return `From ${creditText(scaleCreditAmount(1))}`;
   return creditText(scaleCreditAmount(BASE_TOOL_CREDITS[toolSlug] ?? 1));
 }
