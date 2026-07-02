@@ -3,23 +3,15 @@ import { serverSocialTools } from "./server-social-tools";
 import { serverGeneralTools } from "./server-general-tools";
 import { serverPlatformTools } from "./server-platform-tools";
 import { serverCampaignTools } from "./server-campaign-tools";
+import { serverBlogBatchTools } from "./server-blog-batch-tools";
+import { serverWritingBatchTools } from "./server-writing-batch-tools";
 
 type ValidationResult = { ok: true } | { ok: false; field?: string; error: string };
-
-type ToolFieldRule = {
-  id: string;
-  label: string;
-  required?: boolean;
-  minLength?: number;
-  maxLength?: number;
-};
-
-type RegisteredServerTool = {
-  requiredInputs: ToolFieldRule[];
-};
+type ToolFieldRule = { id: string; label: string; required?: boolean; minLength?: number; maxLength?: number };
+type RegisteredServerTool = { requiredInputs: ToolFieldRule[] };
 
 function getRegisteredTool(toolSlug: string): RegisteredServerTool | undefined {
-  return serverSocialTools[toolSlug] || serverGeneralTools[toolSlug] || serverPlatformTools[toolSlug] || serverCampaignTools[toolSlug];
+  return serverSocialTools[toolSlug] || serverGeneralTools[toolSlug] || serverPlatformTools[toolSlug] || serverCampaignTools[toolSlug] || serverBlogBatchTools[toolSlug] || serverWritingBatchTools[toolSlug];
 }
 
 function validateRegisteredTool(toolSlug: string, inputs: Record<string, string>): ValidationResult {
@@ -27,27 +19,23 @@ function validateRegisteredTool(toolSlug: string, inputs: Record<string, string>
   if (!tool) return { ok: false, error: `Unknown tool: ${toolSlug}` };
 
   for (const field of tool.requiredInputs) {
-    const value = inputs[field.id];
-    const cleaned = typeof value === "string" ? value.trim() : "";
+    const cleaned = typeof inputs[field.id] === "string" ? inputs[field.id].trim() : "";
     const minLength = field.minLength ?? 1;
-
-    if (field.required && cleaned.length < minLength) {
-      return { ok: false, field: field.id, error: `${field.label} is required and must be at least ${minLength} characters.` };
-    }
+    if (field.required && cleaned.length < minLength) return { ok: false, field: field.id, error: `${field.label} is required and must be at least ${minLength} characters.` };
   }
 
   for (const [field, value] of Object.entries(inputs)) {
-    if (typeof value !== "string") return { ok: false, field, error: "Invalid input value. Please submit text fields only." };
+    if (typeof value !== "string") return { ok: false, field, error: "Invalid input value." };
     const rule = tool.requiredInputs.find((item) => item.id === field);
     const maxLength = rule?.maxLength ?? 12000;
-    if (value.length > maxLength) return { ok: false, field, error: `${rule?.label || field} is too long. Please shorten it and try again.` };
+    if (value.length > maxLength) return { ok: false, field, error: `${rule?.label || field} is too long.` };
   }
 
   return { ok: true };
 }
 
 export function getServerPrompt(toolSlug: string) {
-  return serverSocialTools[toolSlug] || serverGeneralTools[toolSlug] || serverPlatformTools[toolSlug] || serverCampaignTools[toolSlug] || getBaseServerPrompt(toolSlug);
+  return serverSocialTools[toolSlug] || serverGeneralTools[toolSlug] || serverPlatformTools[toolSlug] || serverCampaignTools[toolSlug] || serverBlogBatchTools[toolSlug] || serverWritingBatchTools[toolSlug] || getBaseServerPrompt(toolSlug);
 }
 
 export function validateToolInputs(toolSlug: string, inputs: Record<string, string>): ValidationResult {
