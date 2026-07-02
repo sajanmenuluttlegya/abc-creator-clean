@@ -177,7 +177,7 @@ export const generalTools: PublicGeneralTool[] = [
     icon: "report",
     detailEmoji: "📄",
     category: "Writing Tools",
-    displayCreditCost: 5,
+    displayCreditCost: 3,
     outputType: "text",
     aliases: ["report-writer", "ai-report-writer", "report-generator", "professional-report-writer"],
     nextActions: [
