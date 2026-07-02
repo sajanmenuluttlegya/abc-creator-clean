@@ -4,7 +4,7 @@ import { writingBatchTools } from "./public-writing-batch-tools";
 type PublicGeneralToolInput = {
   id: string;
   label: string;
-  type: "text" | "textarea" | "select" | "image";
+  type: "text" | "textarea" | "select" | "image" | "media";
   placeholder?: string;
   required: boolean;
   options?: string[];
