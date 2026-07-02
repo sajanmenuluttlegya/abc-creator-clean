@@ -21,24 +21,14 @@ const SOURCE_MODE_YOUTUBE = "YouTube URL";
 const SOURCE_MODE_UPLOAD = "Upload audio/video";
 const presetBlogEditorTools = new Set(["quick-1-click-blog-post", "human-style-blog-post", "seo-optimized-blog-post", "advanced-blog-post"]);
 const transcriptSourceTools = new Set(["summarize-pro", "video-to-article-converter", "youtube-video-to-blog-post"]);
-const blogOutputSideImageTools = new Set([
-  "blog-topic-ideas",
-  "blog-outline",
+const defaultOutputImageTools = new Set([
   "blog-content",
   "pro-image-brief-for-blog",
-  "blog-seo-pack",
-  "blog-content-calendar",
-  "blog-title-generator",
-  "blog-intro-generator",
-  "blog-conclusion-generator",
-  "faq-generator",
-  "rewrite-article-with-keywords",
-  "blog-section-writer",
+  "human-style-blog-post",
+  "seo-optimized-blog-post",
+  "advanced-blog-post",
+  "quick-1-click-blog-post",
   "comparison-blog-writer",
-  "blog-to-social-posts",
-  "blog-to-email",
-  "blog-to-reels-script",
-  "blog-to-youtube-script",
   "youtube-video-to-blog-post",
 ]);
 
@@ -73,16 +63,25 @@ function hasExistingImageMarker(value: string) {
   return /(^|\n)#{1,4}\s+.*\bimage\b/i.test(value) || /(^|\n)\s*[-*]?\s*(image\s*)?prompt\s*[:\-–]/i.test(value);
 }
 
+function shouldUseDefaultOutputImage(toolSlug: string, inputs: Record<string, string>) {
+  if (!defaultOutputImageTools.has(toolSlug)) return false;
+  if (toolSlug === "blog-content") {
+    const imageMode = (inputs.image_brief_mode || "").toLowerCase();
+    return Boolean(imageMode) && !imageMode.includes("no images");
+  }
+  return true;
+}
+
 function withAutomaticBlogImage(output: string, toolSlug: string, inputs: Record<string, string>) {
   const trimmed = output.trim();
-  if (!trimmed || hasExistingImageMarker(trimmed)) return output;
+  if (!trimmed || !shouldUseDefaultOutputImage(toolSlug, inputs) || hasExistingImageMarker(trimmed)) return output;
 
-  const topic = inputs.title || inputs.blog_title || inputs.topic || inputs.primary_keyword || inputs.keyword || "this blog output";
+  const topic = inputs.title || inputs.blog_title || inputs.topic || inputs.primary_keyword || inputs.keyword || inputs.comparison_topic || "this blog output";
   const context = cleanVisualText(trimmed, 620);
   const marker = [
     "### Image: Automatic Blog Visual",
     "",
-    "Placement: Center below the most relevant nearby text.",
+    "Placement: Bottom below the most relevant nearby text.",
     "",
     `Prompt: Create one premium textless editorial image for ${topic}. Use this nearby context: ${context}. Keep it clean, modern, relevant to the section, smooth rounded-frame friendly, no readable text, no watermarks, no fake logos, and no UI screenshots unless the section clearly needs a product/interface visual.`,
     "",
@@ -91,7 +90,6 @@ function withAutomaticBlogImage(output: string, toolSlug: string, inputs: Record
 
   const paragraphs = trimmed.split(/\n{2,}/);
   if (paragraphs.length <= 1) return `${trimmed}\n\n${marker}`;
-
   const insertAt = Math.min(Math.max(1, Math.floor(paragraphs.length / 3)), paragraphs.length - 1);
   return [...paragraphs.slice(0, insertAt), marker, ...paragraphs.slice(insertAt)].join("\n\n");
 }
@@ -120,7 +118,7 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
   const showEditableOutline = tool.slug === "blog-outline" && Boolean(output.trim()) && !isLoading && !isErrorOutput;
   const usePresetEditor = presetBlogEditorTools.has(tool.slug);
   const useImageCaptionEditor = tool.slug === IMAGE_CAPTION_TOOL;
-  const allowOutputSideImages = blogOutputSideImageTools.has(tool.slug) || usePresetEditor;
+  const allowOutputSideImages = defaultOutputImageTools.has(tool.slug);
   const blogOutput = useMemo(
     () => (allowOutputSideImages && !isLoading && !isErrorOutput ? withAutomaticBlogImage(output, tool.slug, formData) : output),
     [allowOutputSideImages, formData, isErrorOutput, isLoading, output, tool.slug]
@@ -129,7 +127,6 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
 
   useEffect(() => {
     if (tool.slug !== "blog-content") return;
-
     const timer = window.setTimeout(() => {
       try {
         const stored = window.sessionStorage.getItem(BLOG_OUTLINE_HANDOFF_KEY);
@@ -146,7 +143,6 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
         window.sessionStorage.removeItem(BLOG_OUTLINE_HANDOFF_KEY);
       }
     }, 0);
-
     return () => window.clearTimeout(timer);
   }, [tool.slug]);
 
@@ -165,12 +161,10 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
     const { id, files } = e.target;
     const file = files?.[0];
     if (!file) return;
-
     if (!file.type.startsWith("image/") || file.size > 4 * 1024 * 1024) {
       setOutput("Error:\nPlease choose an image file under 4 MB.");
       return;
     }
-
     try {
       const dataUrl = await fileToDataUrl(file);
       setFormData((prev) => ({ ...prev, [id]: dataUrl, image_name: file.name }));
@@ -183,23 +177,19 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
   const handleMediaInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, files } = e.target;
     const file = files?.[0] || null;
-
     if (!file) {
       setMediaFiles((prev) => ({ ...prev, [id]: null }));
       setFormData((prev) => ({ ...prev, [`${id}_name`]: "" }));
       return;
     }
-
     if (!file.type.startsWith("audio/") && !file.type.startsWith("video/")) {
       setOutput("Error:\nPlease choose an audio or video file.");
       return;
     }
-
     if (file.size > 50 * 1024 * 1024) {
       setOutput("Error:\nPlease choose an audio/video file under 50 MB, or paste the transcript manually.");
       return;
     }
-
     setMediaFiles((prev) => ({ ...prev, [id]: file }));
     setFormData((prev) => ({ ...prev, [`${id}_name`]: file.name }));
     setOutput("");
@@ -207,21 +197,17 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
 
   const isInputRequired = (input: ToolInput) => {
     if (!transcriptSourceTools.has(tool.slug)) return input.required;
-
     const sourceMode = transcriptSourceModeOf(formData);
     if (isTranscriptPrimaryInput(tool.slug, input)) return input.required && sourceMode === SOURCE_MODE_PASTE;
     if (input.id === "source_url") return sourceMode === SOURCE_MODE_YOUTUBE;
     if (input.id === "media_upload") return sourceMode === SOURCE_MODE_UPLOAD;
-
     return input.required;
   };
 
   const buildInputsForGeneration = async () => {
     if (!transcriptSourceTools.has(tool.slug)) return formData;
-
     const sourceMode = transcriptSourceModeOf(formData);
     const primaryField = transcriptPrimaryField(tool.slug);
-
     if (sourceMode === SOURCE_MODE_PASTE) return formData;
 
     const payload = new FormData();
@@ -241,36 +227,17 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
     }
 
     setOutput("Extracting transcript...\n\nTranscript extraction uses separate transcript credits. The final output will be based on transcript/source only.");
-
-    const res = await fetch("/api/transcript/extract", {
-      method: "POST",
-      body: payload,
-    });
-
+    const res = await fetch("/api/transcript/extract", { method: "POST", body: payload });
     const data = await res.json().catch(() => null) as { transcript?: string; error?: string; details?: string; requiredCredits?: number; currentCredits?: number } | null;
 
     if (!res.ok || !data?.transcript) {
-      if (res.status === 402) {
-        throw new Error(`Not enough credits for transcript extraction. This needs ${data?.requiredCredits ?? "more"} transcript credits. You currently have ${data?.currentCredits ?? 0}.`);
-      }
+      if (res.status === 402) throw new Error(`Not enough credits for transcript extraction. This needs ${data?.requiredCredits ?? "more"} transcript credits. You currently have ${data?.currentCredits ?? 0}.`);
       throw new Error(data?.error || "Transcript extraction failed.");
     }
 
     const transcriptSourceLabel = sourceMode === SOURCE_MODE_YOUTUBE ? "YouTube captions/transcript" : "uploaded audio/video transcript";
-    const transcriptForPrompt = [
-      `Source mode: ${transcriptSourceLabel}.`,
-      "Use this transcript/source as the factual backbone. State that the output is based on the transcript/source when relevant. Do not claim to have watched the video.",
-      "",
-      "Transcript:",
-      data.transcript,
-    ].join("\n");
-
-    const nextInputs = {
-      ...formData,
-      [primaryField]: transcriptForPrompt,
-      transcript_source_mode: sourceMode,
-    };
-
+    const transcriptForPrompt = [`Source mode: ${transcriptSourceLabel}.`, "Use this transcript/source as the factual backbone. State that the output is based on the transcript/source when relevant. Do not claim to have watched the video.", "", "Transcript:", data.transcript].join("\n");
+    const nextInputs = { ...formData, [primaryField]: transcriptForPrompt, transcript_source_mode: sourceMode };
     setFormData((current) => ({ ...current, [primaryField]: transcriptForPrompt, transcript_source_mode: sourceMode }));
     setOutput("");
     return nextInputs;
@@ -292,15 +259,9 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
     e.preventDefault();
     setIsLoading(true);
     setOutput("");
-
     try {
       const generationInputs = await buildInputsForGeneration();
-      const res = await fetch("/api/generate/stream", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ toolSlug: tool.slug, inputs: generationInputs }),
-      });
-
+      const res = await fetch("/api/generate/stream", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ toolSlug: tool.slug, inputs: generationInputs }) });
       if (!res.ok) {
         const text = await res.text();
         try {
@@ -317,12 +278,10 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
         }
         return;
       }
-
       if (!res.body) {
         setOutput("Error:\nStreaming response body was empty.");
         return;
       }
-
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let finalOutput = "";
@@ -354,7 +313,6 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
                   <label htmlFor={input.id} className="block text-sm font-semibold text-white">
                     {input.label}{isInputRequired(input) && <span className="ml-1 text-pink-400">*</span>}
                   </label>
-
                   {input.type === "media" ? (
                     <div className="rounded-2xl border border-dashed border-cyan-300/25 bg-cyan-400/5 p-4">
                       <input id={input.id} type="file" accept="audio/*,video/*" onChange={handleMediaInput} required={isInputRequired(input) && !mediaFiles[input.id]} className="w-full cursor-pointer rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white file:mr-4 file:rounded-full file:border-0 file:bg-cyan-500/20 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-cyan-100" />
@@ -377,7 +335,6 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
                   )}
                 </div>
               ))}
-
               {showCalendarCustomPostCount ? (
                 <div className="space-y-3">
                   <label htmlFor="custom_post_count" className="block text-sm font-semibold text-white">How many posts? <span className="ml-1 text-pink-400">*</span><span className="ml-2 text-xs font-medium text-gray-400">1–19 only</span></label>
@@ -385,13 +342,11 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
                 </div>
               ) : null}
             </div>
-
             <button type="submit" disabled={isLoading} className="mt-8 flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-3 font-semibold text-white shadow-lg shadow-purple-500/20 transition-all duration-200 hover:from-indigo-700 hover:to-purple-700 hover:shadow-purple-500/40 disabled:from-indigo-600/50 disabled:to-purple-600/50">
               {isLoading ? <><span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />Generating...</> : <><ThemeIcon name="spark" size="xs" />Generate — {creditCost} credits</>}
             </button>
           </form>
         </div>
-
         <div className="rounded-2xl border border-purple-500/20 bg-white/5 p-7 backdrop-blur-sm transition-all duration-200 hover:border-purple-500/40">
           <h3 className="mb-5 text-lg font-semibold text-white">How it works</h3>
           <ol className="space-y-4 text-sm leading-relaxed text-gray-400">
@@ -402,7 +357,6 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
           </ol>
         </div>
       </div>
-
       <div className={`space-y-6 lg:sticky lg:top-28 ${allowOutputSideImages ? "blog-output-visual-upgrade" : "hide-output-side-image-controls"}`}>
         <style>{blogOutputVisualStyles}</style>
         {showEditableOutline ? (
