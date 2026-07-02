@@ -1,4 +1,5 @@
 import { creativeBatchTools } from "./public-creative-batch-tools";
+import { emailBatchTools } from "./public-email-batch-tools";
 
 type PublicBlogBatchToolInput = {
   id: string;
@@ -85,6 +86,7 @@ function tool(slug: string, name: string, description: string, detailEmoji: stri
 
 export const blogBatchTools: PublicBlogBatchTool[] = [
   ...(creativeBatchTools as PublicBlogBatchTool[]),
+  ...(emailBatchTools as PublicBlogBatchTool[]),
   tool("blog-section-writer", "Blog Section Writer", "Write a polished blog section from a heading, outline, or short brief.", "🧱", 3, [
     { id: "section_heading", label: "Section Heading", type: "text", placeholder: "e.g., How AI saves time for small teams", required: true },
     { id: "section_brief", label: "Section Brief / Notes", type: "textarea", placeholder: "Describe what this section should cover.", required: true },
