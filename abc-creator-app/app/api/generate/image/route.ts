@@ -29,6 +29,12 @@ const BLOG_OUTPUT_IMAGE_TOOLS = new Set([
   "blog-intro-generator",
   "blog-conclusion-generator",
   "faq-generator",
+  "blog-section-writer",
+  "comparison-blog-writer",
+  "blog-to-social-posts",
+  "blog-to-email",
+  "blog-to-reels-script",
+  "blog-to-youtube-script",
 ]);
 
 type GenerateImageBody = {
