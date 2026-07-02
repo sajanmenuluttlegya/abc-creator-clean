@@ -115,7 +115,7 @@ export const socialTools: PublicSocialTool[] = [
     icon: "instagram",
     detailEmoji: "📸",
     category: "Social Media Tools",
-    displayCreditCost: 3,
+    displayCreditCost: 5,
     outputType: "text",
     aliases: [
       "image-to-instagram-caption",
