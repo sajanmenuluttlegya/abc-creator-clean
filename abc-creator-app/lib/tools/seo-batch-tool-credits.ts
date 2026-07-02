@@ -1,0 +1,10 @@
+export const SEO_BATCH_TOOL_CREDIT_COSTS: Record<string, number> = {
+  "seo-content-brief-generator": 4,
+  "keyword-cluster-generator": 3,
+  "search-intent-analyzer": 2,
+  "meta-title-description-generator": 1,
+  "ai-visibility-optimizer": 4,
+  "topical-authority-map": 3,
+  "content-gap-analyzer": 4,
+  "schema-markup-generator": 2,
+};
