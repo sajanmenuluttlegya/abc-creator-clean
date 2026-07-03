@@ -101,10 +101,10 @@ export const socialCompletionBatchTools: SocialTool[] = [
   tool("replies-for-twitter-x", "Replies for Twitter/X", "Create concise, brand-safe Twitter/X replies that are useful, natural, and engagement-ready.", "𝕏", 2, replyInputs("Twitter/X"), ["twitter-reply-generator", "x-reply-generator", "replies-for-twitter"]),
   tool("replies-for-linkedin", "Replies for LinkedIn", "Write professional LinkedIn replies for comments, prospects, thought leadership, and B2B conversations.", "💼", 2, replyInputs("LinkedIn"), ["linkedin-reply-generator", "linkedin-comment-replies"]),
   tool("replies-for-instagram", "Replies for Instagram", "Generate friendly Instagram replies for comments, DMs, story replies, objections, and community engagement.", "📸", 2, replyInputs("Instagram"), ["instagram-reply-generator", "instagram-comment-replies"]),
-  tool("instagram-threads-generator", "Instagram Threads Generator", "Create Threads-style post sequences with hooks, short posts, replies, and engagement prompts.", "🧵", 3, postInputs("Instagram Threads"), ["threads-generator", "threads-post-generator"]),
-  tool("tiktok-caption-generator", "TikTok Caption Generator", "Write scroll-stopping TikTok captions with hooks, context, CTA, and hashtag ideas.", "🎵", 2, postInputs("TikTok Caption"), ["tiktok-caption", "tiktok-captions-generator"]),
-  tool("motivational-posts-generator", "Motivational Posts Generator", "Create premium motivational social posts that feel human, specific, and shareable without generic filler.", "🔥", 2, postInputs("Motivational Social"), ["motivational-post-generator", "inspirational-post-generator"]),
-  tool("social-hook-generator", "Social Hook Generator", "Generate short-form hooks for posts, reels, carousels, videos, ads, and threads with safe virality angles.", "🪝", 2, [
+  tool("instagram-threads-generator", "Instagram Threads Generator", "Create Threads-style post sequences with hooks, short posts, replies, and engagement prompts.", "🧵", 5, postInputs("Instagram Threads"), ["threads-generator", "threads-post-generator"]),
+  tool("tiktok-caption-generator", "TikTok Caption Generator", "Write scroll-stopping TikTok captions with hooks, context, CTA, and hashtag ideas.", "🎵", 3, postInputs("TikTok Caption"), ["tiktok-caption", "tiktok-captions-generator"]),
+  tool("motivational-posts-generator", "Motivational Posts Generator", "Create premium motivational social posts that feel human, specific, and shareable without generic filler.", "🔥", 3, postInputs("Motivational Social"), ["motivational-post-generator", "inspirational-post-generator"]),
+  tool("social-hook-generator", "Social Hook Generator", "Generate short-form hooks for posts, reels, carousels, videos, ads, and threads with safe virality angles.", "🪝", 3, [
     { id: "topic", label: "Topic / Offer", type: "textarea", placeholder: "Describe the topic, product, angle, audience, pain point, transformation, or content idea.", required: true },
     { id: "platform", label: "Platform", type: "select", required: true, options: platformOptions },
     { id: "hook_count", label: "How Many Hooks?", type: "select", required: true, options: ["10 hooks", "20 hooks", "30 hooks", "50 hooks"] },
@@ -113,11 +113,11 @@ export const socialCompletionBatchTools: SocialTool[] = [
     { id: "avoid", label: "Avoid", type: "textarea", placeholder: "Optional: clickbait, fake urgency, claims, cringe, banned words, or competitor mentions.", required: false },
     { id: "language", label: "Language", type: "select", required: true, options: languageOptions },
   ], ["hook-generator", "social-media-hook-generator", "viral-hook-generator"]),
-  tool("twitter-x-post-generator", "Twitter/X Post Generator", "Write concise Twitter/X posts with strong hooks, clarity, engagement prompts, and thread-ready variants.", "𝕏", 2, postInputs("Twitter/X"), ["twitter-post-generator", "x-post-generator", "twitter-x-post"]),
+  tool("twitter-x-post-generator", "Twitter/X Post Generator", "Write concise Twitter/X posts with strong hooks, clarity, engagement prompts, and thread-ready variants.", "𝕏", 3, postInputs("Twitter/X"), ["twitter-post-generator", "x-post-generator", "twitter-x-post"]),
   tool("instagram-reel-script", "Instagram Reel Script", "Create Instagram Reel scripts with hook, scenes, captions, on-screen text, CTA, and retention beats.", "🎬", 3, scriptInputs("Instagram Reel"), ["instagram-reels-script", "reel-script-generator"]),
   tool("tiktok-video-script-generator", "TikTok Video Script Generator", "Write TikTok video scripts with thumb-stopping hooks, scene beats, captions, CTA, and retention flow.", "🎥", 3, scriptInputs("TikTok"), ["tiktok-script-generator", "tiktok-video-script", "tiktok-script"]),
-  tool("linkedin-post-generator", "LinkedIn Post Generator", "Write professional LinkedIn posts for authority, storytelling, education, launches, and lead generation.", "💼", 2, postInputs("LinkedIn"), ["linkedin-post", "linkedin-content-generator"]),
-  tool("twitter-x-thread-generator", "Twitter/X Thread Generator", "Build Twitter/X threads with a strong opener, logical flow, value points, CTA, and engagement prompt.", "🧵", 3, [
+  tool("linkedin-post-generator", "LinkedIn Post Generator", "Write professional LinkedIn posts for authority, storytelling, education, launches, and lead generation.", "💼", 3, postInputs("LinkedIn"), ["linkedin-post", "linkedin-content-generator"]),
+  tool("twitter-x-thread-generator", "Twitter/X Thread Generator", "Build Twitter/X threads with a strong opener, logical flow, value points, CTA, and engagement prompt.", "🧵", 5, [
     { id: "thread_brief", label: "Thread Brief", type: "textarea", placeholder: "Describe the topic, audience, main argument, proof, examples, CTA, and key points.", required: true },
     { id: "thread_length", label: "Thread Length", type: "select", required: true, options: ["5 posts", "7 posts", "10 posts", "15 posts"] },
     { id: "audience", label: "Audience", type: "select", required: true, options: audienceOptions },
@@ -127,7 +127,7 @@ export const socialCompletionBatchTools: SocialTool[] = [
     { id: "avoid", label: "Avoid", type: "textarea", placeholder: "Optional: claims, hype, sarcasm, banned words, or competitor mentions.", required: false },
     { id: "language", label: "Language", type: "select", required: true, options: languageOptions },
   ], ["twitter-thread-generator", "x-thread-generator"]),
-  tool("facebook-post-generator", "Facebook Post Generator", "Write Facebook posts for engagement, community, offers, launches, stories, and local/business updates.", "📘", 2, postInputs("Facebook"), ["facebook-post", "facebook-content-generator"]),
+  tool("facebook-post-generator", "Facebook Post Generator", "Write Facebook posts for engagement, community, offers, launches, stories, and local/business updates.", "📘", 3, postInputs("Facebook"), ["facebook-post", "facebook-content-generator"]),
   tool("content-calendar-generator", "Content Calendar Generator", "Plan a premium content calendar across channels with themes, formats, hooks, and production notes.", "🗓️", 4, [
     { id: "content_context", label: "Content Context", type: "textarea", placeholder: "Describe the brand, audience, goals, channels, content pillars, campaigns, products, and available resources.", required: true },
     { id: "channels", label: "Channels", type: "select", required: true, options: ["Social only", "Blog + social", "Email + social", "YouTube + social", "Full content system"] },
@@ -138,7 +138,7 @@ export const socialCompletionBatchTools: SocialTool[] = [
     { id: "avoid", label: "Avoid", type: "textarea", placeholder: "Optional: topics, formats, claims, platforms, or words to avoid.", required: false },
     { id: "language", label: "Language", type: "select", required: true, options: languageOptions },
   ], ["content-calendar", "marketing-content-calendar"]),
-  tool("carousel-post-generator", "Carousel Post Generator", "Create carousel posts with slide-by-slide copy, hook, structure, CTA, and design notes.", "🎠", 3, [
+  tool("carousel-post-generator", "Carousel Post Generator", "Create carousel posts with slide-by-slide copy, hook, structure, CTA, and design notes.", "🎠", 5, [
     { id: "carousel_brief", label: "Carousel Brief", type: "textarea", placeholder: "Describe the topic, audience, platform, product, key points, CTA, and exact facts.", required: true },
     { id: "platform", label: "Platform", type: "select", required: true, options: ["Instagram", "LinkedIn", "Facebook", "Multi-platform"] },
     { id: "slide_count", label: "Slide Count", type: "select", required: true, options: ["5 slides", "7 slides", "10 slides", "12 slides"] },
