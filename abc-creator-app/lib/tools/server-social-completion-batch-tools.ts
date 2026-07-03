@@ -9,7 +9,8 @@ ABC Creator premium social media rules:
 - Build safe shareability through stronger hooks, clarity, contrast, audience pain points, useful value, and clear CTAs without clickbait, fake urgency, or spam.
 - For replies, be respectful, useful, concise, and brand-safe.
 - For scripts, include hook, scene beats, spoken lines, captions, CTA, and retention notes where useful.
-- Use clean Markdown with clear headings and tables where useful.`;
+- Use clean Markdown with clear headings and tables where useful.
+- For every calendar-style output, include the main calendar as a Markdown pipe table with a separator row so it renders as a real table in the output panel and PDF export.`;
 
 function p(name: string, creditCost: number, requiredInputs: ToolFieldRule[], task: string, outputGuide: string): ServerPrompt {
   return { creditCost, requiredInputs, system: `You are ABC Creator's elite ${name} specialist.${rules}\n\nTask: ${task}`, outputGuide };
@@ -69,7 +70,7 @@ export const serverSocialCompletionBatchTools: Record<string, ServerPrompt> = {
     mustField,
     avoidField,
     languageField,
-  ], "Create a platform-ready social media calendar with content pillars, dates, formats, hooks, captions, CTAs, and production notes.", "Return Markdown with: strategy, calendar table, content mix, hook bank, CTA plan, and execution notes."),
+  ], "Create a platform-ready social media calendar with content pillars, dates, formats, hooks, captions, CTAs, and production notes.", "Return Markdown with: strategy, a premium Markdown pipe-table calendar using columns such as Date/Week, Platform, Content Format, Hook, Caption/Angle, CTA, Pillar, and Production Notes, then content mix, hook bank, CTA plan, and execution notes."),
   "replies-for-facebook": p("Replies for Facebook", 2, replyFields("Facebook"), "Write polished Facebook replies for supplied context.", "Return recommended reply, alternate replies, tone notes, and verification notes."),
   "replies-for-twitter-x": p("Replies for Twitter/X", 2, replyFields("Twitter/X"), "Write concise Twitter/X replies that are useful, natural, and brand-safe.", "Return reply options, shortest version, warm version, and notes."),
   "replies-for-linkedin": p("Replies for LinkedIn", 2, replyFields("LinkedIn"), "Write professional LinkedIn replies for supplied context.", "Return recommended reply, professional alternatives, follow-up prompt, and notes."),
@@ -110,7 +111,7 @@ export const serverSocialCompletionBatchTools: Record<string, ServerPrompt> = {
     mustField,
     avoidField,
     languageField,
-  ], "Plan a premium cross-channel content calendar with themes, formats, hooks, CTAs, production notes, and repurposing ideas.", "Return strategy, calendar table, channel mix, repurposing plan, and production notes."),
+  ], "Plan a premium cross-channel content calendar with themes, formats, hooks, CTAs, production notes, and repurposing ideas.", "Return Markdown with: strategy, a premium Markdown pipe-table calendar using columns such as Date/Week, Channel, Format, Topic, Hook, CTA, Funnel Stage, Repurpose Path, and Production Notes, then channel mix, repurposing plan, and production notes."),
   "carousel-post-generator": p("Carousel Post Generator", 3, [
     { id: "carousel_brief", label: "Carousel brief", required: true, minLength: 10, maxLength: 12000 },
     { id: "platform", label: "Platform", required: true, minLength: 2, maxLength: 160 },
