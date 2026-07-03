@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { OutputPanel } from "./OutputPanel";
+import { EmailOutputEditorPanel } from "./EmailOutputEditorPanel";
 import { PresetBlogOutputPanel } from "./PresetBlogOutputPanel";
 import { ThemeIcon } from "./ThemeIcon";
 import { EditableBlogOutlinePanel } from "./EditableBlogOutlinePanel";
@@ -21,6 +22,16 @@ const SOURCE_MODE_YOUTUBE = "YouTube URL";
 const SOURCE_MODE_UPLOAD = "Upload audio/video";
 const presetBlogEditorTools = new Set(["quick-1-click-blog-post", "human-style-blog-post", "seo-optimized-blog-post", "advanced-blog-post"]);
 const transcriptSourceTools = new Set(["summarize-pro", "video-to-article-converter", "youtube-video-to-blog-post"]);
+const emailOutputEditorTools = new Set([
+  "cold-email-personalizer",
+  "blog-to-email",
+  "subject-line-generator",
+  "email-newsletter-generator",
+  "follow-up-email-generator",
+  "sales-email-generator",
+  "welcome-email-generator",
+  "product-launch-email-generator",
+]);
 const defaultOutputImageTools = new Set([
   "blog-content",
   "pro-image-brief-for-blog",
@@ -118,6 +129,7 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
   const showEditableOutline = tool.slug === "blog-outline" && Boolean(output.trim()) && !isLoading && !isErrorOutput;
   const usePresetEditor = presetBlogEditorTools.has(tool.slug);
   const useImageCaptionEditor = tool.slug === IMAGE_CAPTION_TOOL;
+  const useEmailOutputEditor = emailOutputEditorTools.has(tool.slug);
   const allowOutputSideImages = defaultOutputImageTools.has(tool.slug);
   const blogOutput = useMemo(
     () => (allowOutputSideImages && !isLoading && !isErrorOutput ? withAutomaticBlogImage(output, tool.slug, formData) : output),
@@ -365,6 +377,8 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
           <ImageToInstagramCaptionPanel isLoading={isLoading} output={output} inputs={formData} />
         ) : usePresetEditor ? (
           <PresetBlogOutputPanel isLoading={isLoading} output={blogOutput} recommendedNextActions={tool.nextActions} downloadFileBaseName={`${tool.slug}-output`} toolSlug={tool.slug} inputs={formData} />
+        ) : useEmailOutputEditor ? (
+          <EmailOutputEditorPanel isLoading={isLoading} output={output} downloadFileBaseName={`${tool.slug}-output`} />
         ) : (
           <OutputPanel isLoading={isLoading} output={blogOutput} recommendedNextActions={tool.nextActions} downloadFileBaseName={`${tool.slug}-output`} toolSlug={tool.slug} inputs={formData} />
         )}
