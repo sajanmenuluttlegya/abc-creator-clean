@@ -70,7 +70,7 @@ export const platformTools: PublicPlatformTool[] = [
     icon: "writing-pad",
     detailEmoji: "📣",
     category: "Social Media Tools",
-    displayCreditCost: 3,
+    displayCreditCost: 5,
     outputType: "text",
     aliases: ["social-post-generator", "social-media-copy-generator", "ai-social-post-generator", "post-generator"],
     nextActions: [
