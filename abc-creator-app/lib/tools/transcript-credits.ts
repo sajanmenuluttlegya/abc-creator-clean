@@ -1,6 +1,10 @@
 export const TRANSCRIPT_YOUTUBE_CREDITS = 2;
 
-export function calculateTranscriptCreditsFromBytes(sizeBytes: number) {
+function creditLabel(credits: number) {
+  return `${credits} transcript credit${credits === 1 ? "" : "s"}`;
+}
+
+export function calculateTranscriptCreditsFromBytes(sizeBytes: number): number {
   const safeSize = Number.isFinite(sizeBytes) ? Math.max(0, sizeBytes) : 0;
   const sizeMb = safeSize / (1024 * 1024);
 
@@ -10,6 +14,6 @@ export function calculateTranscriptCreditsFromBytes(sizeBytes: number) {
 }
 
 export function getTranscriptCreditLabel(sourceMode: string, sizeBytes?: number) {
-  const credits = sourceMode === "Upload audio/video" ? calculateTranscriptCreditsFromBytes(sizeBytes || 0) : TRANSCRIPT_YOUTUBE_CREDITS;
-  return `${credits} transcript credit${credits === 1 ? "" : "s"}`;
+  const credits: number = sourceMode === "Upload audio/video" ? calculateTranscriptCreditsFromBytes(sizeBytes || 0) : TRANSCRIPT_YOUTUBE_CREDITS;
+  return creditLabel(credits);
 }
