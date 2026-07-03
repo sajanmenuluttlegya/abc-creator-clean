@@ -43,7 +43,7 @@ const adTextNextActions: AdNextAction[] = [
 ];
 
 function tool(slug: string, name: string, description: string, emoji: string, credits: number, inputs: AdInput[], aliases: string[] = []): AdTool {
-  return { id: slug, slug, name, description, icon: "ad-copy", detailEmoji: emoji, category: "Advertising Tools", displayCreditCost: credits, outputType: "text", aliases: [`ai-${slug}`, `${slug}-tool`, `${slug}-generator`, ...aliases], nextActions: adTextNextActions, inputs };
+  return { id: slug, slug, name, description, icon: "megaphone", detailEmoji: emoji, category: "Ad Copy", displayCreditCost: credits, outputType: "text", aliases: [`ai-${slug}`, `${slug}-tool`, `${slug}-generator`, ...aliases], nextActions: adTextNextActions, inputs };
 }
 
 function adInputs(platform: string): AdInput[] {
