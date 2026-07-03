@@ -20,8 +20,10 @@ const IMAGE_CAPTION_TOOL = "image-to-instagram-caption";
 const SOURCE_MODE_PASTE = "Paste text / transcript";
 const SOURCE_MODE_YOUTUBE = "YouTube URL";
 const SOURCE_MODE_UPLOAD = "Upload audio/video";
+const SOURCE_MODE_TEXT_FILE = "Upload text file";
 const presetBlogEditorTools = new Set(["quick-1-click-blog-post", "human-style-blog-post", "seo-optimized-blog-post", "advanced-blog-post"]);
 const transcriptSourceTools = new Set(["summarize-pro", "video-to-article-converter", "youtube-video-to-blog-post"]);
+const textFileSourceTools = new Set(["meeting-notes-summarizer", "file-text-summarizer"]);
 const emailOutputEditorTools = new Set([
   "cold-email-personalizer",
   "blog-to-email",
@@ -65,6 +67,21 @@ function fileToDataUrl(file: File) {
     reader.onerror = () => reject(new Error("Could not read the selected file."));
     reader.readAsDataURL(file);
   });
+}
+
+function fileToText(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("Could not read the selected text file."));
+    reader.readAsText(file);
+  });
+}
+
+function isTextLikeFile(file: File) {
+  const name = file.name.toLowerCase();
+  const allowedExtensions = [".txt", ".md", ".markdown", ".csv", ".json", ".rtf", ".html", ".htm", ".xml", ".log"];
+  return file.type.startsWith("text/") || file.type === "application/json" || file.type === "application/xml" || allowedExtensions.some((ext) => name.endsWith(ext));
 }
 
 function cleanVisualText(value: string, maxLength = 520) {
@@ -119,6 +136,10 @@ function isTranscriptPrimaryInput(toolSlug: string, input: ToolInput) {
   return transcriptSourceTools.has(toolSlug) && input.id === transcriptPrimaryField(toolSlug);
 }
 
+function textFileSourceModeOf(inputs: Record<string, string>) {
+  return inputs.source_mode || SOURCE_MODE_PASTE;
+}
+
 export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [mediaFiles, setMediaFiles] = useState<Record<string, File | null>>({});
@@ -167,6 +188,13 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
         const { custom_post_count: _customPostCount, ...rest } = prev;
         return { ...rest, [id]: value };
       }
+      if (textFileSourceTools.has(tool.slug) && id === "source_mode") {
+        if (value !== SOURCE_MODE_TEXT_FILE) {
+          setMediaFiles((current) => ({ ...current, media_upload: null }));
+          const { media_upload_name: _mediaUploadName, ...rest } = prev;
+          return { ...rest, [id]: value };
+        }
+      }
       return { ...prev, [id]: value };
     });
   };
@@ -191,9 +219,24 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
   const handleMediaInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, files } = e.target;
     const file = files?.[0] || null;
+    const isTextFileTool = textFileSourceTools.has(tool.slug);
     if (!file) {
       setMediaFiles((prev) => ({ ...prev, [id]: null }));
       setFormData((prev) => ({ ...prev, [`${id}_name`]: "" }));
+      return;
+    }
+    if (isTextFileTool) {
+      if (!isTextLikeFile(file)) {
+        setOutput("Error:\nPlease choose a text-based file such as .txt, .md, .csv, .json, .rtf, .html, .xml, or .log.");
+        return;
+      }
+      if (file.size > 2 * 1024 * 1024) {
+        setOutput("Error:\nPlease choose a text file under 2 MB, or paste the most relevant section manually.");
+        return;
+      }
+      setMediaFiles((prev) => ({ ...prev, [id]: file }));
+      setFormData((prev) => ({ ...prev, [`${id}_name`]: file.name }));
+      setOutput("");
       return;
     }
     if (!file.type.startsWith("audio/") && !file.type.startsWith("video/")) {
@@ -210,6 +253,12 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
   };
 
   const isInputRequired = (input: ToolInput) => {
+    if (textFileSourceTools.has(tool.slug)) {
+      const sourceMode = textFileSourceModeOf(formData);
+      if (input.id === "source_content") return sourceMode !== SOURCE_MODE_TEXT_FILE;
+      if (input.id === "media_upload") return sourceMode === SOURCE_MODE_TEXT_FILE;
+      return input.required;
+    }
     if (!transcriptSourceTools.has(tool.slug)) return input.required;
     const sourceMode = transcriptSourceModeOf(formData);
     if (isTranscriptPrimaryInput(tool.slug, input)) return input.required && sourceMode === SOURCE_MODE_PASTE;
@@ -218,7 +267,31 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
     return input.required;
   };
 
+  const buildTextFileInputsForGeneration = async () => {
+    const sourceMode = textFileSourceModeOf(formData);
+    if (sourceMode !== SOURCE_MODE_TEXT_FILE) return formData;
+
+    const file = mediaFiles.media_upload;
+    if (!file) throw new Error("Upload a text file or choose paste mode.");
+
+    const text = await fileToText(file);
+    const cleaned = text.replace(/\u0000/g, "").trim();
+    if (cleaned.length < 20) throw new Error("The uploaded text file does not contain enough readable text.");
+
+    const maxChars = 58000;
+    const truncated = cleaned.length > maxChars;
+    const fileText = truncated ? `${cleaned.slice(0, maxChars)}\n\n[File was longer than ${maxChars} characters, so only the first part was used. Paste a smaller section for deeper analysis.]` : cleaned;
+    const nextInputs = {
+      ...formData,
+      source_content: [`Source mode: uploaded text file (${file.name}).`, "Use this uploaded text as the factual source. Do not claim external file access beyond this uploaded text.", "", fileText].join("\n"),
+      uploaded_text_file_name: file.name,
+    };
+    setFormData((current) => ({ ...current, source_content: nextInputs.source_content, uploaded_text_file_name: file.name }));
+    return nextInputs;
+  };
+
   const buildInputsForGeneration = async () => {
+    if (textFileSourceTools.has(tool.slug)) return buildTextFileInputsForGeneration();
     if (!transcriptSourceTools.has(tool.slug)) return formData;
     const sourceMode = transcriptSourceModeOf(formData);
     const primaryField = transcriptPrimaryField(tool.slug);
@@ -322,33 +395,36 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
 
           <form onSubmit={handleSubmit} className="rounded-2xl border border-purple-500/20 bg-white/5 p-8 backdrop-blur-sm transition-all duration-200 hover:border-purple-500/40">
             <div className="space-y-6">
-              {tool.inputs.map((input) => (
-                <div key={input.id} className="space-y-3">
-                  <label htmlFor={input.id} className="block text-sm font-semibold text-white">
-                    {input.label}{isInputRequired(input) && <span className="ml-1 text-pink-400">*</span>}
-                  </label>
-                  {input.type === "media" ? (
-                    <div className="rounded-2xl border border-dashed border-cyan-300/25 bg-cyan-400/5 p-4">
-                      <input id={input.id} type="file" accept="audio/*,video/*" onChange={handleMediaInput} required={isInputRequired(input) && !mediaFiles[input.id]} className="w-full cursor-pointer rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white file:mr-4 file:rounded-full file:border-0 file:bg-cyan-500/20 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-cyan-100" />
-                      {mediaFiles[input.id] ? <p className="mt-3 text-xs text-cyan-100">Media ready: {mediaFiles[input.id]?.name}</p> : <p className="mt-3 text-xs text-slate-400">Audio/video is transcribed first and charged separately. Max 50 MB.</p>}
-                    </div>
-                  ) : input.type === "image" ? (
-                    <div className="rounded-2xl border border-dashed border-pink-300/25 bg-pink-400/5 p-4">
-                      <input id={input.id} type="file" accept="image/*" onChange={handleFileInput} required={isInputRequired(input) && !formData[input.id]} className="w-full cursor-pointer rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white file:mr-4 file:rounded-full file:border-0 file:bg-pink-500/20 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-pink-100" />
-                      {formData[input.id] ? <p className="mt-3 text-xs text-pink-100">Image ready: {formData.image_name || "uploaded image"}</p> : <p className="mt-3 text-xs text-slate-400">Choose a clear image under 4 MB when using image-analysis mode.</p>}
-                    </div>
-                  ) : input.type === "textarea" ? (
-                    <textarea id={input.id} placeholder={input.placeholder} value={formData[input.id] || ""} onChange={handleInputChange} required={isInputRequired(input)} className="h-28 w-full resize-none rounded-xl border border-purple-500/20 bg-white/5 px-4 py-3 text-white placeholder-gray-500 transition-all duration-200 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-purple-500" />
-                  ) : input.type === "select" ? (
-                    <select id={input.id} value={formData[input.id] || ""} onChange={handleInputChange} required={isInputRequired(input)} className="w-full cursor-pointer appearance-none rounded-xl border border-purple-500/20 bg-white/5 px-4 py-3 text-white transition-all duration-200 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-purple-500">
-                      <option value="" className="bg-black text-white">Select an option</option>
-                      {input.options?.map((option) => <option key={option} value={option} className="bg-black text-white">{option}</option>)}
-                    </select>
-                  ) : (
-                    <input id={input.id} type="text" placeholder={input.placeholder} value={formData[input.id] || ""} onChange={handleInputChange} required={isInputRequired(input)} className="w-full rounded-xl border border-purple-500/20 bg-white/5 px-4 py-3 text-white placeholder-gray-500 transition-all duration-200 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-purple-500" />
-                  )}
-                </div>
-              ))}
+              {tool.inputs.map((input) => {
+                const isTextFileUpload = textFileSourceTools.has(tool.slug) && input.id === "media_upload";
+                return (
+                  <div key={input.id} className="space-y-3">
+                    <label htmlFor={input.id} className="block text-sm font-semibold text-white">
+                      {input.label}{isInputRequired(input) && <span className="ml-1 text-pink-400">*</span>}
+                    </label>
+                    {input.type === "media" ? (
+                      <div className="rounded-2xl border border-dashed border-cyan-300/25 bg-cyan-400/5 p-4">
+                        <input id={input.id} type="file" accept={isTextFileUpload ? ".txt,.md,.markdown,.csv,.json,.rtf,.html,.htm,.xml,.log,text/*,application/json,application/xml" : "audio/*,video/*"} onChange={handleMediaInput} required={isInputRequired(input) && !mediaFiles[input.id]} className="w-full cursor-pointer rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white file:mr-4 file:rounded-full file:border-0 file:bg-cyan-500/20 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-cyan-100" />
+                        {mediaFiles[input.id] ? <p className="mt-3 text-xs text-cyan-100">{isTextFileUpload ? "File" : "Media"} ready: {mediaFiles[input.id]?.name}</p> : <p className="mt-3 text-xs text-slate-400">{isTextFileUpload ? "Upload a text-based file under 2 MB, or paste the content manually." : "Audio/video is transcribed first and charged separately. Max 50 MB."}</p>}
+                      </div>
+                    ) : input.type === "image" ? (
+                      <div className="rounded-2xl border border-dashed border-pink-300/25 bg-pink-400/5 p-4">
+                        <input id={input.id} type="file" accept="image/*" onChange={handleFileInput} required={isInputRequired(input) && !formData[input.id]} className="w-full cursor-pointer rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white file:mr-4 file:rounded-full file:border-0 file:bg-pink-500/20 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-pink-100" />
+                        {formData[input.id] ? <p className="mt-3 text-xs text-pink-100">Image ready: {formData.image_name || "uploaded image"}</p> : <p className="mt-3 text-xs text-slate-400">Choose a clear image under 4 MB when using image-analysis mode.</p>}
+                      </div>
+                    ) : input.type === "textarea" ? (
+                      <textarea id={input.id} placeholder={input.placeholder} value={formData[input.id] || ""} onChange={handleInputChange} required={isInputRequired(input)} className="h-28 w-full resize-none rounded-xl border border-purple-500/20 bg-white/5 px-4 py-3 text-white placeholder-gray-500 transition-all duration-200 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-purple-500" />
+                    ) : input.type === "select" ? (
+                      <select id={input.id} value={formData[input.id] || ""} onChange={handleInputChange} required={isInputRequired(input)} className="w-full cursor-pointer appearance-none rounded-xl border border-purple-500/20 bg-white/5 px-4 py-3 text-white transition-all duration-200 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        <option value="" className="bg-black text-white">Select an option</option>
+                        {input.options?.map((option) => <option key={option} value={option} className="bg-black text-white">{option}</option>)}
+                      </select>
+                    ) : (
+                      <input id={input.id} type="text" placeholder={input.placeholder} value={formData[input.id] || ""} onChange={handleInputChange} required={isInputRequired(input)} className="w-full rounded-xl border border-purple-500/20 bg-white/5 px-4 py-3 text-white placeholder-gray-500 transition-all duration-200 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-purple-500" />
+                    )}
+                  </div>
+                );
+              })}
               {showCalendarCustomPostCount ? (
                 <div className="space-y-3">
                   <label htmlFor="custom_post_count" className="block text-sm font-semibold text-white">How many posts? <span className="ml-1 text-pink-400">*</span><span className="ml-2 text-xs font-medium text-gray-400">1–19 only</span></label>
