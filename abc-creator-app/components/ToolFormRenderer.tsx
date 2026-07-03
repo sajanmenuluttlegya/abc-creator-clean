@@ -31,6 +31,8 @@ const emailOutputEditorTools = new Set([
   "sales-email-generator",
   "welcome-email-generator",
   "product-launch-email-generator",
+  "ai-email-generator",
+  "email-campaign-writer",
 ]);
 const defaultOutputImageTools = new Set([
   "blog-content",
