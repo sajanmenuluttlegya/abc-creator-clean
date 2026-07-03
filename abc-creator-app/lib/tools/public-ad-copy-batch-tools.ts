@@ -7,6 +7,8 @@ type AdInput = {
   options?: string[];
 };
 
+type AdNextAction = { label: string; href: string; description: string };
+
 type AdTool = {
   id: string;
   slug: string;
@@ -18,6 +20,7 @@ type AdTool = {
   displayCreditCost: number;
   outputType: "text";
   aliases?: string[];
+  nextActions?: AdNextAction[];
   inputs: AdInput[];
 };
 
@@ -30,8 +33,17 @@ const countOptions = ["3 variations", "5 variations", "10 variations"];
 const outputLengthOptions = ["Short", "Standard", "Detailed", "Premium campaign pack"];
 const adPatternOptions = ["Auto-pick strongest pattern", "PAS: Problem → Solution", "AIDA", "UGC: Hook → Demo → CTA", "Product Demo", "Founder Story", "Objection Reversal", "Before/After, verified only", "Social Proof, supplied proof only", "Comparison Angle", "Offer Stack, real offer only", "Retargeting Reminder", "Google Search Intent / RSA", "Educational Authority"];
 
+const adTextNextActions: AdNextAction[] = [
+  { label: "Turn into email campaign", href: "/tools/email-campaign-writer", description: "Convert the ad angle into a complete email campaign." },
+  { label: "Turn into social posts", href: "/tools/social-media-post-generator", description: "Repurpose the ad message into platform-ready social posts." },
+  { label: "Turn into YouTube ad script", href: "/tools/commercial-ad-script", description: "Turn the ad idea into a video ad script for YouTube or paid social." },
+  { label: "Create more ad variations", href: "/tools/ad-copy-generator", description: "Generate more copy options from the same campaign direction." },
+  { label: "Create targeting ideas", href: "/tools/ad-targeting-helper", description: "Build audience segments, messaging angles, and test ideas." },
+  { label: "Create pain-point analysis", href: "/tools/find-user-pain-point", description: "Find deeper pains, desires, objections, and ad angles." },
+];
+
 function tool(slug: string, name: string, description: string, emoji: string, credits: number, inputs: AdInput[], aliases: string[] = []): AdTool {
-  return { id: slug, slug, name, description, icon: "ad-copy", detailEmoji: emoji, category: "Advertising Tools", displayCreditCost: credits, outputType: "text", aliases: [`ai-${slug}`, `${slug}-tool`, `${slug}-generator`, ...aliases], inputs };
+  return { id: slug, slug, name, description, icon: "ad-copy", detailEmoji: emoji, category: "Advertising Tools", displayCreditCost: credits, outputType: "text", aliases: [`ai-${slug}`, `${slug}-tool`, `${slug}-generator`, ...aliases], nextActions: adTextNextActions, inputs };
 }
 
 function adInputs(platform: string): AdInput[] {
