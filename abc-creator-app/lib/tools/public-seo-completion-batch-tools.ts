@@ -28,19 +28,6 @@ const intentOptions = ["Informational", "Commercial", "Transactional", "Navigati
 const depthOptions = ["Quick", "Standard", "Detailed", "Premium"];
 const countOptions = ["5 options", "10 options", "20 options", "30 options"];
 
-function topicInputs(mainLabel: string): SeoCompletionInput[] {
-  return [
-    { id: "topic", label: mainLabel, type: "text", placeholder: "e.g., AI tools for teachers, local bakery SEO, CRM for startups", required: true },
-    { id: "business_context", label: "Business / Website Context", type: "textarea", placeholder: "Describe the site, product, audience, location, existing content, brand facts, and goals. No live crawling is performed.", required: true },
-    { id: "audience", label: "Audience", type: "select", required: true, options: audienceOptions },
-    { id: "intent", label: "Search Intent", type: "select", required: true, options: intentOptions },
-    { id: "depth", label: "Depth", type: "select", required: true, options: depthOptions },
-    { id: "must_include", label: "Must Include", type: "textarea", placeholder: "Optional: keywords, entities, products, FAQs, locations, internal pages, proof, or CTA.", required: false },
-    { id: "avoid", label: "Avoid / Compliance Notes", type: "textarea", placeholder: "Optional: claims, competitors, words, topics, fake urgency, unsupported data, or sensitive limits.", required: false },
-    { id: "language", label: "Language", type: "select", required: true, options: languageOptions },
-  ];
-}
-
 function pageInputs(mainLabel: string): SeoCompletionInput[] {
   return [
     { id: "page_content", label: mainLabel, type: "textarea", placeholder: "Paste the page, article, outline, headings, metadata, or draft. No crawling or live Google data is performed.", required: true },
@@ -72,7 +59,7 @@ function tool(slug: string, name: string, description: string, emoji: string, cr
 }
 
 export const seoCompletionBatchTools: SeoCompletionTool[] = [
-  tool("keyword-generator", "Keyword Generator", "Generate keyword ideas with intent buckets, content angles, viral/CTR opportunities, and no fake volume claims.", "🔑", 5, [
+  tool("keyword-generator", "Keyword Generator", "Generate keyword ideas with intent buckets, content angles, viral/CTR opportunities, and no fake volume claims.", "🔑", 2, [
     { id: "seed_topic", label: "Seed Topic / Niche", type: "text", placeholder: "e.g., AI tools for teachers, handmade candles, gym meal plans", required: true },
     { id: "business_context", label: "Business / Website Context", type: "textarea", placeholder: "What the site offers, target audience, location, services, products, competitors, or existing content.", required: true },
     { id: "intent", label: "Intent Focus", type: "select", required: true, options: intentOptions },
@@ -102,7 +89,7 @@ export const seoCompletionBatchTools: SeoCompletionTool[] = [
     { id: "avoid", label: "Avoid", type: "textarea", placeholder: "Optional: fake promises, spam, unsupported claims, words, or competitor mentions.", required: false },
     { id: "language", label: "Language", type: "select", required: true, options: languageOptions },
   ], ["meta-description-generator", "seo-meta-description-generator", "serp-description-generator"]),
-  tool("faq-schema-generator", "FAQ Schema Generator", "Generate FAQ questions, concise answers, and JSON-LD FAQPage schema from supplied page facts only.", "{}", 5, [
+  tool("faq-schema-generator", "FAQ Schema Generator", "Generate FAQ questions, concise answers, and JSON-LD FAQPage schema from supplied page facts only.", "{}", 4, [
     { id: "page_topic", label: "Page Topic / Keyword", type: "text", placeholder: "e.g., CRM software pricing, local dentist services", required: true },
     { id: "page_facts", label: "Page Facts / Source Notes", type: "textarea", placeholder: "Paste exact page facts, FAQs, product/service details, policies, pricing, steps, or answers. Unknown fields will be omitted.", required: true },
     { id: "faq_count", label: "FAQ Count", type: "select", required: true, options: ["5 FAQs", "8 FAQs", "10 FAQs", "15 FAQs"] },
@@ -111,7 +98,7 @@ export const seoCompletionBatchTools: SeoCompletionTool[] = [
     { id: "avoid", label: "Avoid / Compliance Notes", type: "textarea", placeholder: "Optional: claims, legal/medical/financial wording, prices, ratings, or unsupported promises to avoid.", required: false },
     { id: "language", label: "Language", type: "select", required: true, options: languageOptions },
   ], ["faq-json-ld-generator", "faqpage-schema-generator", "schema-faq-generator", "json-ld-faq-generator"]),
-  tool("content-gap-ideas", "Content Gap Ideas", "Suggest missing topics, article angles, keyword gaps, FAQ gaps, and AI visibility opportunities from supplied context.", "🧠", 5, [
+  tool("content-gap-ideas", "Content Gap Ideas", "Suggest missing topics, article angles, keyword gaps, FAQ gaps, and AI visibility opportunities from supplied context.", "🧠", 4, [
     { id: "website_niche", label: "Website Niche", type: "text", placeholder: "e.g., productivity SaaS for agencies, local dental clinic, fitness coaching", required: true },
     { id: "existing_topics", label: "Existing Topics / Pages", type: "textarea", placeholder: "Paste existing page titles, blog topics, sitemap notes, or current content list.", required: true },
     { id: "competitor_or_serp_notes", label: "Competitor / SERP Notes", type: "textarea", placeholder: "Optional: paste competitor topics, SERP observations, People Also Ask, or market notes. No live search is performed.", required: false },
@@ -122,9 +109,9 @@ export const seoCompletionBatchTools: SeoCompletionTool[] = [
     { id: "avoid", label: "Avoid / Exclude", type: "textarea", placeholder: "Optional: topics already covered, irrelevant products, competitor names, or claims to avoid.", required: false },
     { id: "language", label: "Language", type: "select", required: true, options: languageOptions },
   ], ["seo-content-gap-ideas", "content-opportunity-generator", "keyword-gap-content-ideas", "topic-gap-generator"]),
-  tool("content-audit", "Content Audit", "Audit pasted content for SEO, freshness, AI visibility, reader value, conversion gaps, and safe improvement priorities.", "📋", 6, pageInputs("Content / Page to Audit"), ["seo-content-audit", "content-audit-tool", "page-content-audit"]),
-  tool("seo-score", "SEO Score", "Score pasted content with a practical heuristic SEO score, issue breakdown, quick wins, and premium optimization plan.", "💯", 5, pageInputs("Content / Page to Score"), ["seo-score-checker", "seo-content-score", "on-page-seo-score"]),
-  tool("seo-meta-citation-gap-finder", "SEO Meta Citation Gap Finder", "Find missing trust cues, citation gaps, source needs, and AI-answer citation opportunities from pasted page/competitor notes.", "🧭", 6, [
+  tool("content-audit", "Content Audit", "Audit pasted content for SEO, freshness, AI visibility, reader value, conversion gaps, and safe improvement priorities.", "📋", 5, pageInputs("Content / Page to Audit"), ["seo-content-audit", "content-audit-tool", "page-content-audit"]),
+  tool("seo-score", "SEO Score", "Score pasted content with a practical heuristic SEO score, issue breakdown, quick wins, and premium optimization plan.", "💯", 3, pageInputs("Content / Page to Score"), ["seo-score-checker", "seo-content-score", "on-page-seo-score"]),
+  tool("seo-meta-citation-gap-finder", "SEO Meta Citation Gap Finder", "Find missing trust cues, citation gaps, source needs, and AI-answer citation opportunities from pasted page/competitor notes.", "🧭", 5, [
     { id: "page_content", label: "Your Page / Draft", type: "textarea", placeholder: "Paste the page, article, metadata, or draft to inspect for citation and trust gaps.", required: true },
     { id: "target_queries", label: "Target Queries / Buyer Questions", type: "textarea", placeholder: "Questions or searches where you want the brand/page to be cited or trusted.", required: true },
     { id: "competitor_or_source_notes", label: "Competitor / Source Notes", type: "textarea", placeholder: "Optional: paste competitor snippets, cited sources, references, Reddit/forum notes, or SERP observations. No live crawling is performed.", required: false },
@@ -133,7 +120,7 @@ export const seoCompletionBatchTools: SeoCompletionTool[] = [
     { id: "avoid", label: "Avoid / Compliance Notes", type: "textarea", placeholder: "Optional: claims to avoid, sources not to use, regulated topics, or competitor restrictions.", required: false },
     { id: "language", label: "Language", type: "select", required: true, options: languageOptions },
   ], ["citation-gap-finder", "ai-citation-gap-finder", "geo-citation-gap-finder"]),
-  tool("ai-search-visibility-score", "AI Search Visibility Score", "Estimate AI search visibility from supplied content, queries, brand facts, and evidence with GEO/AEO improvement actions.", "🤖", 6, [
+  tool("ai-search-visibility-score", "AI Search Visibility Score", "Estimate AI search visibility from supplied content, queries, brand facts, and evidence with GEO/AEO improvement actions.", "🤖", 5, [
     { id: "brand_or_page", label: "Brand / Page / Product", type: "text", placeholder: "e.g., ABC Creator, local bakery service page, CRM comparison article", required: true },
     { id: "content_or_profile", label: "Content / Brand Profile", type: "textarea", placeholder: "Paste the page, brand profile, article, product facts, bios, citations, or source notes to analyze.", required: true },
     { id: "target_queries", label: "Target AI Search Questions", type: "textarea", placeholder: "Paste questions/prompts users may ask ChatGPT, Gemini, Perplexity, or Google AI Overviews.", required: true },
