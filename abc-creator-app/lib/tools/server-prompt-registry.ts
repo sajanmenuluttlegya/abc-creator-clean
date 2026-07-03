@@ -5,6 +5,7 @@ import { serverPlatformTools } from "./server-platform-tools";
 import { serverCampaignTools } from "./server-campaign-tools";
 import { serverBlogBatchTools } from "./server-blog-batch-tools";
 import { serverSeoBatchTools } from "./server-seo-batch-tools";
+import { serverSeoUtilityBatchTools } from "./server-seo-utility-batch-tools";
 import { serverCreativeCopyBatchTools } from "./server-creative-copy-batch-tools";
 import { serverShortStoryBatchTools } from "./server-short-story-batch-tools";
 import { serverEmailBatchTools } from "./server-email-batch-tools";
@@ -21,7 +22,7 @@ function getEmailTool(toolSlug: string) {
 }
 
 function getRegisteredTool(toolSlug: string): RegisteredServerTool | undefined {
-  return serverSocialTools[toolSlug] || serverGeneralTools[toolSlug] || serverPlatformTools[toolSlug] || serverCampaignTools[toolSlug] || serverBlogBatchTools[toolSlug] || serverSeoBatchTools[toolSlug] || serverCreativeCopyBatchTools[toolSlug] || serverShortStoryBatchTools[toolSlug] || getEmailTool(toolSlug) || serverSalesCopyBatchTools[toolSlug] || serverWritingBatchTools[toolSlug];
+  return serverSocialTools[toolSlug] || serverGeneralTools[toolSlug] || serverPlatformTools[toolSlug] || serverCampaignTools[toolSlug] || serverBlogBatchTools[toolSlug] || serverSeoBatchTools[toolSlug] || serverSeoUtilityBatchTools[toolSlug] || serverCreativeCopyBatchTools[toolSlug] || serverShortStoryBatchTools[toolSlug] || getEmailTool(toolSlug) || serverSalesCopyBatchTools[toolSlug] || serverWritingBatchTools[toolSlug];
 }
 
 function validateRegisteredTool(toolSlug: string, inputs: Record<string, string>): ValidationResult {
@@ -45,7 +46,7 @@ function validateRegisteredTool(toolSlug: string, inputs: Record<string, string>
 }
 
 export function getServerPrompt(toolSlug: string) {
-  return serverSocialTools[toolSlug] || serverGeneralTools[toolSlug] || serverPlatformTools[toolSlug] || serverCampaignTools[toolSlug] || serverBlogBatchTools[toolSlug] || serverSeoBatchTools[toolSlug] || serverCreativeCopyBatchTools[toolSlug] || serverShortStoryBatchTools[toolSlug] || getEmailTool(toolSlug) || serverSalesCopyBatchTools[toolSlug] || serverWritingBatchTools[toolSlug] || getBaseServerPrompt(toolSlug);
+  return serverSocialTools[toolSlug] || serverGeneralTools[toolSlug] || serverPlatformTools[toolSlug] || serverCampaignTools[toolSlug] || serverBlogBatchTools[toolSlug] || serverSeoBatchTools[toolSlug] || serverSeoUtilityBatchTools[toolSlug] || serverCreativeCopyBatchTools[toolSlug] || serverShortStoryBatchTools[toolSlug] || getEmailTool(toolSlug) || serverSalesCopyBatchTools[toolSlug] || serverWritingBatchTools[toolSlug] || getBaseServerPrompt(toolSlug);
 }
 
 export function validateToolInputs(toolSlug: string, inputs: Record<string, string>): ValidationResult {
