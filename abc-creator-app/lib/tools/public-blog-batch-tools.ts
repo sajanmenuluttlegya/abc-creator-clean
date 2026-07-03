@@ -7,6 +7,7 @@ import { seoCompletionBatchTools } from "./public-seo-completion-batch-tools";
 import { emailEcommerceBatchTools } from "./public-email-ecommerce-batch-tools";
 import { socialCompletionBatchTools } from "./public-social-completion-batch-tools";
 import { youtubeCompletionBatchTools } from "./public-youtube-completion-batch-tools";
+import { adCopyBatchTools } from "./public-ad-copy-batch-tools";
 
 type PublicBlogBatchToolInput = {
   id: string;
@@ -101,6 +102,7 @@ export const blogBatchTools: PublicBlogBatchTool[] = [
   ...(emailEcommerceBatchTools as PublicBlogBatchTool[]),
   ...(socialCompletionBatchTools as PublicBlogBatchTool[]),
   ...(youtubeCompletionBatchTools as PublicBlogBatchTool[]),
+  ...(adCopyBatchTools as PublicBlogBatchTool[]),
   tool("blog-section-writer", "Blog Section Writer", "Write a polished blog section from a heading, outline, or short brief.", "🧱", 3, [
     { id: "section_heading", label: "Section Heading", type: "text", placeholder: "e.g., How AI saves time for small teams", required: true },
     { id: "section_brief", label: "Section Brief / Notes", type: "textarea", placeholder: "Describe what this section should cover.", required: true },
