@@ -30,12 +30,6 @@ const nameCountOptions = ["10 names", "20 names", "30 names", "50 names"];
 const poemStyleOptions = ["Modern free verse", "Rhyming poem", "Romantic", "Inspirational", "Spoken word", "Short social poem", "Narrative poem"];
 const dramaLengthOptions = ["3 minutes", "4 minutes", "5 minutes", "Episode outline + script beats"];
 const dramaFormatOptions = ["ReelShort style", "DramaBox style", "Vertical micro-drama", "Romance cliffhanger", "Thriller cliffhanger", "Comedy mini-episode"];
-const coldEmailSourceOptions = [
-  "Paste LinkedIn + Gmail context manually",
-  "Connect to LinkedIn + Gmail",
-  "LinkedIn recent posts only",
-  "Gmail relationship notes only",
-];
 const coldEmailGoalOptions = ["Book a call", "Start a partnership", "Sell a service", "Pitch SaaS/product", "Recruiting outreach", "Follow up after no reply", "Reconnect warmly"];
 
 function standardCreativeInputs(mainLabel: string): BatchToolInput[] {
@@ -118,13 +112,12 @@ export const creativeEmailBatchTools: BatchTool[] = [
     { id: "avoid", label: "Avoid", type: "textarea", placeholder: "Optional: explicit content, violence level, clichés, claims, unsafe themes, or platform limits.", required: false },
     { id: "language", label: "Language", type: "select", required: true, options: languageOptions },
   ], ["short-drama-script-generator", "reelshort-script-generator", "dramabox-script-generator"]),
-  tool("cold-email-personalizer", "AI Cold Email Personalizer", "Draft hyper-personalized cold emails from LinkedIn-style recent posts, Gmail relationship context, and offer details.", "Email Tools", "📧", 5, [
-    { id: "source_mode", label: "Personalization Source", type: "select", required: true, options: coldEmailSourceOptions },
+  tool("cold-email-personalizer", "AI Cold Email Personalizer", "Draft hyper-personalized cold emails from pasted LinkedIn-style public context, pasted relationship notes, and offer details.", "Email Tools", "📧", 5, [
     { id: "target_name", label: "Target Name", type: "text", placeholder: "e.g., Priya Sharma", required: true },
     { id: "target_role_company", label: "Target Role / Company", type: "text", placeholder: "e.g., Head of Growth at Acme", required: true },
-    { id: "linkedin_profile_url", label: "LinkedIn Profile URL", type: "text", placeholder: "Optional: paste URL for reference when using connected/pasted LinkedIn context.", required: false },
-    { id: "recent_linkedin_posts", label: "Recent LinkedIn Posts / Notes", type: "textarea", placeholder: "Paste recent posts, profile notes, announcements, comments, or public context. Required if not using a real connected source.", required: false },
-    { id: "gmail_context", label: "Gmail / Previous Conversation Context", type: "textarea", placeholder: "Paste prior email relationship notes, earlier replies, meeting notes, or thread summary. Do not paste private data without permission.", required: false },
+    { id: "linkedin_profile_url", label: "LinkedIn Profile URL", type: "text", placeholder: "Optional reference URL. Real LinkedIn account connection will be added later.", required: false },
+    { id: "recent_linkedin_posts", label: "LinkedIn Profile / Post Notes", type: "textarea", placeholder: "Paste public profile notes, posts, announcements, comments, or relevant LinkedIn context manually.", required: false },
+    { id: "gmail_context", label: "Gmail / Relationship Notes", type: "textarea", placeholder: "Paste prior email relationship notes, earlier replies, meeting notes, or thread summary manually. Real Gmail connection will be added later.", required: false },
     { id: "offer_context", label: "Your Offer / Product / Reason for Outreach", type: "textarea", placeholder: "What are you offering? Who is it for? Why is it relevant? Include proof only if verified.", required: true },
     { id: "goal", label: "Email Goal", type: "select", required: true, options: coldEmailGoalOptions },
     { id: "email_count", label: "How Many Email Options?", type: "select", required: true, options: countOptions },
