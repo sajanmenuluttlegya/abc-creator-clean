@@ -15,7 +15,7 @@ function p(name: string, creditCost: number, requiredInputs: ToolFieldRule[], ta
   return { creditCost, requiredInputs, system: `You are ABC Creator's elite ${name} specialist.${rules}\n\nTask: ${task}`, outputGuide };
 }
 
-const sourceField: ToolFieldRule = { id: "source_content", label: "Source content", required: true, minLength: 20, maxLength: 30000 };
+const sourceField: ToolFieldRule = { id: "source_content", label: "Source content", required: true, minLength: 20, maxLength: 60000 };
 const audienceField: ToolFieldRule = { id: "audience", label: "Audience", required: true, minLength: 2, maxLength: 160 };
 const toneField: ToolFieldRule = { id: "tone", label: "Tone", required: true, minLength: 2, maxLength: 160 };
 const depthField: ToolFieldRule = { id: "summary_depth", label: "Depth", required: true, minLength: 2, maxLength: 160 };
