@@ -75,10 +75,10 @@ export const serverSocialCompletionBatchTools: Record<string, ServerPrompt> = {
   "replies-for-twitter-x": p("Replies for Twitter/X", 2, replyFields("Twitter/X"), "Write concise Twitter/X replies that are useful, natural, and brand-safe.", "Return reply options, shortest version, warm version, and notes."),
   "replies-for-linkedin": p("Replies for LinkedIn", 2, replyFields("LinkedIn"), "Write professional LinkedIn replies for supplied context.", "Return recommended reply, professional alternatives, follow-up prompt, and notes."),
   "replies-for-instagram": p("Replies for Instagram", 2, replyFields("Instagram"), "Generate friendly Instagram replies for supplied context.", "Return reply options, short option, CTA option, and notes."),
-  "instagram-threads-generator": p("Instagram Threads Generator", 3, postFields("Instagram Threads brief"), "Create Threads-style post sequences with hooks, short posts, replies, and engagement prompts.", "Return opening hook, post sequence, reply prompts, CTA, and rewrite notes."),
-  "tiktok-caption-generator": p("TikTok Caption Generator", 2, postFields("TikTok caption brief"), "Write TikTok captions with hook, context, CTA, and hashtag ideas.", "Return caption options, hashtag ideas, best pick, and avoid notes."),
-  "motivational-posts-generator": p("Motivational Posts Generator", 2, postFields("Motivational post brief"), "Create premium motivational social posts that feel specific, human, and shareable.", "Return post options, short captions, quote-style versions, and engagement prompts."),
-  "social-hook-generator": p("Social Hook Generator", 2, [
+  "instagram-threads-generator": p("Instagram Threads Generator", 5, postFields("Instagram Threads brief"), "Create Threads-style post sequences with hooks, short posts, replies, and engagement prompts.", "Return opening hook, post sequence, reply prompts, CTA, and rewrite notes."),
+  "tiktok-caption-generator": p("TikTok Caption Generator", 3, postFields("TikTok caption brief"), "Write TikTok captions with hook, context, CTA, and hashtag ideas.", "Return caption options, hashtag ideas, best pick, and avoid notes."),
+  "motivational-posts-generator": p("Motivational Posts Generator", 3, postFields("Motivational post brief"), "Create premium motivational social posts that feel specific, human, and shareable.", "Return post options, short captions, quote-style versions, and engagement prompts."),
+  "social-hook-generator": p("Social Hook Generator", 3, [
     { id: "topic", label: "Topic / offer", required: true, minLength: 5, maxLength: 10000 },
     { id: "platform", label: "Platform", required: true, minLength: 2, maxLength: 160 },
     { id: "hook_count", label: "Hook count", required: true, minLength: 2, maxLength: 80 },
@@ -87,11 +87,11 @@ export const serverSocialCompletionBatchTools: Record<string, ServerPrompt> = {
     avoidField,
     languageField,
   ], "Generate platform-native hooks for posts, reels, carousels, short videos, ads, and threads.", "Return a hook table with angle, use case, risk note, and best picks."),
-  "twitter-x-post-generator": p("Twitter/X Post Generator", 2, postFields("Twitter/X post brief"), "Write concise Twitter/X posts with hooks, clarity, engagement prompts, and variations.", "Return post options, best pick, alternate angles, and CTA notes."),
+  "twitter-x-post-generator": p("Twitter/X Post Generator", 3, postFields("Twitter/X post brief"), "Write concise Twitter/X posts with hooks, clarity, engagement prompts, and variations.", "Return post options, best pick, alternate angles, and CTA notes."),
   "instagram-reel-script": p("Instagram Reel Script", 3, scriptFields("Instagram Reel brief"), "Create Instagram Reel scripts with hook, scene beats, spoken lines, captions, CTA, and retention flow.", "Return script options, scene table, on-screen text, caption, CTA, and notes."),
   "tiktok-video-script-generator": p("TikTok Video Script Generator", 3, scriptFields("TikTok video brief"), "Write TikTok scripts with hooks, scene beats, spoken lines, captions, CTA, and retention flow.", "Return script options, scene beats, caption, CTA, and notes."),
-  "linkedin-post-generator": p("LinkedIn Post Generator", 2, postFields("LinkedIn post brief"), "Write professional LinkedIn posts for authority, storytelling, education, launches, and lead generation.", "Return post options, strongest version, hook alternatives, and CTA notes."),
-  "twitter-x-thread-generator": p("Twitter/X Thread Generator", 3, [
+  "linkedin-post-generator": p("LinkedIn Post Generator", 3, postFields("LinkedIn post brief"), "Write professional LinkedIn posts for authority, storytelling, education, launches, and lead generation.", "Return post options, strongest version, hook alternatives, and CTA notes."),
+  "twitter-x-thread-generator": p("Twitter/X Thread Generator", 5, [
     { id: "thread_brief", label: "Thread brief", required: true, minLength: 10, maxLength: 14000 },
     { id: "thread_length", label: "Thread length", required: true, minLength: 2, maxLength: 80 },
     { id: "audience", label: "Audience", required: true, minLength: 2, maxLength: 160 },
@@ -101,7 +101,7 @@ export const serverSocialCompletionBatchTools: Record<string, ServerPrompt> = {
     avoidField,
     languageField,
   ], "Build Twitter/X threads with a strong opener, logical flow, value points, CTA, and engagement prompt.", "Return full thread, hook alternatives, CTA options, and editing notes."),
-  "facebook-post-generator": p("Facebook Post Generator", 2, postFields("Facebook post brief"), "Write Facebook posts for engagement, community, offers, launches, stories, and updates.", "Return post options, community-first version, CTA version, and engagement question."),
+  "facebook-post-generator": p("Facebook Post Generator", 3, postFields("Facebook post brief"), "Write Facebook posts for engagement, community, offers, launches, stories, and updates.", "Return post options, community-first version, CTA version, and engagement question."),
   "content-calendar-generator": p("Content Calendar Generator", 4, [
     { id: "content_context", label: "Content context", required: true, minLength: 20, maxLength: 14000 },
     { id: "channels", label: "Channels", required: true, minLength: 2, maxLength: 160 },
@@ -112,7 +112,7 @@ export const serverSocialCompletionBatchTools: Record<string, ServerPrompt> = {
     avoidField,
     languageField,
   ], "Plan a premium cross-channel content calendar with themes, formats, hooks, CTAs, production notes, and repurposing ideas.", "Return Markdown with: strategy, a premium Markdown pipe-table calendar using columns such as Date/Week, Channel, Format, Topic, Hook, CTA, Funnel Stage, Repurpose Path, and Production Notes, then channel mix, repurposing plan, and production notes."),
-  "carousel-post-generator": p("Carousel Post Generator", 3, [
+  "carousel-post-generator": p("Carousel Post Generator", 5, [
     { id: "carousel_brief", label: "Carousel brief", required: true, minLength: 10, maxLength: 12000 },
     { id: "platform", label: "Platform", required: true, minLength: 2, maxLength: 160 },
     { id: "slide_count", label: "Slide count", required: true, minLength: 2, maxLength: 80 },
