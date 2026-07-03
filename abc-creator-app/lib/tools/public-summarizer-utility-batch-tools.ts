@@ -1,7 +1,7 @@
 type UtilityInput = {
   id: string;
   label: string;
-  type: "text" | "textarea" | "select";
+  type: "text" | "textarea" | "select" | "media";
   placeholder?: string;
   required: boolean;
   options?: string[];
@@ -27,6 +27,7 @@ const audienceOptions = ["General audience", "Beginners", "Students", "Executive
 const summaryDepthOptions = ["Quick", "Standard", "Detailed", "Executive brief"];
 const outputFormatOptions = ["Bullet points", "Short paragraphs", "Table", "Action plan", "Executive memo"];
 const humanizeLevelOptions = ["Light polish", "Natural rewrite", "Stronger human-style rewrite", "Premium editorial rewrite"];
+const sourceModeOptions = ["Paste text / transcript", "Upload text file"];
 
 function tool(slug: string, name: string, description: string, category: string, emoji: string, credits: number, inputs: UtilityInput[], aliases: string[] = []): UtilityTool {
   return { id: slug, slug, name, description, icon: "text-utility", detailEmoji: emoji, category, displayCreditCost: credits, outputType: "text", aliases: [`ai-${slug}`, `${slug}-tool`, `${slug}-generator`, ...aliases], inputs };
@@ -45,18 +46,28 @@ function sourceInputs(primaryLabel: string): UtilityInput[] {
   ];
 }
 
+function uploadableSourceInputs(primaryLabel: string, uploadLabel: string): UtilityInput[] {
+  return [
+    { id: "source_mode", label: "Source Mode", type: "select", required: true, options: sourceModeOptions },
+    { id: "media_upload", label: uploadLabel, type: "media", placeholder: "Upload a text-based file such as .txt, .md, .csv, .json, .rtf, .html, or .xml.", required: false },
+    { id: "source_content", label: primaryLabel, type: "textarea", placeholder: "Paste text here, or choose Upload text file above.", required: false },
+    { id: "audience", label: "Audience", type: "select", required: true, options: audienceOptions },
+    { id: "tone", label: "Tone", type: "select", required: true, options: toneOptions },
+    { id: "summary_depth", label: "Depth", type: "select", required: true, options: summaryDepthOptions },
+    { id: "output_format", label: "Output Format", type: "select", required: true, options: outputFormatOptions },
+    { id: "must_include", label: "Must Include", type: "textarea", placeholder: "Optional: points, keywords, decisions, names, deadlines, facts, or sections to preserve.", required: false },
+    { id: "avoid", label: "Avoid / Constraints", type: "textarea", placeholder: "Optional: things to remove, simplify, avoid, or not mention.", required: false },
+    { id: "language", label: "Language", type: "select", required: true, options: languageOptions },
+  ];
+}
+
 export const summarizerUtilityBatchTools: UtilityTool[] = [
   tool("bullet-point-summarizer", "Bullet Point Summarizer", "Turn long text into clean bullet points with key ideas, priorities, and optional action notes.", "Summarizer / File Tools", "•", 2, sourceInputs("Text to Summarize"), ["bullet-summary-generator", "summarize-into-bullets"]),
-  tool("meeting-notes-summarizer", "Meeting Notes Summarizer", "Convert meeting notes or transcripts into decisions, action items, owners, risks, and follow-ups.", "Summarizer / File Tools", "📝", 3, [
-    { id: "source_content", label: "Meeting Notes / Transcript", type: "textarea", placeholder: "Paste meeting notes, call transcript, rough notes, or minutes.", required: true },
+  tool("meeting-notes-summarizer", "Meeting Notes Summarizer", "Convert pasted or uploaded meeting notes into decisions, action items, owners, risks, and follow-ups.", "Summarizer / File Tools", "📝", 3, [
+    ...uploadableSourceInputs("Meeting Notes / Transcript", "Upload Meeting Notes File"),
     { id: "meeting_context", label: "Meeting Context", type: "text", placeholder: "Optional: meeting name, team, project, client, or goal.", required: false },
-    { id: "summary_depth", label: "Depth", type: "select", required: true, options: summaryDepthOptions },
-    { id: "output_format", label: "Output Format", type: "select", required: true, options: ["Executive notes", "Action list", "Minutes format", "Decision log", "Follow-up email draft"] },
-    { id: "must_include", label: "Must Include", type: "textarea", placeholder: "Optional: names, deadlines, action owners, decisions, or risks to preserve.", required: false },
-    { id: "avoid", label: "Avoid / Constraints", type: "textarea", placeholder: "Optional: private side notes, filler, irrelevant talk, or sensitive items to exclude.", required: false },
-    { id: "language", label: "Language", type: "select", required: true, options: languageOptions },
   ], ["meeting-summary-generator", "meeting-minutes-summarizer", "meeting-notes-generator"]),
-  tool("file-text-summarizer", "File/Text Summarizer", "Summarize pasted file text, document excerpts, reports, transcripts, or long notes into a useful brief.", "Summarizer / File Tools", "📄", 3, sourceInputs("File Text / Document Content"), ["document-summarizer", "text-file-summarizer", "file-summarizer"]),
+  tool("file-text-summarizer", "File/Text Summarizer", "Summarize pasted text or uploaded text-based files, reports, transcripts, notes, or document excerpts into a useful brief.", "Summarizer / File Tools", "📄", 3, uploadableSourceInputs("File Text / Document Content", "Upload Text File"), ["document-summarizer", "text-file-summarizer", "file-summarizer"]),
   tool("explain-like-im-5", "Explain Like I’m 5", "Rewrite complex text into a simple, easy explanation with examples and key takeaways.", "Summarizer / File Tools", "🧒", 2, [
     { id: "source_content", label: "Complex Text / Topic", type: "textarea", placeholder: "Paste the idea, article excerpt, technical topic, policy, lesson, or concept to simplify.", required: true },
     { id: "target_level", label: "Target Simplicity", type: "select", required: true, options: ["ELI5", "Middle school", "High school", "Beginner adult", "Non-technical executive"] },
