@@ -118,7 +118,7 @@ export const creativeEmailBatchTools: BatchTool[] = [
     { id: "avoid", label: "Avoid", type: "textarea", placeholder: "Optional: explicit content, violence level, clichés, claims, unsafe themes, or platform limits.", required: false },
     { id: "language", label: "Language", type: "select", required: true, options: languageOptions },
   ], ["short-drama-script-generator", "reelshort-script-generator", "dramabox-script-generator"]),
-  tool("cold-email-personalizer", "AI Cold Email Personalizer", "Draft hyper-personalized cold emails from LinkedIn-style recent posts, Gmail relationship context, and offer details.", "Email Tools", "📧", 4, [
+  tool("cold-email-personalizer", "AI Cold Email Personalizer", "Draft hyper-personalized cold emails from LinkedIn-style recent posts, Gmail relationship context, and offer details.", "Email Tools", "📧", 5, [
     { id: "source_mode", label: "Personalization Source", type: "select", required: true, options: coldEmailSourceOptions },
     { id: "target_name", label: "Target Name", type: "text", placeholder: "e.g., Priya Sharma", required: true },
     { id: "target_role_company", label: "Target Role / Company", type: "text", placeholder: "e.g., Head of Growth at Acme", required: true },
