@@ -19,8 +19,8 @@ function creditText(credits: number) {
   return `${credits} credit${credits === 1 ? "" : "s"}`;
 }
 
-export const IMAGE_CREDITS_PER_IMAGE = scaleCreditAmount(1);
-export const IMAGE_EDIT_CREDITS = 4;
+export const IMAGE_CREDITS_PER_IMAGE: number = scaleCreditAmount(1);
+export const IMAGE_EDIT_CREDITS: number = 4;
 
 export const IMAGE_GENERATION_TOOL_SLUGS = ["blog-content", "pro-image-brief-for-blog", "human-style-blog-post", "seo-optimized-blog-post", "advanced-blog-post", "quick-1-click-blog-post", "comparison-blog-writer", "youtube-video-to-blog-post"] as const;
 
