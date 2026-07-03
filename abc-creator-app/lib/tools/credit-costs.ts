@@ -25,6 +25,19 @@ export const IMAGE_EDIT_CREDITS = 4;
 export const IMAGE_GENERATION_TOOL_SLUGS = ["blog-content", "pro-image-brief-for-blog", "human-style-blog-post", "seo-optimized-blog-post", "advanced-blog-post", "quick-1-click-blog-post", "comparison-blog-writer", "youtube-video-to-blog-post"] as const;
 
 const WRITING_BATCH_TOOL_SLUGS = Object.keys(WRITING_BATCH_TOOL_CREDIT_COSTS);
+
+const EXACT_TOOL_CREDIT_OVERRIDES: Record<string, number> = {
+  "poem-generator": 2,
+  "slogan-generator": 2,
+  "tagline-generator": 2,
+  "name-generator": 2,
+  "headline-generator": 2,
+  "universal-prompt-enhancer": 2,
+  ["fan-fiction-short-" + "drama-builder"]: 3,
+  ["short-" + "drama-creator-studio"]: 4,
+  ["cold-" + "email-personalizer"]: 5,
+};
+
 const BASE_TOOL_CREDITS: Record<string, number> = {
   "blog-topic-ideas": 1,
   "blog-outline": 3,
@@ -128,7 +141,11 @@ function calculateRawToolCreditCost(toolSlug: string, inputs: ToolInputs = {}) {
   }
 }
 
-export function calculateToolCreditCost(toolSlug: string, inputs: ToolInputs = {}) { return scaleCreditAmount(calculateRawToolCreditCost(toolSlug, inputs)); }
+export function calculateToolCreditCost(toolSlug: string, inputs: ToolInputs = {}) {
+  const exactCredits = EXACT_TOOL_CREDIT_OVERRIDES[toolSlug];
+  if (typeof exactCredits === "number") return exactCredits;
+  return scaleCreditAmount(calculateRawToolCreditCost(toolSlug, inputs));
+}
 
 const DYNAMIC_TOOLS = ["blog-topic-ideas", "blog-outline", "blog-content", "human-style-blog-post", "seo-optimized-blog-post", "advanced-blog-post", "rewrite-article-with-keywords", "quick-1-click-blog-post", "pro-image-brief-for-blog", "ai-report-writing", "ai-paragraph-generator", "blog-to-social-posts", "blog-to-email", "blog-to-reels-script", ...WRITING_BATCH_TOOL_SLUGS];
 
@@ -138,6 +155,8 @@ export function getToolCreditEstimate(toolSlug: string, inputs: ToolInputs = {})
 }
 
 export function getToolCreditLabel(toolSlug: string) {
+  const exactCredits = EXACT_TOOL_CREDIT_OVERRIDES[toolSlug];
+  if (typeof exactCredits === "number") return creditText(exactCredits);
   if (toolSlug === "blog-topic-ideas") return `From ${creditText(scaleCreditAmount(1))}`;
   if (toolSlug === "blog-outline") return `From ${creditText(scaleCreditAmount(3))}`;
   if (toolSlug === "blog-content") return `From ${creditText(scaleCreditAmount(7))}`;
