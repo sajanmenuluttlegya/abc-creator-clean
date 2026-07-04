@@ -3,12 +3,13 @@ type ServerPrompt = { system: string; outputGuide: string; creditCost: number; r
 
 const rules = `
 ABC Creator premium summarizer and text utility rules:
-- Use only the user's supplied source content, context, audience, tone, depth, output format, must-include, avoid, and language fields as the source of truth.
+- Use only the user's supplied source content, extracted uploaded-file text, context, audience, tone, depth, output format, must-include, avoid, and language fields as the source of truth.
 - Preserve factual meaning. Do not invent facts, quotes, statistics, citations, decisions, owners, deadlines, product claims, legal/medical/financial advice, or meeting outcomes.
-- If the source is unclear, conflicting, or missing key details, label uncertainty clearly and add a Missing / Needs Verification section.
+- If the source is unclear, conflicting, incomplete, unstructured, or missing key details, label uncertainty clearly and add a Missing / Needs Verification section.
+- Do not require the source to contain headings such as Agenda, Decisions, Action Items, Summary, or Conclusion. Infer a professional structure from the actual substance.
 - For summaries, distinguish between stated facts, inferred takeaways, open questions, and suggested next steps.
+- Scale depth visibly: Quick = concise; Standard = practical and complete; Detailed = deeper, more complete, and better organized; Executive brief = polished leadership-ready brief with priorities, risks, and next steps.
 - For grammar and rewrite tools, preserve the original intent and do not add unsupported claims.
-- Do not claim hidden analysis, live file access, transcript access, search access, or external research unless the user pasted the material.
 - Use polished Markdown, useful tables when appropriate, and copy-ready formatting.`;
 
 function p(name: string, creditCost: number, requiredInputs: ToolFieldRule[], task: string, outputGuide: string): ServerPrompt {
@@ -28,10 +29,10 @@ function summaryFields(): ToolFieldRule[] {
   return [sourceField, audienceField, toneField, depthField, formatField, mustField, avoidField, languageField];
 }
 
-const summaryGuide = "Return Markdown with: # Summary; ## One-Line Summary; ## Key Points; ## Important Details; ## Action Notes or Next Steps; ## Missing / Needs Verification. Follow the selected output format when possible.";
+const summaryGuide = "Return premium Markdown with: # Summary; ## Executive Snapshot; ## One-Line Summary; ## Key Points; ## Important Details; ## Action Notes or Next Steps; ## Missing / Needs Verification. Follow the selected output format when possible. Do not depend on source headings; create a clean professional structure from the content.";
 
 export const serverSummarizerUtilityBatchTools: Record<string, ServerPrompt> = {
-  "bullet-point-summarizer": p("Bullet Point Summarizer", 2, summaryFields(), "Turn long text into clean bullet points with key ideas, priorities, and optional action notes.", "Return Markdown with: # Bullet Point Summary; ## Main Bullets; ## Priority Points; ## Details Worth Keeping; ## Action Notes; ## Missing / Needs Verification."),
+  "bullet-point-summarizer": p("Bullet Point Summarizer", 2, summaryFields(), "Turn long text or extracted document text into clean bullet points with key ideas, priorities, and optional action notes.", "Return premium Markdown with: # Bullet Point Summary; ## Executive Snapshot; ## Main Bullets; ## Priority Points; ## Details Worth Keeping; ## Action Notes; ## Missing / Needs Verification. Keep bullets specific, grouped, and professional even if the source has no headings."),
   "meeting-notes-summarizer": p("Meeting Notes Summarizer", 3, [
     sourceField,
     { id: "meeting_context", label: "Meeting context", required: false, maxLength: 1000 },
@@ -40,8 +41,8 @@ export const serverSummarizerUtilityBatchTools: Record<string, ServerPrompt> = {
     mustField,
     avoidField,
     languageField,
-  ], "Convert meeting notes or transcripts into decisions, action items, owners, risks, follow-ups, and clean minutes from supplied text only.", "Return Markdown with: # Meeting Summary; ## Executive Summary; ## Decisions; ## Action Items Table with Task, Owner, Deadline, Priority, Evidence; ## Risks / Blockers; ## Open Questions; ## Follow-Up Message Draft; ## Missing / Needs Verification."),
-  "file-text-summarizer": p("File/Text Summarizer", 3, summaryFields(), "Summarize pasted file text, document excerpts, reports, transcripts, or long notes into a useful brief.", summaryGuide),
+  ], "Convert meeting notes, transcripts, or extracted document text into decisions, action items, owners, risks, follow-ups, and clean minutes from supplied text only.", "Return premium Markdown with: # Meeting Summary; ## Executive Snapshot; ## Decisions; ## Action Items Table with Task, Owner, Deadline, Priority, Evidence; ## Risks / Blockers; ## Open Questions; ## Follow-Up Message Draft; ## Missing / Needs Verification. If the notes are messy or have no agenda headings, infer the best structure from the content."),
+  "file-text-summarizer": p("File/Text Summarizer", 3, summaryFields(), "Summarize pasted file text, extracted uploaded-file text, document excerpts, reports, transcripts, or long notes into a useful brief.", summaryGuide),
   "explain-like-im-5": p("Explain Like I’m 5", 2, [
     sourceField,
     { id: "target_level", label: "Target simplicity", required: true, minLength: 2, maxLength: 160 },
@@ -57,7 +58,7 @@ export const serverSummarizerUtilityBatchTools: Record<string, ServerPrompt> = {
     { id: "preserve_style", label: "Preserve original style", required: true, minLength: 2, maxLength: 160 },
     avoidField,
     languageField,
-  ], "Fix grammar, spelling, punctuation, clarity, flow, and readability while preserving the original meaning.", "Return Markdown with: # Corrected Text; the polished corrected version first; then ## What Changed with concise bullets; ## Meaning Preservation Notes if relevant."),
+  ], "Fix grammar, spelling, punctuation, clarity, flow, and readability while preserving the original meaning.", "Return Markdown with: # Corrected Text; the polished corrected version first; then ## What Changed with concise bullets; ## Meaning Preservation Notes if relevant. Scale the editing depth based on edit_level."),
   "text-humanizer": p("Text Humanizer", 3, [
     sourceField,
     { id: "humanize_level", label: "Humanize level", required: true, minLength: 2, maxLength: 160 },
@@ -66,8 +67,8 @@ export const serverSummarizerUtilityBatchTools: Record<string, ServerPrompt> = {
     mustField,
     avoidField,
     languageField,
-  ], "Rewrite text so it sounds more natural, clear, warm, and human-edited while preserving facts and user intent.", "Return Markdown with: # Human-Style Rewrite; provide the rewritten text first; then ## Editorial Notes; ## Preserved Facts; ## Optional Alternate Lines if useful."),
-  "key-takeaways-generator": p("Key Takeaways Generator", 2, summaryFields(), "Extract the most important lessons, insights, decisions, and memorable points from any supplied text.", "Return Markdown with: # Key Takeaways; ## Top Takeaways Table; ## Why They Matter; ## Useful Quotes / Source Phrases only if present; ## Actionable Next Steps; ## Missing / Needs Verification."),
+  ], "Rewrite text so it sounds more natural, clear, warm, and human-edited while preserving facts and user intent.", "Return Markdown with: # Human-Style Rewrite; provide the rewritten text first; then ## Editorial Notes; ## Preserved Facts; ## Optional Alternate Lines if useful. Scale the rewrite depth based on humanize_level."),
+  "key-takeaways-generator": p("Key Takeaways Generator", 2, summaryFields(), "Extract the most important lessons, insights, decisions, and memorable points from supplied text or extracted uploaded-file text.", "Return premium Markdown with: # Key Takeaways; ## Executive Snapshot; ## Top Takeaways Table; ## Why They Matter; ## Useful Source Phrases only if present; ## Actionable Next Steps; ## Missing / Needs Verification. Work even when the source has no clear headings."),
   "action-items-extractor": p("Action Items Extractor", 2, [
     sourceField,
     { id: "context", label: "Context", required: false, maxLength: 1000 },
