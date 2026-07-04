@@ -1,5 +1,6 @@
 import { blogTools } from "./public-blog-tools";
 import { socialTools } from "./public-social-tools";
+import { imageTools } from "./public-image-tools";
 
 export interface RecommendedNextAction {
   label: string;
@@ -177,6 +178,7 @@ const rawPublicTools: Tool[] = [
   },
   ...blogTools,
   ...socialTools,
+  ...imageTools,
   {
     id: "product-description",
     slug: "product-description",
