@@ -76,7 +76,7 @@ export const summarizerUtilityBatchTools: UtilityTool[] = [
     { id: "must_include", label: "Must Include", type: "textarea", placeholder: "Optional: terms, examples, facts, or points that must remain accurate.", required: false },
     { id: "language", label: "Language", type: "select", required: true, options: languageOptions },
   ], ["eli5-generator", "simple-explainer", "explain-simply"]),
-  tool("grammar-fixer", "Grammar Fixer", "Fix grammar, spelling, clarity, punctuation, flow, and readability while preserving the original meaning.", "Writing Assistant", "✅", 2, [
+  tool("grammar-fixer", "Grammar Fixer", "Fix grammar, spelling, clarity, punctuation, flow, and readability while preserving the original meaning.", "Writing Tools", "✅", 2, [
     { id: "source_content", label: "Text to Fix", type: "textarea", placeholder: "Paste the sentence, paragraph, email, article section, or draft to correct.", required: true },
     { id: "edit_level", label: "Edit Level", type: "select", required: true, options: ["Grammar only", "Grammar + clarity", "Professional polish", "Premium editorial polish"] },
     { id: "tone", label: "Tone", type: "select", required: true, options: toneOptions },
@@ -84,7 +84,7 @@ export const summarizerUtilityBatchTools: UtilityTool[] = [
     { id: "avoid", label: "Avoid / Constraints", type: "textarea", placeholder: "Optional: phrases, tone, words, formatting, or meaning that should not change.", required: false },
     { id: "language", label: "Language", type: "select", required: true, options: languageOptions },
   ], ["grammar-corrector", "grammar-checker", "proofreader"]),
-  tool("text-humanizer", "Text Humanizer", "Rewrite text to sound more natural, clear, and human-edited while preserving facts and meaning.", "Rewriting Tools", "🫶", 3, [
+  tool("text-humanizer", "Text Humanizer", "Rewrite text to sound more natural, clear, and human-edited while preserving facts and meaning.", "Writing Tools", "🫶", 3, [
     { id: "source_content", label: "Text to Humanize", type: "textarea", placeholder: "Paste the draft you want rewritten in a more natural human style.", required: true },
     { id: "humanize_level", label: "Humanize Level", type: "select", required: true, options: humanizeLevelOptions },
     { id: "audience", label: "Audience", type: "select", required: true, options: audienceOptions },
