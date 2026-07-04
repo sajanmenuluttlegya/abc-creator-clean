@@ -5,6 +5,8 @@ import { useParams } from "next/navigation";
 import { ToolCategorySidebar } from "@/components/ToolCategorySidebar";
 import { ToolFormRenderer } from "@/components/ToolFormRenderer";
 import { ThemeIcon } from "@/components/ThemeIcon";
+import { ImageTextToImagePanel } from "@/components/ImageTextToImagePanel";
+import { ImageUpscalePanel } from "@/components/ImageUpscalePanel";
 import { getToolBySlug } from "@/lib/tools/public-tools";
 
 export default function DynamicToolPage() {
@@ -83,7 +85,13 @@ export default function DynamicToolPage() {
           </div>
         </div>
 
-        <ToolFormRenderer tool={tool} />
+        {tool.slug === "text-to-image-generator" ? (
+          <ImageTextToImagePanel />
+        ) : tool.slug === "image-upscale" ? (
+          <ImageUpscalePanel />
+        ) : (
+          <ToolFormRenderer tool={tool} />
+        )}
       </section>
     </main>
   );
