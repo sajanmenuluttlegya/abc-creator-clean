@@ -35,18 +35,17 @@ export function ImageComposerDropdown({ label, value, options, onChange }: Props
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
-        className="group flex w-full items-center justify-between gap-3 rounded-xl bg-transparent px-2 py-1.5 text-left transition hover:bg-white/[0.045]"
+        className="group w-full rounded-xl bg-transparent px-2 py-1.5 text-left transition hover:bg-white/[0.045]"
       >
-        <span className="min-w-0">
+        <span className="block min-w-0">
           <span className="block text-[10px] font-black uppercase tracking-[0.24em] text-purple-200/75">{label}</span>
           <span className="mt-1 block truncate text-sm font-black text-white">{selected?.label || value}</span>
           {selected?.meta ? <span className="mt-0.5 block truncate text-[10px] font-bold text-slate-400">{selected.meta}</span> : null}
         </span>
-        <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full border border-white/15 bg-white/[0.05] text-xs text-purple-100 transition ${open ? "rotate-180" : ""}`}>⌄</span>
       </button>
 
       {open ? (
-        <div className="absolute left-0 top-[calc(100%+12px)] z-50 max-h-72 w-max min-w-[220px] overflow-y-auto rounded-2xl border border-white/20 bg-black/[0.74] p-1.5 shadow-2xl shadow-purple-950/40 backdrop-blur-2xl">
+        <div className="absolute left-0 top-[calc(100%+12px)] z-[9999] max-h-72 w-max min-w-[220px] overflow-y-auto rounded-2xl border border-white/20 bg-black/[0.78] p-1.5 shadow-2xl shadow-purple-950/40 backdrop-blur-2xl">
           {options.map((option) => {
             const active = option.value === value;
             return (
