@@ -21,9 +21,10 @@ const SOURCE_MODE_PASTE = "Paste text / transcript";
 const SOURCE_MODE_YOUTUBE = "YouTube URL";
 const SOURCE_MODE_UPLOAD = "Upload audio/video";
 const SOURCE_MODE_TEXT_FILE = "Upload text file";
+const SOURCE_MODE_DOCUMENT_FILE = "Upload document file";
 const presetBlogEditorTools = new Set(["quick-1-click-blog-post", "human-style-blog-post", "seo-optimized-blog-post", "advanced-blog-post"]);
 const transcriptSourceTools = new Set(["summarize-pro", "video-to-article-converter", "youtube-video-to-blog-post"]);
-const textFileSourceTools = new Set(["meeting-notes-summarizer", "file-text-summarizer"]);
+const textFileSourceTools = new Set(["bullet-point-summarizer", "meeting-notes-summarizer", "file-text-summarizer", "key-takeaways-generator"]);
 const emailOutputEditorTools = new Set([
   "cold-email-personalizer",
   "blog-to-email",
@@ -78,10 +79,25 @@ function fileToText(file: File) {
   });
 }
 
+function getFileExtension(file: File) {
+  const name = file.name.toLowerCase();
+  const index = name.lastIndexOf(".");
+  return index >= 0 ? name.slice(index + 1) : "";
+}
+
+function isDocumentFile(file: File) {
+  const extension = getFileExtension(file);
+  return extension === "pdf" || extension === "docx" || file.type === "application/pdf" || file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+}
+
 function isTextLikeFile(file: File) {
   const name = file.name.toLowerCase();
   const allowedExtensions = [".txt", ".md", ".markdown", ".csv", ".json", ".rtf", ".html", ".htm", ".xml", ".log"];
   return file.type.startsWith("text/") || file.type === "application/json" || file.type === "application/xml" || allowedExtensions.some((ext) => name.endsWith(ext));
+}
+
+function isReadableDocumentUpload(file: File) {
+  return isTextLikeFile(file) || isDocumentFile(file);
 }
 
 function cleanVisualText(value: string, maxLength = 520) {
@@ -140,6 +156,10 @@ function textFileSourceModeOf(inputs: Record<string, string>) {
   return inputs.source_mode || SOURCE_MODE_PASTE;
 }
 
+function isDocumentSourceMode(value: string) {
+  return value === SOURCE_MODE_TEXT_FILE || value === SOURCE_MODE_DOCUMENT_FILE;
+}
+
 export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [mediaFiles, setMediaFiles] = useState<Record<string, File | null>>({});
@@ -189,9 +209,9 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
         return { ...rest, [id]: value };
       }
       if (textFileSourceTools.has(tool.slug) && id === "source_mode") {
-        if (value !== SOURCE_MODE_TEXT_FILE) {
+        if (!isDocumentSourceMode(value)) {
           setMediaFiles((current) => ({ ...current, media_upload: null }));
-          const { media_upload_name: _mediaUploadName, ...rest } = prev;
+          const { media_upload_name: _mediaUploadName, uploaded_text_file_name: _uploadedTextFileName, uploaded_file_type: _uploadedFileType, ...rest } = prev;
           return { ...rest, [id]: value };
         }
       }
@@ -226,12 +246,12 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
       return;
     }
     if (isTextFileTool) {
-      if (!isTextLikeFile(file)) {
-        setOutput("Error:\nPlease choose a text-based file such as .txt, .md, .csv, .json, .rtf, .html, .xml, or .log.");
+      if (!isReadableDocumentUpload(file)) {
+        setOutput("Error:\nThis file type cannot be read yet. Please upload PDF, DOCX, TXT, MD, CSV, JSON, RTF, HTML, XML, or LOG, or paste the text manually.");
         return;
       }
-      if (file.size > 2 * 1024 * 1024) {
-        setOutput("Error:\nPlease choose a text file under 2 MB, or paste the most relevant section manually.");
+      if (file.size > 8 * 1024 * 1024) {
+        setOutput("Error:\nPlease choose a document under 8 MB, or paste the most relevant section manually.");
         return;
       }
       setMediaFiles((prev) => ({ ...prev, [id]: file }));
@@ -255,8 +275,8 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
   const isInputRequired = (input: ToolInput) => {
     if (textFileSourceTools.has(tool.slug)) {
       const sourceMode = textFileSourceModeOf(formData);
-      if (input.id === "source_content") return sourceMode !== SOURCE_MODE_TEXT_FILE;
-      if (input.id === "media_upload") return sourceMode === SOURCE_MODE_TEXT_FILE;
+      if (input.id === "source_content") return !isDocumentSourceMode(sourceMode);
+      if (input.id === "media_upload") return isDocumentSourceMode(sourceMode);
       return input.required;
     }
     if (!transcriptSourceTools.has(tool.slug)) return input.required;
@@ -269,24 +289,39 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
 
   const buildTextFileInputsForGeneration = async () => {
     const sourceMode = textFileSourceModeOf(formData);
-    if (sourceMode !== SOURCE_MODE_TEXT_FILE) return formData;
+    if (!isDocumentSourceMode(sourceMode)) return formData;
 
     const file = mediaFiles.media_upload;
-    if (!file) throw new Error("Upload a text file or choose paste mode.");
+    if (!file) throw new Error("Upload a PDF, DOCX, or text file, or choose paste mode.");
 
-    const text = await fileToText(file);
-    const cleaned = text.replace(/\u0000/g, "").trim();
-    if (cleaned.length < 20) throw new Error("The uploaded text file does not contain enough readable text.");
+    let fileText = "";
+    let sourceType = isDocumentFile(file) ? `${getFileExtension(file).toUpperCase()} file` : "text file";
 
-    const maxChars = 58000;
-    const truncated = cleaned.length > maxChars;
-    const fileText = truncated ? `${cleaned.slice(0, maxChars)}\n\n[File was longer than ${maxChars} characters, so only the first part was used. Paste a smaller section for deeper analysis.]` : cleaned;
+    if (isDocumentFile(file)) {
+      setOutput(`Reading ${sourceType}...\n\nExtracting real text from ${file.name}.`);
+      const payload = new FormData();
+      payload.append("file", file, file.name);
+      const res = await fetch("/api/file/extract", { method: "POST", body: payload });
+      const data = await res.json().catch(() => null) as { ok?: boolean; text?: string; fileName?: string; sourceType?: string; error?: string } | null;
+      if (!res.ok || !data?.text) throw new Error(data?.error || "Could not read this file.");
+      fileText = data.text;
+      sourceType = data.sourceType || sourceType;
+    } else {
+      const text = await fileToText(file);
+      const cleaned = text.replace(/\u0000/g, "").trim();
+      if (cleaned.length < 20) throw new Error("The uploaded text file does not contain enough readable text.");
+      const maxChars = 58000;
+      fileText = cleaned.length > maxChars ? `${cleaned.slice(0, maxChars)}\n\n[File was longer than ${maxChars} characters, so only the first part was used. Paste a smaller section for deeper analysis.]` : cleaned;
+    }
+
     const nextInputs = {
       ...formData,
-      source_content: [`Source mode: uploaded text file (${file.name}).`, "Use this uploaded text as the factual source. Do not claim external file access beyond this uploaded text.", "", fileText].join("\n"),
+      source_content: [`Source mode: uploaded ${sourceType} (${file.name}).`, "Use only this extracted uploaded-file text as the factual source. Summarize the substance even when the document is unstructured or has no section headings.", "", fileText].join("\n"),
       uploaded_text_file_name: file.name,
+      uploaded_file_type: sourceType,
     };
-    setFormData((current) => ({ ...current, source_content: nextInputs.source_content, uploaded_text_file_name: file.name }));
+    setFormData((current) => ({ ...current, source_content: nextInputs.source_content, uploaded_text_file_name: file.name, uploaded_file_type: sourceType }));
+    setOutput("");
     return nextInputs;
   };
 
@@ -404,8 +439,8 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
                     </label>
                     {input.type === "media" ? (
                       <div className="rounded-2xl border border-dashed border-cyan-300/25 bg-cyan-400/5 p-4">
-                        <input id={input.id} type="file" accept={isTextFileUpload ? ".txt,.md,.markdown,.csv,.json,.rtf,.html,.htm,.xml,.log,text/*,application/json,application/xml" : "audio/*,video/*"} onChange={handleMediaInput} required={isInputRequired(input) && !mediaFiles[input.id]} className="w-full cursor-pointer rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white file:mr-4 file:rounded-full file:border-0 file:bg-cyan-500/20 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-cyan-100" />
-                        {mediaFiles[input.id] ? <p className="mt-3 text-xs text-cyan-100">{isTextFileUpload ? "File" : "Media"} ready: {mediaFiles[input.id]?.name}</p> : <p className="mt-3 text-xs text-slate-400">{isTextFileUpload ? "Upload a text-based file under 2 MB, or paste the content manually." : "Audio/video is transcribed first and charged separately. Max 50 MB."}</p>}
+                        <input id={input.id} type="file" accept={isTextFileUpload ? ".pdf,.docx,.txt,.md,.markdown,.csv,.json,.rtf,.html,.htm,.xml,.log,text/*,application/json,application/xml,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" : "audio/*,video/*"} onChange={handleMediaInput} required={isInputRequired(input) && !mediaFiles[input.id]} className="w-full cursor-pointer rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white file:mr-4 file:rounded-full file:border-0 file:bg-cyan-500/20 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-cyan-100" />
+                        {mediaFiles[input.id] ? <p className="mt-3 text-xs text-cyan-100">{isTextFileUpload ? "File" : "Media"} ready: {mediaFiles[input.id]?.name}</p> : <p className="mt-3 text-xs text-slate-400">{isTextFileUpload ? "Upload PDF, DOCX, or a text-based file under 8 MB. Image-only PDFs need pasted OCR text." : "Audio/video is transcribed first and charged separately. Max 50 MB."}</p>}
                       </div>
                     ) : input.type === "image" ? (
                       <div className="rounded-2xl border border-dashed border-pink-300/25 bg-pink-400/5 p-4">
