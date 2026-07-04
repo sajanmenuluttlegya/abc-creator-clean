@@ -65,20 +65,26 @@ function cloudflareErrorMessage(data: CloudflareRunResult | null, status: number
   return apiErrors || `Cloudflare image generation failed with HTTP ${status}`;
 }
 
-async function callCloudflareOnce(credential: CloudflareAICredential, input: GenerateImageInput) {
+function buildCloudflarePayload(input: GenerateImageInput) {
   const model = IMAGE_MODEL_OPTIONS[input.model];
   const { width, height } = getImageDimensions(input.resolution, input.aspectRatio);
-
-  const form = new FormData();
-  form.append("prompt", buildPrompt(input));
-  form.append("width", String(width));
-  form.append("height", String(height));
-  form.append("steps", String(model.defaultSteps));
+  const payload: Record<string, string | number> = {
+    prompt: buildPrompt(input),
+    width,
+    height,
+    steps: model.defaultSteps,
+  };
 
   if (input.seed?.trim()) {
-    form.append("seed", input.seed.trim());
+    const numericSeed = Number(input.seed.trim());
+    payload.seed = Number.isFinite(numericSeed) ? Math.floor(numericSeed) : input.seed.trim();
   }
 
+  return { payload, width, height, model };
+}
+
+async function callCloudflareOnce(credential: CloudflareAICredential, input: GenerateImageInput) {
+  const { payload, width, height, model } = buildCloudflarePayload(input);
   const { controller, timer } = timeoutSignal(credential.timeout_ms || 90000);
 
   try {
@@ -88,11 +94,36 @@ async function callCloudflareOnce(credential: CloudflareAICredential, input: Gen
         method: "POST",
         headers: {
           Authorization: `Bearer ${credential.api_token}`,
+          "Content-Type": "application/json",
         },
-        body: form,
+        body: JSON.stringify(payload),
         signal: controller.signal,
       }
     );
+
+    const contentType = res.headers.get("content-type") || "";
+
+    if (contentType.startsWith("image/")) {
+      const buffer = Buffer.from(await res.arrayBuffer());
+
+      if (!res.ok || !buffer.length) {
+        return {
+          ok: false as const,
+          tryNext: shouldTryNextKey(res.status),
+          status: res.status,
+          error: `Cloudflare image generation failed with HTTP ${res.status}`,
+        };
+      }
+
+      return {
+        ok: true as const,
+        dataUrl: `data:${contentType};base64,${buffer.toString("base64")}`,
+        modelId: model.modelId,
+        credentialSlot: credential.key_slot,
+        width,
+        height,
+      };
+    }
 
     const data = (await res.json().catch(() => null)) as CloudflareRunResult | null;
     const imageBase64 = data?.result?.image || data?.image || "";
