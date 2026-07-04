@@ -31,151 +31,25 @@ export interface ToolInput {
   options?: string[];
 }
 
-const audienceOptions = [
-  "General audience",
-  "Beginners",
-  "Intermediate readers",
-  "Experts",
-  "Small business owners",
-  "Marketers",
-  "Students",
-];
-
-const languageOptions = [
-  "English",
-  "Hindi",
-  "Hinglish",
-  "Spanish",
-  "French",
-  "German",
-  "Portuguese",
-  "Arabic",
-];
-
-const toneOptions = [
-  "Professional",
-  "Friendly",
-  "Educational",
-  "Persuasive",
-  "Conversational",
-  "Witty",
-];
-
-const blogTopicIdeaCountOptions = [
-  "5 ideas",
-  "10 ideas",
-  "20 ideas",
-  "30 ideas",
-  "50 ideas",
-];
-
-const voiceOptions = [
-  "Second person helpful guide",
-  "First person expert",
-  "Third person editorial",
-  "Brand voice",
-  "Neutral magazine style",
-  "Founder/operator voice",
-];
-
-const targetWordCountOptions = [
-  "Short article (800-1,200 words)",
-  "Standard article (1,200-1,800 words)",
-  "Long article (1,800-2,500 words)",
-  "Very long article (2,500-3,500 words)",
-  "Premium pillar article (3,500-5,000 words)",
-  "Authority pillar article (5,000-10,000 words)",
-];
-
-const wordsPerSectionOptions = [
-  "Very short (up to 300 words)",
-  "Short (up to 500 words)",
-  "Medium (up to 1000 words)",
-  "Long (up to 2000 words)",
-  "Very long (up to 3000 words)",
-  "2 paragraphs (up to 100 words)",
-];
-
-const articleDepthOptions = [
-  "Basic overview",
-  "Detailed practical guide",
-  "Expert-level deep dive",
-];
-
+const audienceOptions = ["General audience", "Beginners", "Intermediate readers", "Experts", "Small business owners", "Marketers", "Students"];
+const languageOptions = ["English", "Hindi", "Hinglish", "Spanish", "French", "German", "Portuguese", "Arabic"];
+const toneOptions = ["Professional", "Friendly", "Educational", "Persuasive", "Conversational", "Witty"];
+const blogTopicIdeaCountOptions = ["5 ideas", "10 ideas", "20 ideas", "30 ideas", "50 ideas"];
+const voiceOptions = ["Second person helpful guide", "First person expert", "Third person editorial", "Brand voice", "Neutral magazine style", "Founder/operator voice"];
+const targetWordCountOptions = ["Short article (800-1,200 words)", "Standard article (1,200-1,800 words)", "Long article (1,800-2,500 words)", "Very long article (2,500-3,500 words)", "Premium pillar article (3,500-5,000 words)", "Authority pillar article (5,000-10,000 words)"];
+const wordsPerSectionOptions = ["Very short (up to 300 words)", "Short (up to 500 words)", "Medium (up to 1000 words)", "Long (up to 2000 words)", "Very long (up to 3000 words)", "2 paragraphs (up to 100 words)"];
+const articleDepthOptions = ["Basic overview", "Detailed practical guide", "Expert-level deep dive"];
 const yesNoOptions = ["Yes", "No"];
+const imageBriefModeOptions = ["No images", "Hero image only", "Hero + section images"];
+const imagePlanOptions = ["Hero image only", "Hero + key section images", "Image for every major section", "Custom editorial image plan"];
+const imageRatioOptions = ["16:9 landscape", "4:3 landscape", "3:2 editorial", "1:1 square", "9:16 vertical"];
+const imageCountGuidanceOptions = ["1 image", "3 images", "5 images", "7 images", "Custom image count (under 20)"];
+const imageStyleOptions = ["Auto (recommended)", "Cinematic", "Photoreal", "Editorial", "Futuristic Tech", "3D Render", "Minimalist", "Isometric", "Infographic", "Diagram / Blueprint", "Cyberpunk Neon", "Luxury / Premium", "Abstract", "Flat Vector", "Retro Futurist"];
+const visualModeOptions = ["Auto-smart", "Mixed", "Artistic", "Diagram-heavy", "Data-viz-heavy", "Scene illustrations"];
+const chartPreferenceOptions = ["Auto", "Prefer charts", "Prefer diagrams", "Prefer flowcharts", "Prefer lineage / graph visuals", "Prefer scene illustrations", "Avoid charts"];
+const exportImageFrameOptions = ["Boxed", "Borderless"];
 
-const imageBriefModeOptions = [
-  "No images",
-  "Hero image only",
-  "Hero + section images",
-];
-
-const imagePlanOptions = [
-  "Hero image only",
-  "Hero + key section images",
-  "Image for every major section",
-  "Custom editorial image plan",
-];
-
-const imageRatioOptions = [
-  "16:9 landscape",
-  "4:3 landscape",
-  "3:2 editorial",
-  "1:1 square",
-  "9:16 vertical",
-];
-
-const imageCountGuidanceOptions = [
-  "1 image",
-  "3 images",
-  "5 images",
-  "7 images",
-  "Custom image count (under 20)",
-];
-
-const imageStyleOptions = [
-  "Auto (recommended)",
-  "Cinematic",
-  "Photoreal",
-  "Editorial",
-  "Futuristic Tech",
-  "3D Render",
-  "Minimalist",
-  "Isometric",
-  "Infographic",
-  "Diagram / Blueprint",
-  "Cyberpunk Neon",
-  "Luxury / Premium",
-  "Abstract",
-  "Flat Vector",
-  "Retro Futurist",
-];
-
-const visualModeOptions = [
-  "Auto-smart",
-  "Mixed",
-  "Artistic",
-  "Diagram-heavy",
-  "Data-viz-heavy",
-  "Scene illustrations",
-];
-
-const chartPreferenceOptions = [
-  "Auto",
-  "Prefer charts",
-  "Prefer diagrams",
-  "Prefer flowcharts",
-  "Prefer lineage / graph visuals",
-  "Prefer scene illustrations",
-  "Avoid charts",
-];
-
-const exportImageFrameOptions = [
-  "Boxed",
-  "Borderless",
-];
-
-export const publicTools: Tool[] = [
+const rawPublicTools: Tool[] = [
   {
     id: "blog-topic-ideas",
     slug: "blog-topic-ideas",
@@ -187,13 +61,7 @@ export const publicTools: Tool[] = [
     displayCreditCost: 1,
     outputType: "text",
     aliases: ["ai-blog-topic-ideas", "blog-topic-ideas-generator", "blog-topic-ideas-tool"],
-    nextActions: [
-      {
-        label: "Create a blog outline",
-        href: "/tools/blog-outline",
-        description: "Turn your best topic idea into a structured article outline.",
-      },
-    ],
+    nextActions: [{ label: "Create a blog outline", href: "/tools/blog-outline", description: "Turn your best topic idea into a structured article outline." }],
     inputs: [
       { id: "niche", label: "Niche", type: "text", placeholder: "e.g., fitness for busy founders", required: true },
       { id: "keyword", label: "Keyword", type: "text", placeholder: "e.g., 20-minute workouts", required: true },
@@ -214,13 +82,7 @@ export const publicTools: Tool[] = [
     displayCreditCost: 3,
     outputType: "text",
     aliases: ["ai-blog-outline", "blog-outline-generator", "blog-outline-tool"],
-    nextActions: [
-      {
-        label: "Write the full blog content",
-        href: "/tools/blog-content",
-        description: "Use this outline to generate a premium long-form blog article.",
-      },
-    ],
+    nextActions: [{ label: "Write the full blog content", href: "/tools/blog-content", description: "Use this outline to generate a premium long-form blog article." }],
     inputs: [
       { id: "blog_title", label: "Blog Title", type: "text", placeholder: "e.g., How AI Helps Small Businesses Save Time", required: true },
       { id: "target_keyword", label: "Target Keyword", type: "text", placeholder: "e.g., AI for small business", required: true },
@@ -241,16 +103,8 @@ export const publicTools: Tool[] = [
     outputType: "text",
     aliases: ["ai-blog-content", "blog-content-generator", "blog-content-tool"],
     nextActions: [
-      {
-        label: "Create a blog SEO pack",
-        href: "/tools/blog-seo-pack",
-        description: "Generate metadata, slug ideas, FAQ schema, and social copy for this article.",
-      },
-      {
-        label: "Create pro image prompts",
-        href: "/tools/pro-image-brief-for-blog",
-        description: "Plan hero and section images with prompts, alt text, and captions.",
-      },
+      { label: "Create a blog SEO pack", href: "/tools/blog-seo-pack", description: "Generate metadata, slug ideas, FAQ schema, and social copy for this article." },
+      { label: "Create pro image prompts", href: "/tools/pro-image-brief-for-blog", description: "Plan hero and section images with prompts, alt text, and captions." },
     ],
     inputs: [
       { id: "outline", label: "Approved Outline", type: "textarea", placeholder: "Paste the H2/H3 outline you want expanded into a blog post.", required: true },
@@ -287,13 +141,7 @@ export const publicTools: Tool[] = [
     displayCreditCost: 1,
     outputType: "text",
     aliases: ["ai-pro-image-brief-for-blog", "pro-image-brief-for-blog-generator", "pro-image-brief-for-blog-tool"],
-    nextActions: [
-      {
-        label: "Write the full blog content",
-        href: "/tools/blog-content",
-        description: "Use the visual plan alongside a full article draft.",
-      },
-    ],
+    nextActions: [{ label: "Write the full blog content", href: "/tools/blog-content", description: "Use the visual plan alongside a full article draft." }],
     inputs: [
       { id: "blog_topic", label: "Blog Topic", type: "text", placeholder: "e.g., AI tools for online teachers", required: true },
       { id: "blog_outline", label: "Blog Outline / Article", type: "textarea", placeholder: "Paste the blog outline, article draft, or section list.", required: true },
@@ -320,13 +168,7 @@ export const publicTools: Tool[] = [
     displayCreditCost: 5,
     outputType: "text",
     aliases: ["ai-blog-seo-pack", "blog-seo-pack-generator", "blog-seo-pack-tool"],
-    nextActions: [
-      {
-        label: "Create pro image prompts",
-        href: "/tools/pro-image-brief-for-blog",
-        description: "Plan article visuals after the SEO pack is ready.",
-      },
-    ],
+    nextActions: [{ label: "Create pro image prompts", href: "/tools/pro-image-brief-for-blog", description: "Plan article visuals after the SEO pack is ready." }],
     inputs: [
       { id: "blog_title", label: "Blog Title", type: "text", placeholder: "e.g., How AI Helps Small Businesses Save Time", required: true },
       { id: "article_content", label: "Article Content", type: "textarea", placeholder: "Paste the article or draft you want optimized.", required: true },
@@ -335,22 +177,6 @@ export const publicTools: Tool[] = [
   },
   ...blogTools,
   ...socialTools,
-  {
-    id: "facebook-ad-copy",
-    slug: "facebook-ad-copy",
-    name: "Facebook Ad Copy",
-    description: "Create compelling Facebook ad copy that drives clicks and conversions.",
-    icon: "ad-copy",
-    detailEmoji: "📢",
-    category: "Ad Copy",
-    displayCreditCost: 4,
-    outputType: "text",
-    inputs: [
-      { id: "product", label: "Product / Service", type: "text", placeholder: "What are you promoting?", required: true },
-      { id: "audience", label: "Target Audience", type: "text", placeholder: "e.g., Small business owners, fitness enthusiasts", required: true },
-      { id: "cta", label: "Call-to-Action", type: "select", required: false, options: ["Learn More", "Shop Now", "Sign Up", "Get Started", "Download"] },
-    ],
-  },
   {
     id: "product-description",
     slug: "product-description",
@@ -369,8 +195,8 @@ export const publicTools: Tool[] = [
   },
 ];
 
+export const publicTools: Tool[] = rawPublicTools.filter((tool, index, tools) => tools.findIndex((item) => item.slug === tool.slug) === index);
+
 export function getToolBySlug(slug: string): Tool | undefined {
-  return publicTools.find(
-    (tool) => tool.slug === slug || tool.aliases?.includes(slug)
-  );
+  return publicTools.find((tool) => tool.slug === slug || tool.aliases?.includes(slug));
 }
