@@ -7,6 +7,7 @@ type ImageModelKey = "M1" | "M2" | "M3" | "M4" | "M5" | "M6";
 type ImageResolution = "360p" | "480p" | "720p" | "1080p";
 type ImageAspectRatio = "1:1" | "16:9" | "9:16" | "4:5" | "3:4" | "4:3" | "3:2" | "2:3";
 type UpscaleTarget = "2k" | "4k";
+type Option = { label: string; value: string; meta?: string };
 
 type GeneratedImage = {
   index: number;
@@ -20,8 +21,6 @@ type GeneratedImage = {
 };
 
 type UpscaledImage = { target: UpscaleTarget; dataUrl: string; filename: string; creditsCharged?: number };
-
-type Option = { label: string; value: string; meta?: string };
 
 const MODEL_OPTIONS: Option[] = [
   { label: "M1", value: "M1", meta: "Max detail" },
@@ -113,12 +112,10 @@ export function ImageTextToImagePanel() {
       setError("Write a prompt with at least 6 characters.");
       return;
     }
-
     setLoading(true);
     setGenerationProgress(1);
     setError("");
     setNotice("");
-
     try {
       const response = await fetch("/api/image/text-to-image", {
         method: "POST",
@@ -127,7 +124,6 @@ export function ImageTextToImagePanel() {
       });
       const data = await response.json().catch(() => null) as { ok?: boolean; error?: string; details?: string; creditsCharged?: number; images?: GeneratedImage[] } | null;
       if (!response.ok || !data?.ok || !data.images?.length) throw new Error(data?.details || data?.error || "Image generation failed.");
-
       setGenerationProgress(100);
       const enriched = data.images.map((image) => ({ ...image, prompt, kind: "generated" as const }));
       setImages(enriched);
@@ -148,19 +144,16 @@ export function ImageTextToImagePanel() {
       setError("Select an image and describe what to change.");
       return;
     }
-
     setEditing(true);
     setGenerationProgress(1);
     setError("");
     setNotice("");
-
     const consistencyPrompt = [
       "Use the attached/selected reference image as the identity source.",
       "Maintain character consistency: same main subject, body structure, face/helmet/design, color palette, clothing/armor, materials, proportions, and recognizable visual identity.",
       selectedImage.prompt ? `Original generation prompt: ${selectedImage.prompt}` : "",
       `Requested change: ${editPrompt.trim()}`,
     ].filter(Boolean).join("\n");
-
     try {
       const response = await fetch("/api/image/text-to-image", {
         method: "POST",
@@ -184,7 +177,6 @@ export function ImageTextToImagePanel() {
       });
       const data = await response.json().catch(() => null) as { ok?: boolean; error?: string; details?: string; creditsCharged?: number; images?: GeneratedImage[] } | null;
       if (!response.ok || !data?.ok || !data.images?.length) throw new Error(data?.details || data?.error || "Image edit failed.");
-
       setGenerationProgress(100);
       const nextIndex = Math.max(0, ...images.map((image) => image.index)) + 1;
       const edited = { ...data.images[0], index: nextIndex, prompt: consistencyPrompt, parentIndex: selectedImage.index, kind: "edited" as const };
@@ -205,7 +197,6 @@ export function ImageTextToImagePanel() {
     setUpscalingKey(key);
     setError("");
     setNotice("");
-
     try {
       const response = await fetch("/api/image/upscale", {
         method: "POST",
@@ -214,7 +205,6 @@ export function ImageTextToImagePanel() {
       });
       const data = await response.json().catch(() => null) as { ok?: boolean; error?: string; details?: string; creditsCharged?: number; image?: { dataUrl: string; filename?: string } } | null;
       if (!response.ok || !data?.ok || !data.image?.dataUrl) throw new Error(data?.details || data?.error || "Upscale failed.");
-
       const next = { target, dataUrl: data.image.dataUrl, filename: data.image.filename || `upscaled-${target}-${image.index}.png`, creditsCharged: data.creditsCharged };
       setUpscaled((current) => ({ ...current, [String(image.index)]: [...(current[String(image.index)] || []).filter((item) => item.target !== target), next] }));
       setNotice(`Upscaled image ${image.index} to ${target.toUpperCase()} for ${data.creditsCharged ?? UPSCALE_CREDITS[target]} credits.`);
@@ -237,18 +227,13 @@ export function ImageTextToImagePanel() {
 
   return (
     <div className="space-y-10">
-      <div className="mx-auto max-w-6xl rounded-[2rem] border border-white/55 bg-white/[0.035] shadow-2xl shadow-purple-950/20 backdrop-blur-2xl">
+      <div className="mx-auto max-w-6xl overflow-visible rounded-[2rem] border border-white/55 bg-white/[0.035] shadow-2xl shadow-purple-950/20 backdrop-blur-2xl">
         <div className="px-6 pt-6 sm:px-8 sm:pt-8">
           <div className="mb-4 flex items-center justify-between gap-4">
             <p className="text-xs font-black uppercase tracking-[0.32em] text-purple-100/80">Text to image</p>
             <span className="rounded-full border border-white/15 bg-white/[0.06] px-4 py-1.5 text-xs font-black text-white backdrop-blur-xl">{creditEstimate} credits</span>
           </div>
-          <textarea
-            value={prompt}
-            onChange={(event) => setPrompt(event.target.value)}
-            placeholder="Describe the exact image you want..."
-            className="min-h-[210px] w-full resize-none bg-transparent text-lg font-semibold leading-8 text-white outline-none placeholder:text-slate-500 sm:min-h-[250px]"
-          />
+          <textarea value={prompt} onChange={(event) => setPrompt(event.target.value)} placeholder="Describe the exact image you want..." className="min-h-[210px] w-full resize-none bg-transparent text-lg font-semibold leading-8 text-white outline-none placeholder:text-slate-500 sm:min-h-[250px]" />
         </div>
 
         <div className="mx-6 h-px bg-white/15 sm:mx-8" />
@@ -272,11 +257,7 @@ export function ImageTextToImagePanel() {
             <VerticalDivider />
             <ImageComposerDropdown label="Style" value={style} options={STYLE_OPTIONS} onChange={setStyle} />
           </div>
-
-          <button type="button" onClick={generate} disabled={!canGenerate} className="group flex h-14 shrink-0 items-center justify-center gap-3 rounded-full border border-white/20 bg-white/[0.09] px-6 text-base font-black text-white backdrop-blur-xl transition hover:bg-white/[0.14] disabled:cursor-not-allowed disabled:opacity-50" aria-label="Generate image">
-            <span>{loading ? "Generating" : "Generate"}</span>
-            <span className="grid h-9 w-9 place-items-center rounded-full bg-white/15 text-xl transition group-hover:translate-x-1">→</span>
-          </button>
+          <button type="button" onClick={generate} disabled={!canGenerate} className="group flex h-14 shrink-0 items-center justify-center gap-3 rounded-full border border-white/20 bg-white/[0.09] px-6 text-base font-black text-white backdrop-blur-xl transition hover:bg-white/[0.14] disabled:cursor-not-allowed disabled:opacity-50" aria-label="Generate image"><span>{loading ? "Generating" : "Generate"}</span><span className="grid h-9 w-9 place-items-center rounded-full bg-white/15 text-xl transition group-hover:translate-x-1">→</span></button>
         </div>
       </div>
 
@@ -284,56 +265,31 @@ export function ImageTextToImagePanel() {
       {notice ? <div className="mx-auto max-w-6xl rounded-2xl border border-emerald-400/25 bg-emerald-500/10 px-5 py-4 text-sm font-semibold text-emerald-100">{notice}</div> : null}
 
       {loading ? (
-        <div className="mx-auto grid max-w-6xl gap-5 md:grid-cols-2">
+        <div className="mx-auto grid max-w-6xl gap-5 pt-6 md:grid-cols-2">
           {Array.from({ length: Number(imageCount) || 1 }).map((_, index) => (
             <div key={index} className="relative aspect-square overflow-hidden rounded-[2rem] border border-white/25 bg-white/[0.035] shadow-2xl shadow-purple-950/20 backdrop-blur-xl">
               <span className="absolute right-4 top-4 rounded-full border border-white/15 bg-black/60 px-3 py-1.5 text-xs font-black text-white backdrop-blur-xl">{generationProgress}%</span>
-              <div className="grid h-full place-items-center text-center">
-                <div><div className="mx-auto h-14 w-14 animate-spin rounded-full border-2 border-purple-300/20 border-t-purple-200" /><p className="mt-4 text-sm font-black text-white">Generating image...</p><p className="mt-1 text-xs font-semibold text-slate-400">Streaming progress</p></div>
-              </div>
+              <div className="grid h-full place-items-center text-center"><div><div className="mx-auto h-14 w-14 animate-spin rounded-full border-2 border-purple-300/20 border-t-purple-200" /><p className="mt-4 text-sm font-black text-white">Generating image...</p><p className="mt-1 text-xs font-semibold text-slate-400">Streaming progress</p></div></div>
             </div>
           ))}
         </div>
       ) : null}
 
       {selectedImage ? (
-        <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
+        <div className="mx-auto grid max-w-6xl gap-6 pt-6 lg:grid-cols-[minmax(0,1fr)_280px]">
           <div className="rounded-[2rem] border border-white/25 bg-white/[0.035] p-3 shadow-2xl shadow-purple-950/25 backdrop-blur-2xl">
-            <div className="relative overflow-hidden rounded-[1.45rem] bg-black/45">
-              <img src={selectedImage.dataUrl} alt={`Selected image ${selectedImage.index}`} className="max-h-[620px] w-full object-contain" />
-              {editing ? <span className="absolute right-4 top-4 rounded-full border border-white/15 bg-black/60 px-3 py-1.5 text-xs font-black text-white backdrop-blur-xl">{generationProgress}%</span> : null}
-            </div>
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 px-1">
-              <div><p className="text-sm font-black text-white">Selected image {selectedImage.index}</p><p className="text-xs font-semibold text-slate-400">{selectedImage.kind === "edited" ? `Consistent edit from image ${selectedImage.parentIndex}` : "Click any thumbnail to switch reference"}</p></div>
-              {imageActions(selectedImage)}
-            </div>
-
+            <div className="relative overflow-hidden rounded-[1.45rem] bg-black/45"><img src={selectedImage.dataUrl} alt={`Selected image ${selectedImage.index}`} className="max-h-[620px] w-full object-contain" />{editing ? <span className="absolute right-4 top-4 rounded-full border border-white/15 bg-black/60 px-3 py-1.5 text-xs font-black text-white backdrop-blur-xl">{generationProgress}%</span> : null}</div>
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 px-1"><div><p className="text-sm font-black text-white">Selected image {selectedImage.index}</p><p className="text-xs font-semibold text-slate-400">{selectedImage.kind === "edited" ? `Consistent edit from image ${selectedImage.parentIndex}` : "Click any thumbnail to switch reference"}</p></div>{imageActions(selectedImage)}</div>
             <div className="mt-4 overflow-visible rounded-[1.6rem] border border-white/30 bg-white/[0.035] backdrop-blur-2xl">
               <textarea value={editPrompt} onChange={(event) => setEditPrompt(event.target.value)} placeholder="What do you want to change? Character consistency stays locked to the selected image." className="min-h-[110px] w-full resize-none bg-transparent px-5 py-4 text-base font-semibold leading-7 text-white outline-none placeholder:text-slate-500" />
               <div className="mx-5 h-px bg-white/15" />
-              <div className="flex flex-col gap-3 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex flex-wrap items-center gap-y-3">
-                  <ImageComposerDropdown label="Model" value={model} options={MODEL_OPTIONS} onChange={(value) => setModel(value as ImageModelKey)} />
-                  <VerticalDivider />
-                  <ImageComposerDropdown label="Resolution" value={resolution} options={RESOLUTION_OPTIONS} onChange={(value) => setResolution(value as ImageResolution)} />
-                  <VerticalDivider />
-                  <ImageComposerDropdown label="Ratio" value={aspectRatio} options={ASPECT_OPTIONS} onChange={(value) => setAspectRatio(value as ImageAspectRatio)} />
-                  <VerticalDivider />
-                  <ImageComposerDropdown label="Style" value={style} options={STYLE_OPTIONS} onChange={setStyle} />
-                </div>
-                <button type="button" onClick={makeConsistentEdit} disabled={!canEdit} className="group flex h-12 shrink-0 items-center justify-center gap-2 rounded-full border border-white/20 bg-white/[0.09] px-5 text-sm font-black text-white backdrop-blur-xl transition hover:bg-white/[0.14] disabled:cursor-not-allowed disabled:opacity-50"><span>{editing ? "Editing" : `${editCreditEstimate} cr`}</span><span className="grid h-7 w-7 place-items-center rounded-full bg-white/15 text-lg transition group-hover:translate-x-1">→</span></button>
-              </div>
+              <div className="flex flex-col gap-3 px-3 py-3 sm:flex-row sm:items-center sm:justify-between"><div className="flex flex-wrap items-center gap-y-3"><ImageComposerDropdown label="Model" value={model} options={MODEL_OPTIONS} onChange={(value) => setModel(value as ImageModelKey)} /><VerticalDivider /><ImageComposerDropdown label="Resolution" value={resolution} options={RESOLUTION_OPTIONS} onChange={(value) => setResolution(value as ImageResolution)} /><VerticalDivider /><ImageComposerDropdown label="Ratio" value={aspectRatio} options={ASPECT_OPTIONS} onChange={(value) => setAspectRatio(value as ImageAspectRatio)} /><VerticalDivider /><ImageComposerDropdown label="Style" value={style} options={STYLE_OPTIONS} onChange={setStyle} /></div><button type="button" onClick={makeConsistentEdit} disabled={!canEdit} className="group flex h-12 shrink-0 items-center justify-center gap-2 rounded-full border border-white/20 bg-white/[0.09] px-5 text-sm font-black text-white backdrop-blur-xl transition hover:bg-white/[0.14] disabled:cursor-not-allowed disabled:opacity-50"><span>{editing ? "Editing" : `${editCreditEstimate} cr`}</span><span className="grid h-7 w-7 place-items-center rounded-full bg-white/15 text-lg transition group-hover:translate-x-1">→</span></button></div>
             </div>
-
             {(upscaled[String(selectedImage.index)] || []).length ? <div className="mt-4 space-y-3 rounded-2xl border border-white/10 bg-black/35 p-3">{(upscaled[String(selectedImage.index)] || []).map((item) => <div key={item.target} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.035] p-3"><div><p className="text-sm font-black text-white">Upscaled {item.target.toUpperCase()}</p><p className="text-xs font-semibold text-slate-400">{item.creditsCharged ?? UPSCALE_CREDITS[item.target]} credits charged</p></div><button type="button" onClick={() => downloadDataUrl(item.dataUrl, item.filename)} className="rounded-full border border-purple-300/20 bg-purple-400/10 px-4 py-2 text-xs font-black text-purple-100 transition hover:bg-purple-400/20">Download upscale</button></div>)}</div> : null}
           </div>
-
-          <div className="space-y-3">
-            <p className="px-1 text-xs font-black uppercase tracking-[0.24em] text-purple-200/80">Session images</p>
-            {images.map((image) => <button key={image.index} type="button" onClick={() => setSelectedIndex(image.index)} className={`block w-full overflow-hidden rounded-2xl border p-1 text-left transition ${selectedIndex === image.index ? "border-white/70 bg-white/[0.08]" : "border-white/10 bg-white/[0.03] hover:border-purple-300/35 hover:bg-white/[0.06]"}`}><img src={image.dataUrl} alt={`Thumbnail ${image.index}`} className="aspect-square w-full rounded-xl object-cover" /><span className="mt-2 block px-1 pb-1 text-xs font-black text-white">{image.kind === "edited" ? `Edit ${image.index}` : `Image ${image.index}`}</span></button>)}
-          </div>
+          <div className="space-y-3"><p className="px-1 text-xs font-black uppercase tracking-[0.24em] text-purple-200/80">Session images</p>{images.map((image) => <button key={image.index} type="button" onClick={() => setSelectedIndex(image.index)} className={`block w-full overflow-hidden rounded-2xl border p-1 text-left transition ${selectedIndex === image.index ? "border-white/70 bg-white/[0.08]" : "border-white/10 bg-white/[0.03] hover:border-purple-300/35 hover:bg-white/[0.06]"}`}><img src={image.dataUrl} alt={`Thumbnail ${image.index}`} className="aspect-square w-full rounded-xl object-cover" /><span className="mt-2 block px-1 pb-1 text-xs font-black text-white">{image.kind === "edited" ? `Edit ${image.index}` : `Image ${image.index}`}</span></button>)}</div>
         </div>
-      ) : !loading ? <div className="mx-auto max-w-6xl rounded-[2rem] border border-white/15 bg-white/[0.025] p-10 text-center text-slate-400 backdrop-blur-xl">Generated images will appear below the prompt box. Click any image to open the consistency edit workspace.</div> : null}
+      ) : null}
     </div>
   );
 }
