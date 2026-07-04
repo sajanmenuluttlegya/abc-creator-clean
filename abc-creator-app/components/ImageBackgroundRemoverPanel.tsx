@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ImageBeforeAfterSlider } from "./ImageBeforeAfterSlider";
 
 type BackgroundRemoveResponse = {
   ok?: boolean;
@@ -139,10 +140,10 @@ export function ImageBackgroundRemoverPanel() {
       {notice ? <div className="mx-auto max-w-5xl rounded-2xl border border-emerald-400/25 bg-emerald-500/10 px-5 py-4 text-sm font-semibold text-emerald-100">{notice}</div> : null}
 
       {output ? (
-        <div className="mx-auto max-w-5xl overflow-hidden rounded-[2rem] border border-purple-300/20 bg-[linear-gradient(45deg,rgba(255,255,255,.04)_25%,transparent_25%,transparent_75%,rgba(255,255,255,.04)_75%),linear-gradient(45deg,rgba(255,255,255,.04)_25%,transparent_25%,transparent_75%,rgba(255,255,255,.04)_75%)] bg-[length:32px_32px] bg-[position:0_0,16px_16px] p-3 shadow-2xl shadow-purple-950/25 backdrop-blur-2xl">
-          <div className="overflow-hidden rounded-[1.45rem] border border-white/10 bg-black/35"><img src={output.dataUrl} alt="Transparent PNG output" className="w-full object-contain" /></div>
+        <div className="mx-auto max-w-5xl overflow-hidden rounded-[2rem] border border-purple-300/20 bg-white/[0.035] p-3 shadow-2xl shadow-purple-950/25 backdrop-blur-2xl">
+          {preview ? <ImageBeforeAfterSlider beforeSrc={preview} afterSrc={output.dataUrl} beforeLabel="Original" afterLabel="Transparent" alt="Background removal comparison" checkerboard /> : <div className="overflow-hidden rounded-[1.45rem] border border-white/10 bg-black/35"><img src={output.dataUrl} alt="Transparent PNG output" className="w-full object-contain" /></div>}
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3 px-1">
-            <div><p className="text-sm font-black text-white">Transparent PNG output</p><p className="text-xs font-semibold text-slate-400">{output.creditsCharged ?? BACKGROUND_REMOVER_CREDITS} credits charged</p></div>
+            <div><p className="text-sm font-black text-white">Transparent PNG output</p><p className="text-xs font-semibold text-slate-400">{output.creditsCharged ?? BACKGROUND_REMOVER_CREDITS} credits charged · Preview slider only, download is transparent PNG result</p></div>
             <button type="button" onClick={() => downloadDataUrl(output.dataUrl, output.filename)} className="rounded-full border border-purple-300/20 bg-purple-400/10 px-4 py-2 text-xs font-black text-purple-100 transition hover:bg-purple-400/20">Download PNG</button>
           </div>
         </div>
