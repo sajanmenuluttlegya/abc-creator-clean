@@ -31,6 +31,12 @@ type CreditSpendResult = {
   status?: string;
 };
 
+type CompositeLayer = {
+  input: Buffer;
+  left: number;
+  top: number;
+};
+
 function rpcErrorMessage(error: unknown) {
   if (!error) return "Unknown credit ledger error.";
   if (error instanceof Error) return error.message;
@@ -134,7 +140,7 @@ async function createCombinedImage(input: {
   const cellWidth = Math.floor((width - padding * 2 - gap * (columns - 1)) / columns);
   const cellHeight = Math.floor((canvasHeight - padding * 2 - gap * (rows - 1)) / rows);
 
-  const composites: sharp.OverlayOptions[] = [];
+  const composites: CompositeLayer[] = [];
 
   for (let index = 0; index < input.files.length; index += 1) {
     const file = input.files[index];
