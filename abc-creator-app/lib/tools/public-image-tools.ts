@@ -12,6 +12,7 @@ export const imageTools: Tool[] = [
     displayCreditCost: 2,
     aliases: ["text-to-image", "ai-image-generator", "image-generator", "text-to-img-gen"],
     nextActions: [
+      { label: "Combine images", href: "/tools/image-combine", description: "Blend up to 6 images into one generated image using a prompt." },
       { label: "Upscale an image", href: "/tools/image-upscale", description: "Increase a generated or uploaded image to 1080p, 2K, or 4K." },
       { label: "Remove image background", href: "/tools/background-remover", description: "Turn an image into a transparent PNG." },
     ],
@@ -39,6 +40,18 @@ export const imageTools: Tool[] = [
     category: "Image Tools",
     displayCreditCost: 3,
     aliases: ["remove-background", "image-background-remover", "transparent-png-maker"],
+    inputs: [],
+  },
+  {
+    id: "image-combine",
+    slug: "image-combine",
+    name: "Image Combine",
+    description: "Upload 2 to 6 images and combine them into one generated image using a prompt.",
+    icon: "image-combine",
+    detailEmoji: "🧩",
+    category: "Image Tools",
+    displayCreditCost: 2,
+    aliases: ["combine-images", "image-combiner", "multi-image-combine", "blend-images"],
     inputs: [],
   },
 ];
