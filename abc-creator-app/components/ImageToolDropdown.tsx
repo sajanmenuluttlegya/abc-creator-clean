@@ -47,7 +47,7 @@ export function ImageToolDropdown({ label, value, options, onChange, compact = f
       </button>
 
       {open ? (
-        <div className="absolute left-0 top-[calc(100%+10px)] z-50 max-h-72 w-full min-w-[220px] overflow-y-auto rounded-2xl border border-purple-300/20 bg-black/72 p-1.5 shadow-2xl shadow-purple-950/40 backdrop-blur-2xl">
+        <div className="absolute left-0 top-[calc(100%+10px)] z-50 max-h-72 w-full min-w-[220px] overflow-y-auto rounded-2xl border border-purple-300/20 bg-black/[0.72] p-1.5 shadow-2xl shadow-purple-950/40 backdrop-blur-2xl">
           {options.map((option) => {
             const active = option.value === value;
             return (
@@ -58,7 +58,7 @@ export function ImageToolDropdown({ label, value, options, onChange, compact = f
                   onChange(option.value);
                   setOpen(false);
                 }}
-                className={`flex w-full items-start justify-between gap-3 rounded-xl px-3 py-2.5 text-left transition ${active ? "bg-purple-500/24 text-white" : "text-slate-300 hover:bg-white/[0.08] hover:text-white"}`}
+                className={`flex w-full items-start justify-between gap-3 rounded-xl px-3 py-2.5 text-left transition ${active ? "bg-purple-500/20 text-white" : "text-slate-300 hover:bg-white/[0.08] hover:text-white"}`}
               >
                 <span className="min-w-0">
                   <span className="block truncate text-sm font-bold">{option.label}</span>
