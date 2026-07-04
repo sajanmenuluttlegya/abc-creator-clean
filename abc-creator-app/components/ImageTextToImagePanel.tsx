@@ -52,11 +52,11 @@ const STYLE_OPTIONS = ["Photorealistic", "Cinematic", "Anime", "Manga", "Cartoon
 
 const CREDIT_MAP: Record<ImageModelKey, Record<ImageResolution, number>> = {
   M1: { "360p": 9, "480p": 11, "720p": 13, "1080p": 15 },
-  M2: { "360p": 5, "480p": 6, "720p": 8, "1080p": 9 },
+  M2: { "360p": 5, "480p": 7, "720p": 8, "1080p": 9 },
   M3: { "360p": 8, "480p": 10, "720p": 12, "1080p": 13 },
   M4: { "360p": 7, "480p": 9, "720p": 11, "1080p": 12 },
   M5: { "360p": 2, "480p": 3, "720p": 4, "1080p": 5 },
-  M6: { "360p": 2, "480p": 2, "720p": 3, "1080p": 4 },
+  M6: { "360p": 2, "480p": 3, "720p": 3, "1080p": 4 },
 };
 const UPSCALE_CREDITS: Record<UpscaleTarget, number> = { "2k": 6, "4k": 10 };
 
