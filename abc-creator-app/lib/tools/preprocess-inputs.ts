@@ -42,8 +42,32 @@ function isLengthControlField(field: string) {
     normalized === "article_depth" ||
     normalized === "analysis_depth" ||
     normalized === "prompt_depth" ||
+    normalized === "edit_level" ||
+    normalized === "humanize_level" ||
     normalized.includes("duration")
   );
+}
+
+function selectedLengthValues(inputs: Record<string, string>) {
+  return Object.entries(inputs)
+    .filter(([field, value]) => field !== LENGTH_CONTROL_FIELD && isLengthControlField(field) && typeof value === "string" && value.trim())
+    .map(([, value]) => value.trim());
+}
+
+function mapOutputLength(value: string) {
+  const cleaned = value.toLowerCase();
+  const match = cleaned.match(/(\d+)/);
+  const amount = match ? Number(match[1]) : 0;
+
+  if (/premium|executive|very\s+long|detailed|deep|shot-by-shot|pack|editorial/.test(cleaned)) return "Detailed";
+  if (/long|large|extended|expanded/.test(cleaned)) return "Long";
+  if (/professional|stronger|medium|standard|balanced|mixed|natural/.test(cleaned)) return "Medium";
+  if (/quick|simple|light|short|small|brief|concise|compact/.test(cleaned)) return "Short";
+  if (cleaned.includes("days")) return amount >= 30 ? "Detailed" : amount >= 14 ? "Medium" : "Short";
+  if (cleaned.includes("posts")) return amount >= 10 ? "Detailed" : amount >= 7 ? "Medium" : "Short";
+  if (cleaned.includes("minutes")) return "Detailed";
+  if (cleaned.includes("seconds")) return amount >= 45 ? "Medium" : "Short";
+  return "";
 }
 
 function buildLengthControlNote(inputs: Record<string, string>) {
@@ -55,15 +79,22 @@ function buildLengthControlNote(inputs: Record<string, string>) {
 
   return [
     `Length controls selected: ${selections.join("; ")}.`,
-    "Treat the selected length, word-count, duration, or depth field as mandatory.",
-    "Short/very short/small/brief/concise/light means compact but complete.",
-    "Medium/standard/balanced/mixed means moderate length and useful detail.",
-    "Long/large/extended/expanded means visibly longer with more developed sections, examples, stanzas, or steps.",
-    "Detailed/very long/premium/advanced/expert/authority/deep dive/pack means substantially deeper and more complete, with richer substance rather than filler.",
-    "Poem length guide: Short 4-8 lines; Medium 10-18 lines; Long/Large 20-36 lines; Detailed/Very long/Premium 36-60+ lines or multiple developed stanzas.",
-    "General text guide when no exact word count is selected: Short 150-300 words; Medium 350-700 words; Long/Large 800-1,500 words; Detailed/Premium/Advanced 1,500-2,500 words when the tool type supports it.",
-    "For exact word-count or time-duration choices, follow the selected range or duration.",
+    "Use the selected length, word-count, duration, depth, polish, or level field to control the final output size and detail.",
+    "Short/quick/light/brief = compact. Medium/standard/professional/natural = moderate. Long/large/extended = longer. Detailed/premium/executive/deep/editorial/pack = deeper and more complete.",
+    "For exact word-count, count, or time-duration choices, follow the selected range, count, or duration.",
   ].join("\n");
+}
+
+function addNormalizedOutputLength(next: Record<string, string>) {
+  if (typeof next.output_length === "string" && next.output_length.trim()) return;
+
+  for (const value of selectedLengthValues(next)) {
+    const mapped = mapOutputLength(value);
+    if (mapped) {
+      next.output_length = mapped;
+      return;
+    }
+  }
 }
 
 export function preprocessToolInputs(toolSlug: string, inputs: Record<string, string>) {
@@ -73,6 +104,8 @@ export function preprocessToolInputs(toolSlug: string, inputs: Record<string, st
   if (toolSlug === "blog-seo-pack" && typeof next.article_content === "string") {
     next.article_content = compactByHeading(next.article_content, SEO_PACK_ARTICLE_MAX_CHARS);
   }
+
+  addNormalizedOutputLength(next);
 
   const lengthControlNote = buildLengthControlNote(next);
   if (lengthControlNote) {
