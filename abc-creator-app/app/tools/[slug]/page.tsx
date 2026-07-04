@@ -8,6 +8,7 @@ import { ThemeIcon } from "@/components/ThemeIcon";
 import { ImageTextToImagePanel } from "@/components/ImageTextToImagePanel";
 import { ImageUpscalePanel } from "@/components/ImageUpscalePanel";
 import { ImageBackgroundRemoverPanel } from "@/components/ImageBackgroundRemoverPanel";
+import { ImageCombinePanel } from "@/components/ImageCombinePanel";
 import { getToolBySlug } from "@/lib/tools/public-tools";
 
 export default function DynamicToolPage() {
@@ -92,6 +93,8 @@ export default function DynamicToolPage() {
           <ImageUpscalePanel />
         ) : tool.slug === "background-remover" ? (
           <ImageBackgroundRemoverPanel />
+        ) : tool.slug === "image-combine" ? (
+          <ImageCombinePanel />
         ) : (
           <ToolFormRenderer tool={tool} />
         )}
