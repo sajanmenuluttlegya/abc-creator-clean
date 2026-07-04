@@ -11,7 +11,10 @@ export const imageTools: Tool[] = [
     category: "Image Tools",
     displayCreditCost: 2,
     aliases: ["text-to-image", "ai-image-generator", "image-generator", "text-to-img-gen"],
-    nextActions: [{ label: "Upscale an image", href: "/tools/image-upscale", description: "Increase a generated or uploaded image to 1080p, 2K, or 4K." }],
+    nextActions: [
+      { label: "Upscale an image", href: "/tools/image-upscale", description: "Increase a generated or uploaded image to 1080p, 2K, or 4K." },
+      { label: "Remove image background", href: "/tools/background-remover", description: "Turn an image into a transparent PNG." },
+    ],
     inputs: [],
   },
   {
@@ -24,6 +27,18 @@ export const imageTools: Tool[] = [
     category: "Image Tools",
     displayCreditCost: 3,
     aliases: ["image-upscaler", "ai-image-upscale", "upscale-image"],
+    inputs: [],
+  },
+  {
+    id: "background-remover",
+    slug: "background-remover",
+    name: "Background Remover",
+    description: "Upload an image and remove the background with a transparent PNG output.",
+    icon: "background-remover",
+    detailEmoji: "✂️",
+    category: "Image Tools",
+    displayCreditCost: 3,
+    aliases: ["remove-background", "image-background-remover", "transparent-png-maker"],
     inputs: [],
   },
 ];
