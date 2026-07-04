@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ImageToolDropdown } from "./ImageToolDropdown";
+import { ImageBeforeAfterSlider } from "./ImageBeforeAfterSlider";
 
 type UpscaleTarget = "1080p" | "2k" | "4k";
 type UpscaleResponse = { ok?: boolean; error?: string; details?: string; creditsCharged?: number; image?: { dataUrl: string; filename?: string } };
@@ -134,9 +135,9 @@ export function ImageUpscalePanel() {
 
       {output ? (
         <div className="mx-auto max-w-5xl overflow-hidden rounded-[2rem] border border-purple-300/20 bg-white/[0.035] p-3 shadow-2xl shadow-purple-950/25 backdrop-blur-2xl">
-          <div className="overflow-hidden rounded-[1.45rem] border border-white/10 bg-black/50"><img src={output.dataUrl} alt="Upscaled output" className="w-full object-contain" /></div>
+          {preview ? <ImageBeforeAfterSlider beforeSrc={preview} afterSrc={output.dataUrl} beforeLabel="Original" afterLabel="Upscaled" alt="Upscale comparison" /> : <div className="overflow-hidden rounded-[1.45rem] border border-white/10 bg-black/50"><img src={output.dataUrl} alt="Upscaled output" className="w-full object-contain" /></div>}
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3 px-1">
-            <div><p className="text-sm font-black text-white">Upscaled output</p><p className="text-xs font-semibold text-slate-400">{output.creditsCharged ?? selectedCredits.replace(" credits", "")} credits charged</p></div>
+            <div><p className="text-sm font-black text-white">Upscaled output</p><p className="text-xs font-semibold text-slate-400">{output.creditsCharged ?? selectedCredits.replace(" credits", "")} credits charged · Preview slider only, download is final result</p></div>
             <button type="button" onClick={() => downloadDataUrl(output.dataUrl, output.filename)} className="rounded-full border border-purple-300/20 bg-purple-400/10 px-4 py-2 text-xs font-black text-purple-100 transition hover:bg-purple-400/20">Download upscale</button>
           </div>
         </div>
