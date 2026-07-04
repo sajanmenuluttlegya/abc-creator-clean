@@ -7,6 +7,8 @@ const MAX_FILE_BYTES = 8 * 1024 * 1024;
 const MAX_TEXT_CHARS = 58000;
 
 type PdfParseResult = { text?: string };
+type PdfParseFn = (data: Buffer) => Promise<PdfParseResult>;
+type PdfParseImport = PdfParseFn | { default?: PdfParseFn };
 type MammothResult = { value?: string };
 
 function extensionOf(fileName: string) {
@@ -56,7 +58,7 @@ async function extractDocx(buffer: Buffer) {
 }
 
 async function extractPdf(buffer: Buffer) {
-  const pdfParseModule = (await import("pdf-parse")) as { default?: (data: Buffer) => Promise<PdfParseResult> } & ((data: Buffer) => Promise<PdfParseResult>);
+  const pdfParseModule = (await import("pdf-parse")) as unknown as PdfParseImport;
   const pdfParse = typeof pdfParseModule === "function" ? pdfParseModule : pdfParseModule.default;
 
   if (!pdfParse) {
