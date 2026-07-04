@@ -124,5 +124,5 @@ export const creativeEmailBatchTools: BatchTool[] = [
     { id: "tone", label: "Tone", type: "select", required: true, options: ["Warm professional", "Concise executive", "Friendly founder", "Premium consultative", "Direct sales", "Soft follow-up"] },
     { id: "avoid", label: "Avoid / Compliance Notes", type: "textarea", placeholder: "Optional: claims to avoid, privacy limits, regulated promises, words, industries, or aggressive tactics.", required: false },
     { id: "language", label: "Language", type: "select", required: true, options: languageOptions },
-  ], ["ai-cold-email-generator", "cold-email-generator", "linkedin-gmail-cold-email"]),
+  ], ["linkedin-gmail-cold-email", "ai-cold-email-personalizer"]),
 ];
