@@ -25,7 +25,7 @@ export const IMAGE_GENERATION_TOOL_SLUGS = ["blog-content", "pro-image-brief-for
 
 const EXACT_TOOL_CREDIT_OVERRIDES: Record<string, number> = {
   "poem-generator": 2, "slogan-generator": 2, "tagline-generator": 2, "name-generator": 2, "headline-generator": 2, "universal-prompt-enhancer": 2, "video-prompt-generator": 3,
-  "subject-line-generator": 2, "email-newsletter-generator": 3, "follow-up-email-generator": 2, "sales-email-generator": 3, "welcome-email-generator": 2, "product-launch-email-generator": 3,
+  "subject-line-generator": 2, "cold-email-generator": 5, "email-newsletter-generator": 3, "follow-up-email-generator": 2, "sales-email-generator": 3, "welcome-email-generator": 2, "product-launch-email-generator": 3,
   "value-proposition-generator": 2, "pain-point-generator": 2, "feature-to-benefit-converter": 2, "offer-generator": 3, "aida-copy-generator": 2, "pas-copy-generator": 2, "objection-handler-generator": 3, "sales-pitch-generator": 3, "usp-generator": 2, "product-angle-generator": 2,
   "keyword-generator": 2, "seo-title-generator": 2, "seo-description-generator": 2, "faq-schema-generator": 4, "content-gap-ideas": 4, "content-audit": 5, "seo-score": 3, "seo-meta-citation-gap-finder": 5, "ai-search-visibility-score": 5,
   "ai-email-generator": 2, "email-campaign-writer": 3, "product-description-generator": 3, "amazon-product-listing-generator": 4, "shopify-product-description-generator": 3, "product-benefit-generator": 2, "product-review-writer": 3, "product-comparison-writer": 3,
