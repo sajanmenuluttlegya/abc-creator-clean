@@ -16,6 +16,10 @@ type GenerateImageInput = {
   aspectRatio: ImageAspectRatio;
   style?: string;
   seed?: string;
+  operation?: "generate" | "edit" | "combine";
+  sourceImageDataUrl?: string;
+  referenceImageDataUrl?: string;
+  referenceImageDataUrls?: string[];
 };
 
 type CloudflareRunResult = {
@@ -95,6 +99,28 @@ function cleanSeed(seed: string | undefined) {
   return Math.max(0, Math.floor(numericSeed));
 }
 
+function dataUrlToBlob(dataUrl: string) {
+  const match = /^data:([^;,]+);base64,(.+)$/i.exec(dataUrl.trim());
+
+  if (!match) {
+    throw new Error("Invalid reference image data URL.");
+  }
+
+  const mimeType = match[1] || "image/png";
+  const buffer = Buffer.from(match[2], "base64");
+  return new Blob([new Uint8Array(buffer)], { type: mimeType });
+}
+
+function referenceImages(input: GenerateImageInput) {
+  return [
+    input.sourceImageDataUrl,
+    input.referenceImageDataUrl,
+    ...(input.referenceImageDataUrls || []),
+  ]
+    .map((item) => item?.trim())
+    .filter((item): item is string => Boolean(item) && /^data:image\/(?:png|jpeg|jpg|webp);base64,/i.test(item));
+}
+
 function buildRequestFields(input: GenerateImageInput) {
   const model = IMAGE_MODEL_OPTIONS[input.model];
   const format = MODEL_REQUEST_FORMAT[input.model];
@@ -124,13 +150,22 @@ function buildRequestFields(input: GenerateImageInput) {
   return { fields, width, height, model, format };
 }
 
-function buildRequestPayload(format: CloudflareImageRequestFormat, fields: Record<string, string | number>): RequestPayload {
+function buildRequestPayload(format: CloudflareImageRequestFormat, fields: Record<string, string | number>, input: GenerateImageInput): RequestPayload {
   if (format === "multipart") {
     const form = new FormData();
 
     for (const [key, value] of Object.entries(fields)) {
       form.append(key, String(value));
     }
+
+    const refs = referenceImages(input).slice(0, 4);
+    refs.forEach((dataUrl, index) => {
+      const blob = dataUrlToBlob(dataUrl);
+      form.append("image", blob, `reference-${index + 1}.png`);
+      if (index === 0) {
+        form.append("reference_image", blob, "reference-image.png");
+      }
+    });
 
     // Do not set Content-Type for FormData. fetch adds the multipart boundary automatically.
     return { headers: {}, body: form };
@@ -167,7 +202,7 @@ async function parseCloudflareResponse(res: Response): Promise<ParsedCloudflareR
 
 async function callCloudflareOnce(credential: CloudflareAICredential, input: GenerateImageInput) {
   const { fields, width, height, model, format } = buildRequestFields(input);
-  const requestPayload = buildRequestPayload(format, fields);
+  const requestPayload = buildRequestPayload(format, fields, input);
   const { controller, timer } = timeoutSignal(credential.timeout_ms || 90000);
 
   try {
