@@ -39,7 +39,7 @@ type RequestPayload = {
 
 type ParsedCloudflareResponse =
   | { ok: true; dataUrl: string }
-  | { ok: false; error: string };
+  | { ok: false; error: string; safetyBlocked?: boolean };
 
 type CloudflareImageRequestFormat = "multipart" | "json-flux1" | "json-leonardo-lucid" | "json-leonardo-phoenix";
 
@@ -52,7 +52,30 @@ const MODEL_REQUEST_FORMAT: Record<ImageModelKey, CloudflareImageRequestFormat> 
   M6: "json-flux1", // @cf/black-forest-labs/flux-1-schnell
 };
 
-function shouldTryNextKey(status: number) {
+const SAFETY_BLOCK_MESSAGE = "The image provider rejected this prompt or reference image combination. Try a different prompt, a different reference image, or remove sensitive wording.";
+
+export function getEffectiveEditModel(requestedModel: ImageModelKey): ImageModelKey {
+  // M1 and M2 are the strongest reference-image edit path in this Cloudflare setup.
+  if (requestedModel === "M1" || requestedModel === "M2") return requestedModel;
+
+  // M3/M4 are premium generation models, but their documented Cloudflare interface is JSON text-to-image.
+  // Route edits through M2 so the selected image can be sent as multipart reference input.
+  if (requestedModel === "M3" || requestedModel === "M4") return "M2";
+
+  // M5/M6 premium edit routing will be handled later; for now route edits to M2 instead of fake edits.
+  return "M2";
+}
+
+function isProviderSafetyBlock(message: string) {
+  return /flagged|safety|policy|blocked|choose another prompt|input image combination|output has been/i.test(message);
+}
+
+function friendlyProviderError(message: string) {
+  return isProviderSafetyBlock(message) ? SAFETY_BLOCK_MESSAGE : message;
+}
+
+function shouldTryNextKey(status: number, safetyBlocked = false) {
+  if (safetyBlocked) return false;
   if (status === 0) return true;    // network / timeout
   if (status === 408) return true;  // timeout
   if (status >= 500) return true;   // temporary server/provider failure
@@ -112,6 +135,8 @@ function dataUrlToBlob(dataUrl: string) {
 }
 
 function referenceImages(input: GenerateImageInput) {
+  if (input.operation !== "edit" && input.operation !== "combine") return [];
+
   return [
     input.sourceImageDataUrl,
     input.referenceImageDataUrl,
@@ -162,8 +187,11 @@ function buildRequestPayload(format: CloudflareImageRequestFormat, fields: Recor
     refs.forEach((dataUrl, index) => {
       const blob = dataUrlToBlob(dataUrl);
       form.append("image", blob, `reference-${index + 1}.png`);
+      form.append(`reference_image_${index + 1}`, blob, `reference-image-${index + 1}.png`);
+
       if (index === 0) {
         form.append("reference_image", blob, "reference-image.png");
+        form.append("source_image", blob, "source-image.png");
       }
     });
 
@@ -184,7 +212,9 @@ async function parseCloudflareResponse(res: Response): Promise<ParsedCloudflareR
     const buffer = Buffer.from(await res.arrayBuffer());
 
     if (!res.ok || !buffer.length) {
-      return { ok: false, error: `Cloudflare image generation failed with HTTP ${res.status}` };
+      const rawError = `Cloudflare image generation failed with HTTP ${res.status}`;
+      const safetyBlocked = isProviderSafetyBlock(rawError);
+      return { ok: false, error: friendlyProviderError(rawError), safetyBlocked };
     }
 
     return { ok: true, dataUrl: `data:${contentType};base64,${buffer.toString("base64")}` };
@@ -194,7 +224,9 @@ async function parseCloudflareResponse(res: Response): Promise<ParsedCloudflareR
   const imageBase64 = data?.result?.image || data?.image || "";
 
   if (!res.ok || !data?.success || !imageBase64) {
-    return { ok: false, error: cloudflareErrorMessage(data, res.status) };
+    const rawError = cloudflareErrorMessage(data, res.status);
+    const safetyBlocked = isProviderSafetyBlock(rawError);
+    return { ok: false, error: friendlyProviderError(rawError), safetyBlocked };
   }
 
   return { ok: true, dataUrl: `data:image/png;base64,${imageBase64}` };
@@ -224,9 +256,10 @@ async function callCloudflareOnce(credential: CloudflareAICredential, input: Gen
     if (!parsed.ok) {
       return {
         ok: false as const,
-        tryNext: shouldTryNextKey(res.status),
+        tryNext: shouldTryNextKey(res.status, parsed.safetyBlocked),
+        safetyBlocked: parsed.safetyBlocked || false,
         status: res.status,
-        error: `${input.model} ${format}: ${parsed.error}`,
+        error: parsed.error,
       };
     }
 
@@ -244,6 +277,7 @@ async function callCloudflareOnce(credential: CloudflareAICredential, input: Gen
     return {
       ok: false as const,
       tryNext: true,
+      safetyBlocked: false,
       status: 0,
       error: isTimeout
         ? `Cloudflare request timed out after ${credential.timeout_ms || 90000}ms.`
@@ -270,6 +304,10 @@ export async function generateCloudflareImageWithManualFailover(input: GenerateI
 
     if (result.ok) {
       return result;
+    }
+
+    if (result.safetyBlocked) {
+      throw new Error(result.error);
     }
 
     failures.push(`Key slot ${credential.key_slot}: ${result.error}`);
