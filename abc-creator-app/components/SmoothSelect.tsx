@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 type SmoothSelectProps = {
   id: string;
@@ -10,19 +11,101 @@ type SmoothSelectProps = {
   onChange: (id: string, value: string) => void;
 };
 
+type FloatingRect = {
+  left: number;
+  top: number;
+  width: number;
+  maxHeight: number;
+};
+
 export function SmoothSelect({ id, value, options = [], required, onChange }: SmoothSelectProps) {
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [floatingRect, setFloatingRect] = useState<FloatingRect | null>(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
   const label = value || "Select an option";
 
-  return (
+  useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const updatePosition = () => {
+      const button = buttonRef.current;
+      if (!button) return;
+      const rect = button.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom - 12;
+      const spaceAbove = rect.top - 12;
+      const maxHeight = Math.max(180, Math.min(320, Math.max(spaceBelow, spaceAbove)));
+      const shouldOpenAbove = spaceBelow < 220 && spaceAbove > spaceBelow;
+      setFloatingRect({
+        left: rect.left,
+        top: shouldOpenAbove ? Math.max(12, rect.top - maxHeight - 10) : rect.bottom + 10,
+        width: rect.width,
+        maxHeight,
+      });
+    };
+
+    updatePosition();
+    window.addEventListener("scroll", updatePosition, true);
+    window.addEventListener("resize", updatePosition);
+    return () => {
+      window.removeEventListener("scroll", updatePosition, true);
+      window.removeEventListener("resize", updatePosition);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      const root = rootRef.current;
+      const menu = document.getElementById(`${id}-smooth-select-menu`);
+      if (target && (root?.contains(target) || menu?.contains(target))) return;
+      setOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [id, open]);
+
+  const menu = open && mounted && floatingRect ? createPortal(
     <div
-      className="relative"
-      onBlur={(event) => {
-        const nextTarget = event.relatedTarget as Node | null;
-        if (!nextTarget || !event.currentTarget.contains(nextTarget)) setOpen(false);
-      }}
+      id={`${id}-smooth-select-menu`}
+      className="fixed z-[2147483647] rounded-[1.45rem] border border-purple-300/25 bg-[#07050d]/98 p-2 shadow-[0_28px_90px_rgba(88,28,135,0.55)] backdrop-blur-2xl"
+      style={{ left: floatingRect.left, top: floatingRect.top, width: floatingRect.width }}
     >
+      <div role="listbox" aria-labelledby={id} className="creator-output-scroll overflow-y-auto pr-1" style={{ maxHeight: floatingRect.maxHeight - 20 }}>
+        <button
+          type="button"
+          role="option"
+          aria-selected={!value}
+          onClick={() => { onChange(id, ""); setOpen(false); }}
+          className={`block w-full rounded-2xl px-4 py-3 text-left text-sm font-semibold transition ${!value ? "bg-purple-400/20 text-white" : "text-slate-300 hover:bg-white/[0.075] hover:text-white"}`}
+        >
+          Select an option
+        </button>
+        {options.map((option) => (
+          <button
+            key={option}
+            type="button"
+            role="option"
+            aria-selected={value === option}
+            onClick={() => { onChange(id, option); setOpen(false); }}
+            className={`mt-1 block w-full rounded-2xl px-4 py-3 text-left text-sm font-semibold transition ${value === option ? "bg-purple-500/30 text-white" : "text-slate-100 hover:bg-white/[0.075] hover:text-white"}`}
+          >
+            {option}
+          </button>
+        ))}
+      </div>
+    </div>,
+    document.body
+  ) : null;
+
+  return (
+    <div ref={rootRef} className="relative">
       <button
+        ref={buttonRef}
         id={id}
         type="button"
         aria-haspopup="listbox"
@@ -34,36 +117,7 @@ export function SmoothSelect({ id, value, options = [], required, onChange }: Sm
         <span className={value ? "text-white" : "text-slate-400"}>{label}</span>
         <span className={`ml-3 h-2.5 w-2.5 shrink-0 border-b-2 border-r-2 border-purple-100/85 transition-transform ${open ? "-rotate-135" : "rotate-45"}`} />
       </button>
-
-      {open ? (
-        <div className="absolute left-0 right-0 z-[80] mt-2 max-h-72 overflow-hidden rounded-[1.45rem] border border-purple-300/25 bg-[#07050d]/95 p-2 shadow-2xl shadow-purple-950/45 backdrop-blur-2xl">
-          <div role="listbox" aria-labelledby={id} className="creator-output-scroll max-h-64 overflow-y-auto pr-1">
-            <button
-              type="button"
-              role="option"
-              aria-selected={!value}
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={() => { onChange(id, ""); setOpen(false); }}
-              className={`block w-full rounded-2xl px-4 py-3 text-left text-sm font-semibold transition ${!value ? "bg-purple-400/20 text-white" : "text-slate-300 hover:bg-white/[0.075] hover:text-white"}`}
-            >
-              Select an option
-            </button>
-            {options.map((option) => (
-              <button
-                key={option}
-                type="button"
-                role="option"
-                aria-selected={value === option}
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => { onChange(id, option); setOpen(false); }}
-                className={`mt-1 block w-full rounded-2xl px-4 py-3 text-left text-sm font-semibold transition ${value === option ? "bg-purple-500/30 text-white" : "text-slate-100 hover:bg-white/[0.075] hover:text-white"}`}
-              >
-                {option}
-              </button>
-            ))}
-          </div>
-        </div>
-      ) : null}
+      {menu}
     </div>
   );
 }
