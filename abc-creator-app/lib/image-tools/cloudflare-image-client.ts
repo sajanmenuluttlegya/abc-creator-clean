@@ -26,14 +26,19 @@ type GenerateImageInput = {
 
 type CloudflareRunResult = {
   success?: boolean;
-  result?: { image?: string };
-  image?: string;
+  result?: unknown;
+  image?: unknown;
+  data?: unknown;
+  output?: unknown;
+  images?: unknown;
   errors?: Array<{ message?: string; code?: string | number }>;
+  messages?: Array<{ message?: string; code?: string | number }>;
 };
 
 type RequestFormat = "multipart" | "json-flux1" | "json-leonardo-lucid" | "json-leonardo-phoenix";
 type ParsedResponse = { ok: true; dataUrl: string } | { ok: false; error: string; providerRefused?: boolean; keyExhausted?: boolean };
 type RequestPayload = { headers: HeadersInit; body: BodyInit };
+type ImageCandidate = { base64: string; mimeType: string };
 
 const MODEL_REQUEST_FORMAT: Record<ImageModelKey, RequestFormat> = {
   M1: "multipart",
@@ -45,6 +50,8 @@ const MODEL_REQUEST_FORMAT: Record<ImageModelKey, RequestFormat> = {
 };
 
 const PROVIDER_REFUSAL_MESSAGE = "The image provider rejected this prompt or reference image combination. Try a different prompt, a different reference image, or a simpler wording.";
+const MAX_PROVIDER_PROMPT_CHARS = 1900;
+const MAX_PROVIDER_NEGATIVE_PROMPT_CHARS = 900;
 
 export function getEffectiveEditModel(requestedModel: ImageModelKey): ImageModelKey {
   return requestedModel === "M1" || requestedModel === "M2" ? requestedModel : "M2";
@@ -65,13 +72,22 @@ function safeStyle(style: string | undefined) {
   return (IMAGE_STYLE_OPTIONS as readonly string[]).includes(value) ? value : "";
 }
 
+function clampProviderText(value: string, limit: number) {
+  const text = value.trim().replace(/\s+\n/g, "\n").replace(/[ \t]+/g, " ");
+  if (text.length <= limit) return text;
+
+  const clipped = text.slice(0, limit);
+  const lastBreak = Math.max(clipped.lastIndexOf("\n"), clipped.lastIndexOf(". "), clipped.lastIndexOf(", "), clipped.lastIndexOf(" "));
+  return `${clipped.slice(0, lastBreak > Math.floor(limit * 0.72) ? lastBreak : limit).trim()}…`;
+}
+
 function buildPrompt(input: GenerateImageInput) {
   const style = safeStyle(input.style);
-  return [
+  return clampProviderText([
     input.prompt.trim(),
     style ? `Style: ${style}` : "",
     input.negativePrompt?.trim() ? `Avoid: ${input.negativePrompt.trim()}` : "",
-  ].filter(Boolean).join("\n");
+  ].filter(Boolean).join("\n"), MAX_PROVIDER_PROMPT_CHARS);
 }
 
 function cleanSeed(seed: string | undefined) {
@@ -82,9 +98,11 @@ function cleanSeed(seed: string | undefined) {
   return Math.max(0, Math.floor(numericSeed));
 }
 
-function cloudflareErrorMessage(data: CloudflareRunResult | null, status: number) {
+function cloudflareErrorMessage(data: CloudflareRunResult | null, status: number, fallbackText = "") {
   const apiErrors = data?.errors?.map((error) => error.message || error.code).filter(Boolean).join("; ");
-  return apiErrors || `Cloudflare image generation failed with HTTP ${status}`;
+  const apiMessages = data?.messages?.map((message) => message.message || message.code).filter(Boolean).join("; ");
+  const fallback = fallbackText.trim().slice(0, 500);
+  return apiErrors || apiMessages || fallback || `Cloudflare image generation failed with HTTP ${status}`;
 }
 
 function dataUrlToBlob(dataUrl: string) {
@@ -101,6 +119,47 @@ function referenceImages(input: GenerateImageInput): string[] {
     .filter((item): item is string => /^data:image\/(?:png|jpeg|jpg|webp);base64,/i.test(item));
 }
 
+function imageMimeFromBase64(base64: string) {
+  if (base64.startsWith("/9j/")) return "image/jpeg";
+  if (base64.startsWith("iVBORw0KGgo")) return "image/png";
+  if (base64.startsWith("UklGR")) return "image/webp";
+  if (base64.startsWith("R0lGOD")) return "image/gif";
+  return "image/png";
+}
+
+function normalizeImageCandidate(value: string): ImageCandidate | null {
+  const text = value.trim();
+  const dataUrl = /^data:(image\/(?:png|jpeg|jpg|webp|gif));base64,(.+)$/i.exec(text);
+  if (dataUrl?.[2]) return { base64: dataUrl[2].replace(/\s+/g, ""), mimeType: dataUrl[1].toLowerCase().replace("image/jpg", "image/jpeg") };
+
+  const base64 = text.replace(/\s+/g, "");
+  if (base64.length < 80 || !/^[A-Za-z0-9+/]+={0,2}$/.test(base64)) return null;
+  if (!/^(?:\/9j\/|iVBORw0KGgo|UklGR|R0lGOD)/.test(base64)) return null;
+  return { base64, mimeType: imageMimeFromBase64(base64) };
+}
+
+function extractImageCandidate(value: unknown): ImageCandidate | null {
+  if (!value) return null;
+  if (typeof value === "string") return normalizeImageCandidate(value);
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = extractImageCandidate(item);
+      if (found) return found;
+    }
+    return null;
+  }
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    return extractImageCandidate(record.image) ||
+      extractImageCandidate(record.data) ||
+      extractImageCandidate(record.b64_json) ||
+      extractImageCandidate(record.images) ||
+      extractImageCandidate(record.output) ||
+      extractImageCandidate(record.result);
+  }
+  return null;
+}
+
 function buildRequestFields(input: GenerateImageInput) {
   const model = IMAGE_MODEL_OPTIONS[input.model];
   const format = MODEL_REQUEST_FORMAT[input.model];
@@ -108,7 +167,7 @@ function buildRequestFields(input: GenerateImageInput) {
   const prompt = buildPrompt(input);
   const seed = cleanSeed(input.seed);
   const steps = model.defaultSteps;
-  const negativePrompt = input.negativePrompt?.trim();
+  const negativePrompt = clampProviderText(input.negativePrompt?.trim() || "", MAX_PROVIDER_NEGATIVE_PROMPT_CHARS);
   let fields: Record<string, string | number>;
 
   if (format === "multipart") {
@@ -153,26 +212,29 @@ function buildRequestPayload(format: RequestFormat, fields: Record<string, strin
 async function parseCloudflareResponse(res: Response): Promise<ParsedResponse> {
   const contentType = res.headers.get("content-type") || "";
 
-  if (contentType.startsWith("image/")) {
+  if (contentType.startsWith("image/") || (res.ok && contentType.startsWith("application/octet-stream"))) {
     const buffer = Buffer.from(await res.arrayBuffer());
     if (!res.ok || !buffer.length) {
       const rawError = `Cloudflare image generation failed with HTTP ${res.status}`;
       const keyExhausted = isCloudflareKeyExhausted(rawError, res.status);
       return { ok: false, error: rawError, keyExhausted };
     }
-    return { ok: true, dataUrl: `data:${contentType};base64,${buffer.toString("base64")}` };
+    return { ok: true, dataUrl: `data:${contentType.startsWith("image/") ? contentType : "image/jpeg"};base64,${buffer.toString("base64")}` };
   }
 
-  const data = (await res.json().catch(() => null)) as CloudflareRunResult | null;
-  const imageBase64 = data?.result?.image || data?.image || "";
-  if (!res.ok || !data?.success || !imageBase64) {
-    const rawError = cloudflareErrorMessage(data, res.status);
+  const rawText = await res.text().catch(() => "");
+  const data = rawText ? (JSON.parse(rawText) as CloudflareRunResult) : null;
+  const image = extractImageCandidate(data) || extractImageCandidate(rawText);
+  const successFlag = typeof data?.success === "boolean" ? data.success : undefined;
+
+  if (!res.ok || successFlag === false || !image) {
+    const rawError = cloudflareErrorMessage(data, res.status, rawText);
     const keyExhausted = isCloudflareKeyExhausted(rawError, res.status);
     const providerRefused = !keyExhausted && isProviderRefusal(rawError);
     return { ok: false, error: providerRefused ? PROVIDER_REFUSAL_MESSAGE : rawError, providerRefused, keyExhausted };
   }
 
-  return { ok: true, dataUrl: `data:image/png;base64,${imageBase64}` };
+  return { ok: true, dataUrl: `data:${image.mimeType};base64,${image.base64}` };
 }
 
 async function callCloudflareOnce(credential: CloudflareAICredential, input: GenerateImageInput) {
