@@ -1,3 +1,12 @@
-.hide-output-side-image-controls [data-abc-image-block] {
+.hide-output-side-image-controls [data-abc-image-block],
+.hide-output-side-image-controls [data-abc-image-block] * {
   display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+.hide-output-side-image-controls button[aria-label="Add image beside this output section"],
+.hide-output-side-image-controls button[title="Add image to this output section"] {
+  display: none !important;
+  visibility: hidden !important;
 }
