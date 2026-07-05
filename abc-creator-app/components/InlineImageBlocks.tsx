@@ -43,6 +43,9 @@ const AUTO_IMAGE_TOOLS = new Set([
   "youtube-video-to-blog-post",
 ]);
 
+const translucentActionClass = "rounded-full border border-white/15 bg-white/[0.055] px-4 py-2 text-xs font-semibold text-white/90 shadow-lg shadow-black/20 backdrop-blur-xl transition hover:border-white/30 hover:bg-white/[0.11] disabled:cursor-not-allowed disabled:opacity-50";
+const translucentIconClass = "inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/15 bg-white/[0.055] text-sm text-white/90 shadow-lg shadow-black/20 backdrop-blur-xl transition hover:border-white/30 hover:bg-white/[0.11]";
+
 function creditLabel(credits: number) {
   return `${credits} credit${credits === 1 ? "" : "s"}`;
 }
@@ -109,6 +112,15 @@ function imageFrameStyle(placement: ImagePlacement, widthPercent: number): CSSPr
   if (placement === "top") return { width: `${widthPercent}%`, margin: "0 auto 18px" };
   if (placement === "bottom") return { width: `${widthPercent}%`, margin: "18px auto 0" };
   return { width: `${widthPercent}%`, margin: "0 auto" };
+}
+
+function aspectRatioStyle(label: string): CSSProperties {
+  const lower = label.toLowerCase();
+  if (lower.includes("9:16")) return { aspectRatio: "9 / 16" };
+  if (lower.includes("4:3")) return { aspectRatio: "4 / 3" };
+  if (lower.includes("3:2")) return { aspectRatio: "3 / 2" };
+  if (lower.includes("1:1")) return { aspectRatio: "1 / 1" };
+  return { aspectRatio: "16 / 9" };
 }
 
 export function splitOutputIntoImageSegments(output: string): OutputSegment[] {
@@ -191,6 +203,7 @@ function buildControlledImagePrompt(basePrompt: string, inputs: Record<string, s
 Smart visual-selection rules:
 - Generate a relevant textless illustration for this exact article section.
 - Do not create charts, dashboards, diagrams, flowcharts, UI labels, text, fake typography, or readable words inside the image.
+- Graphs, flowcharts, diagrams, trees, lineage, maps, data visuals, and process visuals must be handled by coded abc-diagram blocks in the article, not by image generation.
 - Never include watermarks, fake logos, protected brand marks, copyrighted characters, or public-figure likenesses.
 
 Image brief to generate:
@@ -215,6 +228,8 @@ interface InlineImageBlockProps {
 export function InlineImageBlock({ blockId, markdown, prompt, toolSlug = "", inputs = {}, autoGenerate = false }: InlineImageBlockProps) {
   const [image, setImage] = useState<GeneratedImageResult | null>(null);
   const [previousImage, setPreviousImage] = useState<GeneratedImageResult | null>(null);
+  const [canUndoImageChange, setCanUndoImageChange] = useState(false);
+  const [undoLabel, setUndoLabel] = useState("Undo");
   const [editPrompt, setEditPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -233,6 +248,12 @@ export function InlineImageBlock({ blockId, markdown, prompt, toolSlug = "", inp
   const isBorderlessExport = exportFrame.includes("borderless");
   const shouldKeepPromptVisible = toolSlug === "pro-image-brief-for-blog";
   const shouldAutoGenerate = (autoGenerate || isAutoImageTool(toolSlug)) && isAutoImageTool(toolSlug);
+
+  const rememberUndo = (label: string) => {
+    setPreviousImage(image);
+    setCanUndoImageChange(true);
+    setUndoLabel(label);
+  };
 
   const callImageRoute = async (operation: "generate" | "edit") => {
     const editing = operation === "edit";
@@ -282,7 +303,7 @@ export function InlineImageBlock({ blockId, markdown, prompt, toolSlug = "", inp
         setError("Image generation finished but no image was returned.");
         return;
       }
-      if (editing && image) setPreviousImage(image);
+      rememberUndo(editing ? "Undo Edit" : image ? "Undo Image Change" : "Undo Image");
       setImage(nextImage);
       setIsDeleted(false);
       if (editing) {
@@ -324,7 +345,7 @@ export function InlineImageBlock({ blockId, markdown, prompt, toolSlug = "", inp
         setError("Could not read the uploaded image file.");
         return;
       }
-      if (image) setPreviousImage(image);
+      rememberUndo("Undo Upload");
       setImage({
         index: Date.now(),
         dataUrl,
@@ -341,12 +362,34 @@ export function InlineImageBlock({ blockId, markdown, prompt, toolSlug = "", inp
     reader.readAsDataURL(file);
   };
 
-  const undoEdit = () => {
-    if (!previousImage) return;
+  const undoImageChange = () => {
+    if (!canUndoImageChange) return;
     setImage(previousImage);
     setPreviousImage(null);
+    setCanUndoImageChange(false);
+    setUndoLabel("Undo");
+    setError("");
+    setIsDeleted(false);
+    setIsEditModalOpen(false);
+  };
+
+  const deleteImage = () => {
+    if (!image) return;
+    rememberUndo("Undo Delete");
+    setImage(null);
+    setIsDeleted(true);
     setError("");
     setIsEditModalOpen(false);
+  };
+
+  const downloadCurrentImage = () => {
+    if (!image?.dataUrl) return;
+    const link = document.createElement("a");
+    link.href = image.dataUrl;
+    link.download = image.filename || `abc-blog-image-${blockId}.png`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
   };
 
   const startResize = (event: ReactPointerEvent<HTMLButtonElement>) => {
@@ -365,16 +408,13 @@ export function InlineImageBlock({ blockId, markdown, prompt, toolSlug = "", inp
     window.addEventListener("pointerup", onUp);
   };
 
-  if (isDeleted) return null;
-
   if (image) {
-    const hoverUndoLabel = image.provider === "user-upload" ? "Undo Upload" : "Undo";
     const showHorizontalResize = ["left", "right", "center", "top", "bottom"].includes(placement);
 
     return (
       <section className="my-6" data-abc-image-block={blockId} data-abc-image-placement={placement} style={imageBlockLayoutStyle(placement)}>
         {shouldKeepPromptVisible ? (
-          <div className="mb-4 rounded-2xl border border-emerald-400/20 bg-black/35 p-5">
+          <div className="mb-4 rounded-2xl border border-white/10 bg-white/[0.035] p-5 backdrop-blur-xl">
             <div className="prose prose-invert max-w-none prose-p:text-gray-200 prose-strong:text-white prose-headings:text-white prose-code:text-emerald-100">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>{markdown}</ReactMarkdown>
             </div>
@@ -382,18 +422,18 @@ export function InlineImageBlock({ blockId, markdown, prompt, toolSlug = "", inp
         ) : null}
 
         <div className="group relative" style={imageFrameStyle(placement, widthPercent)}>
-          <figure className={isBorderlessExport ? "overflow-hidden rounded-2xl border border-transparent transition group-hover:border-emerald-400/20" : "overflow-hidden rounded-2xl border border-transparent bg-black/40 p-3 shadow-lg shadow-emerald-950/20 transition group-hover:border-emerald-400/20"}>
-            <img src={image.dataUrl} alt={extractPrompt(markdown) || "Generated blog image"} className={isBorderlessExport ? "w-full rounded-2xl object-cover" : "w-full rounded-xl object-cover"} data-generated-blog-image="true" />
+          <figure className={isBorderlessExport ? "overflow-hidden rounded-2xl border border-transparent transition group-hover:border-white/15" : "overflow-hidden rounded-2xl border border-transparent bg-white/[0.035] p-3 shadow-lg shadow-black/20 backdrop-blur-xl transition group-hover:border-white/15"}>
+            <img src={image.dataUrl} alt={extractPrompt(markdown) || "Generated blog image"} className={isBorderlessExport ? "w-full rounded-2xl object-cover" : "w-full rounded-xl object-cover"} style={aspectRatioStyle(aspectRatio)} data-generated-blog-image="true" />
           </figure>
-
-          <button type="button" title="Delete image" aria-label="Delete image" onClick={() => setIsDeleted(true)} data-export-ignore="true" className="absolute right-3 top-3 z-20 h-8 w-8 rounded-full border border-red-300/30 bg-black/75 text-sm text-red-100 opacity-0 shadow-lg shadow-black/30 backdrop-blur-md transition hover:bg-red-500/25 group-hover:opacity-100">🗑</button>
-          {showHorizontalResize ? <button type="button" title="Drag to resize image" aria-label="Drag to resize image" onPointerDown={startResize} data-export-ignore="true" className="absolute right-0 top-0 z-10 h-full w-4 cursor-ew-resize bg-emerald-300/5 opacity-0 transition hover:bg-emerald-300/20 group-hover:opacity-100" /> : null}
+          {showHorizontalResize ? <button type="button" title="Drag to resize image" aria-label="Drag to resize image" onPointerDown={startResize} data-export-ignore="true" className="absolute right-0 top-0 z-10 h-full w-4 cursor-ew-resize bg-white/[0.035] opacity-0 transition hover:bg-white/[0.09] group-hover:opacity-100" /> : null}
 
           <div data-export-ignore="true" className="pointer-events-none absolute inset-0 flex items-start justify-end p-4 opacity-0 transition duration-200 group-hover:opacity-100">
-            <div className="pointer-events-auto mr-10 flex flex-wrap gap-2 rounded-2xl border border-white/15 bg-black/75 p-2 backdrop-blur-md">
-              <button type="button" onClick={() => { setError(""); setIsEditModalOpen(true); }} className="rounded-full border border-emerald-300/30 bg-emerald-400/10 px-4 py-2 text-xs font-semibold text-emerald-100 transition hover:bg-emerald-400/20">Edit Image</button>
-              <button type="button" onClick={() => uploadInputRef.current?.click()} className="rounded-full border border-amber-300/30 bg-amber-400/10 px-4 py-2 text-xs font-semibold text-amber-100 transition hover:bg-amber-400/20">Upload Image</button>
-              {previousImage ? <button type="button" onClick={undoEdit} className="rounded-full border border-purple-300/30 bg-purple-400/10 px-4 py-2 text-xs font-semibold text-purple-100 transition hover:bg-purple-400/20">{hoverUndoLabel}</button> : null}
+            <div className="pointer-events-auto flex max-w-full flex-wrap gap-2 rounded-2xl border border-white/15 bg-black/45 p-2 shadow-xl shadow-black/25 backdrop-blur-2xl">
+              <button type="button" onClick={() => { setError(""); setIsEditModalOpen(true); }} className={translucentActionClass}>Edit</button>
+              <button type="button" onClick={() => uploadInputRef.current?.click()} className={translucentActionClass}>Upload</button>
+              {canUndoImageChange ? <button type="button" onClick={undoImageChange} className={translucentActionClass}>{undoLabel}</button> : null}
+              <button type="button" onClick={downloadCurrentImage} className={translucentActionClass}>Download</button>
+              <button type="button" title="Delete image" aria-label="Delete image" onClick={deleteImage} className={translucentIconClass}>🗑</button>
               <input ref={uploadInputRef} type="file" accept="image/*" onChange={handleUploadImage} className="hidden" aria-label="Upload replacement image" />
             </div>
           </div>
@@ -403,17 +443,17 @@ export function InlineImageBlock({ blockId, markdown, prompt, toolSlug = "", inp
 
         {isEditModalOpen ? (
           <div data-export-ignore="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
-            <div className="w-full max-w-xl rounded-3xl border border-emerald-400/20 bg-[#04110e] p-6 shadow-2xl shadow-black/40">
+            <div className="w-full max-w-xl rounded-3xl border border-white/15 bg-black/80 p-6 shadow-2xl shadow-black/40 backdrop-blur-2xl">
               <div className="mb-4">
-                <h3 className="text-lg font-semibold text-white">Edit generated image</h3>
+                <h3 className="text-lg font-semibold text-white">Edit image</h3>
                 <p className="mt-1 text-sm text-gray-400">Describe what to change. Editing uses {creditLabel(IMAGE_EDIT_CREDITS)}.</p>
               </div>
               {error ? <div className="mb-4 whitespace-pre-wrap rounded-xl border border-red-400/25 bg-red-500/10 p-3 text-sm text-red-100">{error}</div> : null}
-              <textarea value={editPrompt} onChange={(event) => setEditPrompt(event.currentTarget.value)} placeholder="Example: make it more cinematic, reduce text, make it darker, improve composition." className="h-32 w-full resize-none rounded-2xl border border-emerald-400/20 bg-black/40 px-4 py-3 text-sm text-white placeholder-gray-500 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-400" />
+              <textarea value={editPrompt} onChange={(event) => setEditPrompt(event.currentTarget.value)} placeholder="Example: make it more cinematic, reduce text, make it darker, improve composition." className="h-32 w-full resize-none rounded-2xl border border-white/15 bg-white/[0.055] px-4 py-3 text-sm text-white placeholder-gray-500 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-white/25" />
               <div className="mt-5 flex flex-wrap gap-2">
-                <button type="button" onClick={() => void callImageRoute("edit")} disabled={isEditing || !editPrompt.trim()} className="rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:from-emerald-600 hover:to-teal-600 disabled:cursor-not-allowed disabled:opacity-60">{isEditing ? "Editing..." : `Apply Edit — ${creditLabel(IMAGE_EDIT_CREDITS)}`}</button>
-                <button type="button" onClick={undoEdit} disabled={!previousImage || isEditing} className="rounded-full border border-purple-300/30 bg-purple-400/10 px-5 py-2.5 text-sm font-semibold text-purple-100 transition hover:bg-purple-400/20 disabled:cursor-not-allowed disabled:opacity-50">Undo</button>
-                <button type="button" onClick={() => { setIsEditModalOpen(false); setEditPrompt(""); setError(""); }} disabled={isEditing} className="rounded-full border border-white/15 bg-white/5 px-5 py-2.5 text-sm font-semibold text-gray-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60">Close</button>
+                <button type="button" onClick={() => void callImageRoute("edit")} disabled={isEditing || !editPrompt.trim()} className={translucentActionClass}>{isEditing ? "Editing..." : `Apply Edit — ${creditLabel(IMAGE_EDIT_CREDITS)}`}</button>
+                <button type="button" onClick={undoImageChange} disabled={!canUndoImageChange || isEditing} className={translucentActionClass}>Undo</button>
+                <button type="button" onClick={() => { setIsEditModalOpen(false); setEditPrompt(""); setError(""); }} disabled={isEditing} className={translucentActionClass}>Close</button>
               </div>
             </div>
           </div>
@@ -423,17 +463,23 @@ export function InlineImageBlock({ blockId, markdown, prompt, toolSlug = "", inp
   }
 
   return (
-    <section className="my-6 rounded-2xl border border-transparent bg-emerald-500/10 p-5 transition hover:border-emerald-400/20" data-abc-image-block={blockId} data-abc-image-placement={placement}>
+    <section className="group relative my-6 rounded-2xl border border-transparent bg-white/[0.03] p-5 transition hover:border-white/15" data-abc-image-block={blockId} data-abc-image-placement={placement}>
       {shouldKeepPromptVisible ? (
         <div className="prose prose-invert max-w-none prose-p:text-gray-200 prose-strong:text-white prose-headings:text-white">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{markdown}</ReactMarkdown>
         </div>
       ) : null}
-      <div data-export-ignore="true" className={shouldKeepPromptVisible ? "mt-4 flex flex-col gap-3 rounded-2xl border border-emerald-300/20 bg-black/35 p-4" : "flex flex-col gap-3 rounded-2xl border border-emerald-300/20 bg-black/35 p-4"}>
-        {error ? <div className="whitespace-pre-wrap rounded-xl border border-red-400/25 bg-red-500/10 p-3 text-sm text-red-100">{error}</div> : null}
-        <button type="button" onClick={() => void callImageRoute("generate")} disabled={isGenerating || isEditing} className="rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-emerald-500/20 transition hover:from-emerald-600 hover:to-teal-600 disabled:cursor-not-allowed disabled:opacity-60">
-          {isGenerating ? (shouldAutoGenerate ? "Auto-generating image..." : "Generating image...") : `Generate Image — ${creditLabel(IMAGE_CREDITS_PER_IMAGE)}`}
-        </button>
+      <div data-export-ignore="true" className={shouldKeepPromptVisible ? "mt-4 rounded-2xl border border-white/10 bg-white/[0.035] p-4 text-sm text-slate-300" : "rounded-2xl border border-white/10 bg-white/[0.035] p-4 text-sm text-slate-300"}>
+        {error ? <div className="mb-3 whitespace-pre-wrap rounded-xl border border-red-400/25 bg-red-500/10 p-3 text-sm text-red-100">{error}</div> : null}
+        <span>{isDeleted ? "Image deleted. Hover for undo, upload, or regenerate." : isGenerating ? "Generating image..." : "Hover to add or upload an image for this section."}</span>
+      </div>
+      <div data-export-ignore="true" className="pointer-events-none absolute inset-0 flex items-start justify-end p-4 opacity-0 transition duration-200 group-hover:opacity-100">
+        <div className="pointer-events-auto flex flex-wrap gap-2 rounded-2xl border border-white/15 bg-black/45 p-2 shadow-xl shadow-black/25 backdrop-blur-2xl">
+          <button type="button" onClick={() => void callImageRoute("generate")} disabled={isGenerating || isEditing} className={translucentActionClass}>{isGenerating ? (shouldAutoGenerate ? "Auto-generating..." : "Generating...") : `Generate — ${creditLabel(IMAGE_CREDITS_PER_IMAGE)}`}</button>
+          <button type="button" onClick={() => uploadInputRef.current?.click()} className={translucentActionClass}>Upload</button>
+          {canUndoImageChange ? <button type="button" onClick={undoImageChange} className={translucentActionClass}>{undoLabel}</button> : null}
+          <input ref={uploadInputRef} type="file" accept="image/*" onChange={handleUploadImage} className="hidden" aria-label="Upload image" />
+        </div>
       </div>
     </section>
   );
