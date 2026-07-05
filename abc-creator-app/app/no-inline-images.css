@@ -11,25 +11,6 @@
   visibility: hidden !important;
 }
 
-aside[aria-label="Tool categories"],
-button.fixed.left-4.top-28 {
-  display: none !important;
-  visibility: hidden !important;
-  pointer-events: none !important;
-}
-
-@media (min-width: 1024px) {
-  .lg\:pl-\[330px\] {
-    padding-left: 1.5rem !important;
-  }
-}
-
-@media (min-width: 1280px) {
-  .xl\:pl-\[340px\] {
-    padding-left: 1.5rem !important;
-  }
-}
-
 main section > div.mb-12 > div.flex.gap-3 > span:first-child:not(:only-child) {
   display: none !important;
 }
