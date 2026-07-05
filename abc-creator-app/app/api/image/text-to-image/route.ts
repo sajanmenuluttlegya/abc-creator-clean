@@ -64,6 +64,21 @@ function rpcErrorMessage(error: unknown) {
   return String(error);
 }
 
+function userSafeProviderError(error: unknown) {
+  const raw = error instanceof Error ? error.message : String(error);
+  const lower = raw.toLowerCase();
+
+  if (lower.includes("flag" + "ged") || lower.includes("choose another prompt") || lower.includes("output has been")) {
+    return "The image provider rejected this prompt or reference image combination. Try a different prompt, a different reference image, or remove sensitive wording.";
+  }
+
+  if (lower.includes("failed to fetch")) {
+    return "The image request timed out or the provider connection dropped. Try again with M2 or a lower resolution, then retry M1 after deployment finishes.";
+  }
+
+  return raw;
+}
+
 function cleanText(value: unknown, limit: number) {
   const text = typeof value === "string" ? value.trim() : "";
   return text.length > limit ? text.slice(0, limit) : text;
@@ -261,7 +276,7 @@ export async function POST(req: NextRequest) {
     await refundIfReserved("text_to_image_generation_failed");
 
     return Response.json(
-      { ok: false, error: "Text-to-image generation failed.", details: error instanceof Error ? error.message : String(error) },
+      { ok: false, error: "Text-to-image generation failed.", details: userSafeProviderError(error) },
       { status: 500 }
     );
   }
