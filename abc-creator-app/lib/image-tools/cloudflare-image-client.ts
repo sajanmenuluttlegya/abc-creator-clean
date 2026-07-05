@@ -28,11 +28,31 @@ type CloudflareRunResult = {
   messages?: unknown[];
 };
 
+type PayloadVariant = {
+  label: string;
+  body: Record<string, unknown>;
+};
+
+type ParsedCloudflareResponse =
+  | {
+      ok: true;
+      dataUrl: string;
+    }
+  | {
+      ok: false;
+      error: string;
+    };
+
 function shouldTryNextKey(status: number) {
   if (status === 0) return true;    // network / timeout
   if (status === 408) return true;  // timeout
   if (status >= 500) return true;   // temporary server/provider failure
   return false;
+}
+
+function shouldTryNextPayloadVariant(status: number, error: string) {
+  if (status !== 400 && status !== 422) return false;
+  return /multipart|not valid json|bad input|required properties/i.test(error);
 }
 
 function timeoutSignal(timeoutMs: number) {
@@ -65,7 +85,7 @@ function cloudflareErrorMessage(data: CloudflareRunResult | null, status: number
   return apiErrors || `Cloudflare image generation failed with HTTP ${status}`;
 }
 
-function buildCloudflarePayload(input: GenerateImageInput) {
+function buildBasePayload(input: GenerateImageInput) {
   const model = IMAGE_MODEL_OPTIONS[input.model];
   const { width, height } = getImageDimensions(input.resolution, input.aspectRatio);
   const payload: Record<string, string | number> = {
@@ -83,84 +103,115 @@ function buildCloudflarePayload(input: GenerateImageInput) {
   return { payload, width, height, model };
 }
 
+function buildPayloadVariants(input: GenerateImageInput) {
+  const { payload, width, height, model } = buildBasePayload(input);
+  const entries = Object.entries(payload).map(([name, value]) => ({
+    name,
+    value: String(value),
+    content: String(value),
+  }));
+
+  const variants: PayloadVariant[] = [
+    { label: "json", body: payload },
+    { label: "multipart-object", body: { multipart: payload } },
+    { label: "multipart-array", body: { multipart: entries } },
+    { label: "multipart-tuples", body: { multipart: Object.entries(payload) } },
+  ];
+
+  return { variants, width, height, model };
+}
+
+async function parseCloudflareResponse(res: Response): Promise<ParsedCloudflareResponse> {
+  const contentType = res.headers.get("content-type") || "";
+
+  if (contentType.startsWith("image/")) {
+    const buffer = Buffer.from(await res.arrayBuffer());
+
+    if (!res.ok || !buffer.length) {
+      return { ok: false, error: `Cloudflare image generation failed with HTTP ${res.status}` };
+    }
+
+    return { ok: true, dataUrl: `data:${contentType};base64,${buffer.toString("base64")}` };
+  }
+
+  const data = (await res.json().catch(() => null)) as CloudflareRunResult | null;
+  const imageBase64 = data?.result?.image || data?.image || "";
+
+  if (!res.ok || !data?.success || !imageBase64) {
+    return { ok: false, error: cloudflareErrorMessage(data, res.status) };
+  }
+
+  return { ok: true, dataUrl: `data:image/png;base64,${imageBase64}` };
+}
+
 async function callCloudflareOnce(credential: CloudflareAICredential, input: GenerateImageInput) {
-  const { payload, width, height, model } = buildCloudflarePayload(input);
-  const { controller, timer } = timeoutSignal(credential.timeout_ms || 90000);
+  const { variants, width, height, model } = buildPayloadVariants(input);
+  const failures: string[] = [];
 
-  try {
-    const res = await fetch(
-      `https://api.cloudflare.com/client/v4/accounts/${credential.account_id}/ai/run/${model.modelId}`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${credential.api_token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-        signal: controller.signal,
+  for (const variant of variants) {
+    const { controller, timer } = timeoutSignal(credential.timeout_ms || 90000);
+
+    try {
+      const res = await fetch(
+        `https://api.cloudflare.com/client/v4/accounts/${credential.account_id}/ai/run/${model.modelId}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${credential.api_token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(variant.body),
+          signal: controller.signal,
+        }
+      );
+
+      const parsed = await parseCloudflareResponse(res);
+
+      if (parsed.ok) {
+        return {
+          ok: true as const,
+          dataUrl: parsed.dataUrl,
+          modelId: model.modelId,
+          credentialSlot: credential.key_slot,
+          width,
+          height,
+        };
       }
-    );
 
-    const contentType = res.headers.get("content-type") || "";
+      failures.push(`${variant.label}: ${parsed.error}`);
 
-    if (contentType.startsWith("image/")) {
-      const buffer = Buffer.from(await res.arrayBuffer());
-
-      if (!res.ok || !buffer.length) {
+      if (!shouldTryNextPayloadVariant(res.status, parsed.error)) {
         return {
           ok: false as const,
           tryNext: shouldTryNextKey(res.status),
           status: res.status,
-          error: `Cloudflare image generation failed with HTTP ${res.status}`,
+          error: parsed.error,
         };
       }
+    } catch (error) {
+      const isTimeout = error instanceof Error && error.name === "AbortError";
 
-      return {
-        ok: true as const,
-        dataUrl: `data:${contentType};base64,${buffer.toString("base64")}`,
-        modelId: model.modelId,
-        credentialSlot: credential.key_slot,
-        width,
-        height,
-      };
-    }
-
-    const data = (await res.json().catch(() => null)) as CloudflareRunResult | null;
-    const imageBase64 = data?.result?.image || data?.image || "";
-
-    if (!res.ok || !data?.success || !imageBase64) {
       return {
         ok: false as const,
-        tryNext: shouldTryNextKey(res.status),
-        status: res.status,
-        error: cloudflareErrorMessage(data, res.status),
+        tryNext: true,
+        status: 0,
+        error: isTimeout
+          ? `Cloudflare request timed out after ${credential.timeout_ms || 90000}ms.`
+          : error instanceof Error
+            ? error.message
+            : String(error),
       };
+    } finally {
+      clearTimeout(timer);
     }
-
-    return {
-      ok: true as const,
-      dataUrl: `data:image/png;base64,${imageBase64}`,
-      modelId: model.modelId,
-      credentialSlot: credential.key_slot,
-      width,
-      height,
-    };
-  } catch (error) {
-    const isTimeout = error instanceof Error && error.name === "AbortError";
-
-    return {
-      ok: false as const,
-      tryNext: true,
-      status: 0,
-      error: isTimeout
-        ? `Cloudflare request timed out after ${credential.timeout_ms || 90000}ms.`
-        : error instanceof Error
-          ? error.message
-          : String(error),
-    };
-  } finally {
-    clearTimeout(timer);
   }
+
+  return {
+    ok: false as const,
+    tryNext: false,
+    status: 400,
+    error: failures.join(" | ") || "Cloudflare image generation failed.",
+  };
 }
 
 export async function generateCloudflareImageWithManualFailover(input: GenerateImageInput) {
