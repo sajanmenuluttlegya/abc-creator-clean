@@ -6,6 +6,7 @@ import {
   getEffectiveEditModel,
 } from "@/lib/image-tools/cloudflare-image-client";
 import { buildPremiumEditPrompt } from "@/lib/image-tools/edit-planner";
+import { buildPremiumGenerationPrompt } from "@/lib/image-tools/premium-prompts";
 import {
   getTextToImageCredits,
   IMAGE_ASPECT_RATIOS,
@@ -73,7 +74,7 @@ function userSafeProviderError(error: unknown) {
   const lower = raw.toLowerCase();
 
   if (lower.includes("flag" + "ged") || lower.includes("choose another prompt") || lower.includes("output has been") || lower.includes("provider rejected")) {
-    return "The image provider rejected this prompt or reference image combination. Try a different prompt, a different reference image, or remove sensitive wording.";
+    return "The image provider rejected this prompt or reference image combination. Try a different prompt or a different reference image.";
   }
 
   if (lower.includes("failed to fetch")) {
@@ -172,9 +173,22 @@ export async function POST(req: NextRequest) {
     const imageCount = operation === "edit" ? 1 : safeImageCount(body.imageCount);
     const effectiveModel = operation === "edit" ? getEffectiveEditModel(requestedModel) : requestedModel;
 
+    if (operation === "generate" && rawPrompt.length < 6) {
+      return Response.json({ ok: false, error: "Prompt must be at least 6 characters.", code: "PROMPT_REQUIRED" }, { status: 400 });
+    }
+
+    if (operation === "edit" && !hasReference) {
+      return Response.json({ ok: false, error: "Select a source image before editing.", code: "REFERENCE_IMAGE_REQUIRED" }, { status: 400 });
+    }
+
+    if (operation === "edit" && (rawEditPrompt || rawPrompt).length < 3) {
+      return Response.json({ ok: false, error: "Describe what to edit.", code: "EDIT_PROMPT_REQUIRED" }, { status: 400 });
+    }
+
     let prompt = rawPrompt;
     let negativePrompt = negativePromptBase;
     let editPlan = null as ReturnType<typeof buildPremiumEditPrompt>["plan"] | null;
+    let generationIntent: ReturnType<typeof buildPremiumGenerationPrompt>["intent"] | null = null;
 
     if (operation === "edit") {
       const premiumEdit = buildPremiumEditPrompt({
@@ -186,14 +200,18 @@ export async function POST(req: NextRequest) {
       prompt = premiumEdit.prompt;
       negativePrompt = mergeNegativePrompts(negativePromptBase, premiumEdit.negativePrompt);
       editPlan = premiumEdit.plan;
-    }
+    } else {
+      const premiumGeneration = buildPremiumGenerationPrompt({
+        userPrompt: rawPrompt,
+        baseNegative: negativePromptBase,
+        style,
+        resolution,
+        aspectRatio,
+      });
 
-    if (prompt.length < 6) {
-      return Response.json({ ok: false, error: "Prompt must be at least 6 characters.", code: "PROMPT_REQUIRED" }, { status: 400 });
-    }
-
-    if (operation === "edit" && !hasReference) {
-      return Response.json({ ok: false, error: "Select a source image before editing.", code: "REFERENCE_IMAGE_REQUIRED" }, { status: 400 });
+      prompt = premiumGeneration.prompt;
+      negativePrompt = premiumGeneration.negativePrompt;
+      generationIntent = premiumGeneration.intent;
     }
 
     const requiredCredits = getTextToImageCredits(effectiveModel, resolution, imageCount);
@@ -265,7 +283,7 @@ export async function POST(req: NextRequest) {
 
     const spendResponse = await supabase.rpc("spend_reserved_credits", {
       p_transaction_id: reservedTransactionId,
-      p_provider: operation === "edit" ? "image:premium-edit:cloudflare-workers-ai" : "image:text-to-image:cloudflare-workers-ai",
+      p_provider: operation === "edit" ? "image:premium-edit:cloudflare-workers-ai" : "image:premium-generation:cloudflare-workers-ai",
       p_model: operation === "edit" ? `${requestedModel}->${effectiveModel}` : effectiveModel,
     });
 
@@ -294,8 +312,10 @@ export async function POST(req: NextRequest) {
       modelRequested: requestedModel,
       modelUsed: effectiveModel,
       effectiveModel,
+      promptMode: operation === "edit" ? "premium-edit-planner" : "premium-generation-enhancer",
       editMode: operation === "edit" ? "premium-consistency-lock" : undefined,
       editPlan,
+      generationIntent,
       resolution,
       aspectRatio,
       style,
