@@ -1,0 +1,3 @@
+.hide-output-side-image-controls [data-abc-image-block] {
+  display: none !important;
+}
