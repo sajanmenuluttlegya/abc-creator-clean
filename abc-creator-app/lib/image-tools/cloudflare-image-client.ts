@@ -1,6 +1,5 @@
 import { ALL_CLOUDFLARE_KEYS_EXHAUSTED_MESSAGE, isCloudflareKeyExhausted, shouldRotateCloudflareCredential } from "./cloudflare-failover";
 import { getActiveCloudflareAICredentials, type CloudflareAICredential } from "./cloudflare-credentials";
-import { polishImageDataUrl } from "./image-output-polish";
 import {
   getImageDimensions,
   IMAGE_MODEL_OPTIONS,
@@ -272,18 +271,13 @@ async function callCloudflareOnce(credential: CloudflareAICredential, input: Gen
       };
     }
 
-    const polished = await polishImageDataUrl(parsed.dataUrl, input.operation === "edit" ? "edit" : "generate", {
-      resolution: input.resolution,
-      aspectRatio: input.aspectRatio,
-    });
-
     return {
       ok: true as const,
-      dataUrl: polished.dataUrl,
+      dataUrl: parsed.dataUrl,
       modelId: model.modelId,
       credentialSlot: credential.key_slot,
-      width: polished.width ?? width,
-      height: polished.height ?? height,
+      width,
+      height,
     };
   } catch (error) {
     const isTimeout = error instanceof Error && error.name === "AbortError";
