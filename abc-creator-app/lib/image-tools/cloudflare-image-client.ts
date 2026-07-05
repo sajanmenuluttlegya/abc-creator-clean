@@ -223,7 +223,15 @@ async function parseCloudflareResponse(res: Response): Promise<ParsedResponse> {
   }
 
   const rawText = await res.text().catch(() => "");
-  const data = rawText ? (JSON.parse(rawText) as CloudflareRunResult) : null;
+  let data: CloudflareRunResult | null = null;
+  if (rawText) {
+    try {
+      data = JSON.parse(rawText) as CloudflareRunResult;
+    } catch {
+      data = null;
+    }
+  }
+
   const image = extractImageCandidate(data) || extractImageCandidate(rawText);
   const successFlag = typeof data?.success === "boolean" ? data.success : undefined;
 
