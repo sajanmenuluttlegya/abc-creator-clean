@@ -57,7 +57,7 @@ const CREDIT_MAP: Record<ImageModelKey, Record<ImageResolution, number>> = {
   M5: { "360p": 2, "480p": 3, "720p": 4, "1080p": 5 },
   M6: { "360p": 2, "480p": 3, "720p": 3, "1080p": 4 },
 };
-const UPSCALE_CREDITS: Record<UpscaleTarget, number> = { "2k": 6, "4k": 10 };
+const UPSCALE_CREDITS: Record<UpscaleTarget, number> = { "2k": 5, "4k": 9 };
 
 function downloadDataUrl(dataUrl: string, filename: string) {
   const link = document.createElement("a");
@@ -88,6 +88,7 @@ export function ImageTextToImagePanel() {
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
+  const [revealReady, setRevealReady] = useState(true);
   const [upscalingKey, setUpscalingKey] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -97,6 +98,7 @@ export function ImageTextToImagePanel() {
   const editCreditEstimate = CREDIT_MAP[model][resolution];
   const canGenerate = prompt.trim().length >= 6 && !loading;
   const canEdit = Boolean(selectedImage) && editPrompt.trim().length >= 3 && !editing;
+  const progressLabel = generationProgress >= 93 ? "Finalizing" : `${generationProgress}%`;
 
   useEffect(() => {
     if (!loading && !editing) return;
@@ -107,12 +109,17 @@ export function ImageTextToImagePanel() {
     return () => window.clearInterval(timer);
   }, [loading, editing]);
 
+  function revealFinalImage() {
+    window.setTimeout(() => setRevealReady(true), 120);
+  }
+
   async function generate() {
     if (!canGenerate) {
       setError("Write a prompt with at least 6 characters.");
       return;
     }
     setLoading(true);
+    setRevealReady(false);
     setGenerationProgress(1);
     setError("");
     setNotice("");
@@ -130,8 +137,10 @@ export function ImageTextToImagePanel() {
       setSelectedIndex(enriched[0]?.index || null);
       setEditPrompt("");
       setUpscaled({});
+      revealFinalImage();
       setNotice(`Generated ${enriched.length} image${enriched.length === 1 ? "" : "s"}. Charged ${data.creditsCharged ?? creditEstimate} credits.`);
     } catch (err) {
+      setRevealReady(true);
       setError(err instanceof Error ? err.message : "Image generation failed.");
     } finally {
       setLoading(false);
@@ -145,6 +154,7 @@ export function ImageTextToImagePanel() {
       return;
     }
     setEditing(true);
+    setRevealReady(false);
     setGenerationProgress(1);
     setError("");
     setNotice("");
@@ -183,8 +193,10 @@ export function ImageTextToImagePanel() {
       setImages((current) => [...current, edited]);
       setSelectedIndex(edited.index);
       setEditPrompt("");
+      revealFinalImage();
       setNotice(`Created a consistent edit from image ${selectedImage.index}. Charged ${data.creditsCharged ?? editCreditEstimate} credits.`);
     } catch (err) {
+      setRevealReady(true);
       setError(err instanceof Error ? err.message : "Image edit failed.");
     } finally {
       setEditing(false);
@@ -268,8 +280,8 @@ export function ImageTextToImagePanel() {
         <div className="mx-auto grid max-w-6xl gap-5 pt-6 md:grid-cols-2">
           {Array.from({ length: Number(imageCount) || 1 }).map((_, index) => (
             <div key={index} className="relative aspect-square overflow-hidden rounded-[2rem] border border-white/25 bg-white/[0.035] shadow-2xl shadow-purple-950/20 backdrop-blur-xl">
-              <span className="absolute right-4 top-4 rounded-full border border-white/15 bg-black/60 px-3 py-1.5 text-xs font-black text-white backdrop-blur-xl">{generationProgress}%</span>
-              <div className="grid h-full place-items-center text-center"><div><div className="mx-auto h-14 w-14 animate-spin rounded-full border-2 border-purple-300/20 border-t-purple-200" /><p className="mt-4 text-sm font-black text-white">Generating image...</p><p className="mt-1 text-xs font-semibold text-slate-400">Streaming progress</p></div></div>
+              <span className="absolute right-4 top-4 rounded-full border border-white/15 bg-black/60 px-3 py-1.5 text-xs font-black text-white backdrop-blur-xl">{progressLabel}</span>
+              <div className="grid h-full place-items-center text-center"><div><div className="mx-auto h-14 w-14 animate-spin rounded-full border-2 border-purple-300/20 border-t-purple-200" /><p className="mt-4 text-sm font-black text-white">Generating image...</p><p className="mt-1 text-xs font-semibold text-slate-400">Final image will reveal from blur to clear</p></div></div>
             </div>
           ))}
         </div>
@@ -278,7 +290,7 @@ export function ImageTextToImagePanel() {
       {selectedImage ? (
         <div className="mx-auto grid max-w-6xl gap-6 pt-6 lg:grid-cols-[minmax(0,1fr)_280px]">
           <div className="rounded-[2rem] border border-white/25 bg-white/[0.035] p-3 shadow-2xl shadow-purple-950/25 backdrop-blur-2xl">
-            <div className="relative overflow-hidden rounded-[1.45rem] bg-black/45"><img src={selectedImage.dataUrl} alt={`Selected image ${selectedImage.index}`} className="max-h-[620px] w-full object-contain" />{editing ? <span className="absolute right-4 top-4 rounded-full border border-white/15 bg-black/60 px-3 py-1.5 text-xs font-black text-white backdrop-blur-xl">{generationProgress}%</span> : null}</div>
+            <div className="relative overflow-hidden rounded-[1.45rem] bg-black/45"><img src={selectedImage.dataUrl} alt={`Selected image ${selectedImage.index}`} className={`max-h-[620px] w-full object-contain transition-all duration-[1400ms] ease-out ${revealReady ? "scale-100 blur-0 opacity-100" : "scale-[1.035] blur-2xl opacity-55"}`} />{editing ? <span className="absolute right-4 top-4 rounded-full border border-white/15 bg-black/60 px-3 py-1.5 text-xs font-black text-white backdrop-blur-xl">{progressLabel}</span> : null}</div>
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3 px-1"><div><p className="text-sm font-black text-white">Selected image {selectedImage.index}</p><p className="text-xs font-semibold text-slate-400">{selectedImage.kind === "edited" ? `Consistent edit from image ${selectedImage.parentIndex}` : "Click any thumbnail to switch reference"}</p></div>{imageActions(selectedImage)}</div>
             <div className="mt-4 overflow-visible rounded-[1.6rem] border border-white/30 bg-white/[0.035] backdrop-blur-2xl">
               <textarea value={editPrompt} onChange={(event) => setEditPrompt(event.target.value)} placeholder="What do you want to change? Character consistency stays locked to the selected image." className="min-h-[110px] w-full resize-none bg-transparent px-5 py-4 text-base font-semibold leading-7 text-white outline-none placeholder:text-slate-500" />
