@@ -15,9 +15,11 @@ import {
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 300;
 
 type TextToImageBody = {
   prompt?: string;
+  editPrompt?: string;
   negativePrompt?: string;
   model?: ImageModelKey;
   resolution?: ImageResolution;
@@ -25,6 +27,11 @@ type TextToImageBody = {
   imageCount?: number;
   style?: string;
   seed?: string;
+  operation?: "generate" | "edit";
+  maintainConsistency?: boolean;
+  sourceImageDataUrl?: string;
+  referenceImageDataUrl?: string;
+  parentImageIndex?: number;
 };
 
 type CreditReservation = {
@@ -62,6 +69,11 @@ function cleanText(value: unknown, limit: number) {
   return text.length > limit ? text.slice(0, limit) : text;
 }
 
+function cleanDataUrl(value: unknown) {
+  const text = cleanText(value, 18_000_000);
+  return /^data:image\/(?:png|jpeg|jpg|webp);base64,/i.test(text) ? text : "";
+}
+
 function safeImageCount(value: unknown) {
   const count = Math.floor(Number(value) || 1);
   return Math.min(Math.max(count, 1), 4);
@@ -82,6 +94,18 @@ function parseAspectRatio(value: unknown): ImageAspectRatio {
 function parseStyle(value: unknown) {
   const style = cleanText(value, 80);
   return (IMAGE_STYLE_OPTIONS as readonly string[]).includes(style) ? style : "";
+}
+
+function buildEditPrompt(prompt: string, editPrompt: string, hasReference: boolean) {
+  if (!hasReference) return prompt;
+
+  return [
+    "Edit the provided reference image. Do not generate a new unrelated person or scene.",
+    "Preserve the same subject, pose, camera angle, lighting, clothing, background, and composition unless the user explicitly asks to change them.",
+    "Apply only the requested local change as cleanly and realistically as possible.",
+    editPrompt ? `Requested edit: ${editPrompt}` : prompt,
+    prompt,
+  ].filter(Boolean).join("\n");
 }
 
 export async function POST(req: NextRequest) {
@@ -115,14 +139,19 @@ export async function POST(req: NextRequest) {
 
     const body = (await req.json()) as TextToImageBody;
 
-    const prompt = cleanText(body.prompt, 4000);
+    const rawPrompt = cleanText(body.prompt, 4000);
+    const editPrompt = cleanText(body.editPrompt, 1200);
     const negativePrompt = cleanText(body.negativePrompt, 1200);
     const style = parseStyle(body.style);
     const seed = cleanText(body.seed, 80);
     const model = parseModel(body.model);
     const resolution = parseResolution(body.resolution);
     const aspectRatio = parseAspectRatio(body.aspectRatio);
-    const imageCount = safeImageCount(body.imageCount);
+    const operation = body.operation === "edit" ? "edit" : "generate";
+    const sourceImageDataUrl = cleanDataUrl(body.sourceImageDataUrl || body.referenceImageDataUrl);
+    const hasReference = operation === "edit" && Boolean(sourceImageDataUrl);
+    const prompt = operation === "edit" ? buildEditPrompt(rawPrompt, editPrompt, hasReference) : rawPrompt;
+    const imageCount = operation === "edit" ? 1 : safeImageCount(body.imageCount);
 
     if (prompt.length < 6) {
       return Response.json({ ok: false, error: "Prompt must be at least 6 characters.", code: "PROMPT_REQUIRED" }, { status: 400 });
@@ -133,7 +162,7 @@ export async function POST(req: NextRequest) {
     const reserveResponse = await supabase.rpc("reserve_credits", {
       p_tool_slug: "text-to-image-generator",
       p_amount: requiredCredits,
-      p_idempotency_key: `${user.id}:text-to-image-generator:${model}:${resolution}:${randomUUID()}`,
+      p_idempotency_key: `${user.id}:text-to-image-generator:${operation}:${model}:${resolution}:${randomUUID()}`,
     });
 
     if (reserveResponse.error) {
@@ -175,12 +204,15 @@ export async function POST(req: NextRequest) {
         aspectRatio,
         style,
         seed: seed ? `${seed}-${index}` : "",
+        operation,
+        sourceImageDataUrl: hasReference ? sourceImageDataUrl : undefined,
+        referenceImageDataUrl: hasReference ? sourceImageDataUrl : undefined,
       });
 
       images.push({
         index: index + 1,
         dataUrl: result.dataUrl,
-        filename: `text-to-image-${model}-${resolution}-${index + 1}.png`,
+        filename: operation === "edit" ? `image-edit-${model}-${resolution}-${index + 1}.png` : `text-to-image-${model}-${resolution}-${index + 1}.png`,
         provider: "cloudflare-workers-ai",
         model: result.modelId,
         modelLabel: model,
@@ -192,7 +224,7 @@ export async function POST(req: NextRequest) {
 
     const spendResponse = await supabase.rpc("spend_reserved_credits", {
       p_transaction_id: reservedTransactionId,
-      p_provider: "image:text-to-image:cloudflare-workers-ai",
+      p_provider: operation === "edit" ? "image:edit:cloudflare-workers-ai" : "image:text-to-image:cloudflare-workers-ai",
       p_model: model,
     });
 
