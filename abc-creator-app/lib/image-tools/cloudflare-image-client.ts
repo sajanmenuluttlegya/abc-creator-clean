@@ -55,14 +55,10 @@ const MODEL_REQUEST_FORMAT: Record<ImageModelKey, CloudflareImageRequestFormat> 
 const SAFETY_BLOCK_MESSAGE = "The image provider rejected this prompt or reference image combination. Try a different prompt, a different reference image, or remove sensitive wording.";
 
 export function getEffectiveEditModel(requestedModel: ImageModelKey): ImageModelKey {
-  // M1 and M2 are the strongest reference-image edit path in this Cloudflare setup.
+  // M1 and M2 stay direct because they are the premium reference-image edit path in this Cloudflare setup.
   if (requestedModel === "M1" || requestedModel === "M2") return requestedModel;
 
-  // M3/M4 are premium generation models, but their documented Cloudflare interface is JSON text-to-image.
-  // Route edits through M2 so the selected image can be sent as multipart reference input.
-  if (requestedModel === "M3" || requestedModel === "M4") return "M2";
-
-  // M5/M6 premium edit routing will be handled later; for now route edits to M2 instead of fake edits.
+  // M3/M4/M5/M6 can still be premium generation choices, but edits route through M2 so edits use the stronger reference-image path instead of a fake text-only rewrite.
   return "M2";
 }
 
