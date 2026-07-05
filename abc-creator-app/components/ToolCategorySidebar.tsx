@@ -18,10 +18,8 @@ function getCategoryIcon(category: string) {
 
 export function ToolCategorySidebar({ activeSlug }: ToolCategorySidebarProps) {
   const pathname = usePathname();
-  const [isOpen, setIsOpen] = useState(true);
 
-  const activeToolSlug =
-    activeSlug || pathname?.split("/tools/")[1]?.split("/")[0] || "";
+  const activeToolSlug = activeSlug || pathname?.split("/tools/")[1]?.split("/")[0] || "";
 
   const categories = useMemo(
     () => Array.from(new Set(publicTools.map((tool) => tool.category))),
@@ -36,43 +34,20 @@ export function ToolCategorySidebar({ activeSlug }: ToolCategorySidebarProps) {
   const [openCategory, setOpenCategory] = useState(activeCategory);
 
   return (
-    <>
-      <button
-        type="button"
-        onClick={() => setIsOpen(true)}
-        className={`fixed left-4 top-28 z-40 rounded-full border border-purple-400/30 bg-black/75 px-6 py-3 text-base font-bold text-purple-100 shadow-xl shadow-purple-950/30 backdrop-blur-xl transition hover:bg-purple-500/15 ${
-          isOpen ? "pointer-events-none opacity-0" : "opacity-100"
-        }`}
-      >
-        Create New
-      </button>
+    <aside
+      className="fixed bottom-4 left-4 top-24 z-40 w-[280px] overflow-hidden rounded-3xl border border-purple-500/25 bg-black/80 shadow-2xl shadow-purple-950/40 backdrop-blur-2xl"
+      aria-label="Tool categories"
+    >
+      <div className="border-b border-purple-500/15 px-5 py-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-purple-300/80">
+          Creator Tools
+        </p>
+        <h2 className="mt-1 text-lg font-bold text-white">Categories</h2>
+      </div>
 
-      <aside
-        className={`fixed bottom-4 left-4 top-24 z-40 w-[280px] overflow-hidden rounded-3xl border border-purple-500/25 bg-black/80 shadow-2xl shadow-purple-950/40 backdrop-blur-2xl transition-transform duration-300 ${
-          isOpen ? "translate-x-0" : "-translate-x-[310px]"
-        }`}
-        aria-label="Tool categories"
-      >
-        <div className="flex items-center justify-between border-b border-purple-500/15 px-5 py-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-purple-300/80">
-              Creator Tools
-            </p>
-            <h2 className="mt-1 text-lg font-bold text-white">Categories</h2>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setIsOpen(false)}
-            className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm font-semibold text-gray-200 transition hover:bg-white/10"
-            aria-label="Close categories sidebar"
-          >
-            ✕
-          </button>
-        </div>
-
-        <div className="creator-output-scroll h-[calc(100%-76px)] overflow-y-auto px-4 py-4">
-          <div className="space-y-2">
+      <div className="h-[calc(100%-72px)] overflow-hidden p-3">
+        <div className="creator-output-scroll h-full overflow-y-auto rounded-[1.35rem] pr-2">
+          <div className="space-y-2 pb-2">
             {categories.map((category) => {
               const tools = publicTools.filter((tool) => tool.category === category);
               const isCategoryOpen = openCategory === category;
@@ -134,7 +109,7 @@ export function ToolCategorySidebar({ activeSlug }: ToolCategorySidebarProps) {
             })}
           </div>
         </div>
-      </aside>
-    </>
+      </div>
+    </aside>
   );
 }
