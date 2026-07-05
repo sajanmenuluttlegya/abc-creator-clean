@@ -10,7 +10,6 @@ import {
   buildImageEditToolInstruction,
   parseImageEditToolPreset,
 } from "@/lib/image-tools/edit-tool-presets";
-import { polishImageDataUrl } from "@/lib/image-tools/image-output-polish";
 import { buildPremiumGenerationPrompt } from "@/lib/image-tools/premium-prompts";
 import {
   getTextToImageCredits,
@@ -276,21 +275,19 @@ export async function POST(req: NextRequest) {
         referenceImageDataUrl: hasReference ? sourceImageDataUrl : undefined,
       });
 
-      const polished = await polishImageDataUrl(result.dataUrl, operation);
-
       images.push({
         index: index + 1,
-        dataUrl: polished.dataUrl,
+        dataUrl: result.dataUrl,
         filename: operation === "edit" ? `image-edit-${effectiveModel}-${resolution}-${index + 1}.png` : `text-to-image-${effectiveModel}-${resolution}-${index + 1}.png`,
         provider: "cloudflare-workers-ai",
-        postProcess: polished.polished ? "sharp-premium-polish" : "none",
+        postProcess: "provider-native",
         model: result.modelId,
         modelLabel: effectiveModel,
         requestedModel,
         modelUsed: effectiveModel,
         credentialSlot: result.credentialSlot,
-        width: polished.width ?? result.width,
-        height: polished.height ?? result.height,
+        width: result.width,
+        height: result.height,
       });
     }
 
@@ -330,7 +327,7 @@ export async function POST(req: NextRequest) {
       toolPreset,
       editPlan,
       generationIntent,
-      outputPolish: "sharp-premium-polish",
+      outputPolish: "provider-native",
       resolution,
       aspectRatio,
       style,
