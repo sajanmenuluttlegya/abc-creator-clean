@@ -1,13 +1,18 @@
 export type PremiumEditCategory =
   | "face-hair"
+  | "face-feature"
   | "hairstyle"
   | "expression"
   | "clothing"
   | "background"
   | "object-add-remove"
+  | "object-replace"
   | "color-change"
+  | "lighting"
+  | "pose-composition"
   | "style-change"
   | "text-edit"
+  | "product-material"
   | "general";
 
 export type PremiumEditPlan = {
@@ -35,6 +40,10 @@ export function classifyEditRequest(input: string): PremiumEditCategory {
     return "face-hair";
   }
 
+  if (/(eyes|eye color|nose|lips|mouth|teeth|jaw|chin|cheeks|skin|wrinkle|scar|freckle|makeup|glasses)/i.test(text)) {
+    return "face-feature";
+  }
+
   if (/(hair|hairstyle|haircut|long hair|short hair|curly hair|straight hair|bald|bangs|fringe)/i.test(text)) {
     return "hairstyle";
   }
@@ -43,28 +52,44 @@ export function classifyEditRequest(input: string): PremiumEditCategory {
     return "expression";
   }
 
-  if (/(shirt|dress|jacket|hoodie|clothes|clothing|outfit|suit|tie|uniform|pants|shoes)/i.test(text)) {
+  if (/(shirt|dress|jacket|hoodie|clothes|clothing|outfit|suit|tie|uniform|pants|shoes|hat|cap|armor)/i.test(text)) {
     return "clothing";
   }
 
-  if (/(background|remove background|transparent background|room|sky|wall|scene|environment)/i.test(text)) {
+  if (/(background|remove background|transparent background|room|sky|wall|scene|environment|replace background)/i.test(text)) {
     return "background";
+  }
+
+  if (/(replace|swap|change).*(with|into|to)/i.test(text)) {
+    return "object-replace";
+  }
+
+  if (/(add|remove|delete|erase|put|insert|take out|hide|show)/i.test(text)) {
+    return "object-add-remove";
   }
 
   if (/(text|word|letter|caption|sign|logo|label|typography|written)/i.test(text)) {
     return "text-edit";
   }
 
+  if (/(brighter|darker|lighting|shadow|sunlight|neon|glow|contrast|exposure|mood)/i.test(text)) {
+    return "lighting";
+  }
+
+  if (/(pose|standing|sitting|turn|angle|camera|zoom|crop|composition|framing|move|position)/i.test(text)) {
+    return "pose-composition";
+  }
+
+  if (/(metal|wood|glass|leather|fabric|plastic|matte|glossy|texture|material|product)/i.test(text)) {
+    return "product-material";
+  }
+
   if (/(color|colour|red|blue|green|black|white|gold|pink|purple|yellow|orange|silver|brown|grey|gray)/i.test(text)) {
     return "color-change";
   }
 
-  if (/(style|anime|photorealistic|realistic|cartoon|manga|cinematic|watercolor|oil painting|3d|pixel|sketch)/i.test(text)) {
+  if (/(style|anime|photorealistic|realistic|cartoon|manga|cinematic|watercolor|oil painting|3d|pixel|sketch|vector)/i.test(text)) {
     return "style-change";
-  }
-
-  if (/(add|remove|delete|erase|replace|put|insert|take out|hide|show)/i.test(text)) {
-    return "object-add-remove";
   }
 
   return "general";
@@ -72,36 +97,54 @@ export function classifyEditRequest(input: string): PremiumEditCategory {
 
 function commonPreserve() {
   return [
-    "same subject identity",
-    "same face structure and recognizable appearance",
-    "same pose and body position unless explicitly changed",
-    "same camera angle and perspective",
-    "same framing and crop",
-    "same lighting direction and mood",
-    "same clothing unless explicitly changed",
-    "same background unless explicitly changed",
+    "same main subject or main object identity",
+    "same visible identity cues and recognizable appearance",
+    "same pose and spatial placement unless explicitly changed",
+    "same camera angle and perspective unless explicitly changed",
+    "same framing and crop unless explicitly changed",
+    "same lighting direction unless explicitly changed",
+    "same clothing, materials, and colors unless explicitly changed",
+    "same background and environment unless explicitly changed",
     "same object arrangement unless explicitly changed",
-    "same overall composition",
+    "same overall composition unless explicitly changed",
   ];
 }
 
 function commonAvoid() {
   return [
-    "different person",
-    "different age",
-    "different ethnicity",
-    "different body shape",
+    "different main subject",
+    "different main object",
     "different scene",
     "unrequested background change",
     "unrequested clothing change",
-    "extra people",
-    "duplicate subject",
-    "distorted face",
-    "warped hands",
+    "unrequested color change",
+    "extra people or duplicate subjects",
+    "distorted details",
+    "warped structure",
     "unwanted props",
     "full scene rewrite",
     "identity drift",
   ];
+}
+
+function planBase(params: {
+  category: PremiumEditCategory;
+  targetSubject: string;
+  localChangeZone: string;
+  requestedChange: string;
+  preserve?: string[];
+  avoid?: string[];
+  strength?: PremiumEditPlan["strength"];
+}): PremiumEditPlan {
+  return {
+    category: params.category,
+    targetSubject: params.targetSubject,
+    localChangeZone: params.localChangeZone,
+    requestedChange: params.requestedChange,
+    preserve: unique(params.preserve || commonPreserve()),
+    avoid: unique([...(params.avoid || commonAvoid())]),
+    strength: params.strength || "minimal-change",
+  };
 }
 
 export function buildPremiumEditPlan(userEditPrompt: string): PremiumEditPlan {
@@ -112,136 +155,175 @@ export function buildPremiumEditPlan(userEditPrompt: string): PremiumEditPlan {
 
   switch (category) {
     case "face-hair":
-      return {
+      return planBase({
         category,
-        targetSubject: "main person",
-        localChangeZone: "lower face, chin, jawline, cheeks, moustache and beard region only",
+        targetSubject: "main person or animal if the selected image contains one",
+        localChangeZone: "only the hair or facial-hair region mentioned by the request",
         requestedChange: cleaned,
         preserve,
-        avoid: unique([
-          ...avoid,
-          "new person",
-          "different hairstyle",
-          "changed shirt",
-          "changed desk or monitor",
-          "changed background objects",
-          "helmet",
-          "remaining beard stubble unless requested",
-        ]),
-        strength: "minimal-change",
-      };
+        avoid: [...avoid, "new subject", "different hairstyle unless requested", "changed clothing", "changed background objects"],
+      });
+
+    case "face-feature":
+      return planBase({
+        category,
+        targetSubject: "main face or visible character face",
+        localChangeZone: "only the named facial feature or skin region",
+        requestedChange: cleaned,
+        preserve,
+        avoid: [...avoid, "different face identity", "changed hair", "changed clothing", "changed background"],
+      });
 
     case "hairstyle":
-      return {
+      return planBase({
         category,
-        targetSubject: "main person",
+        targetSubject: "main person or character",
         localChangeZone: "hair and head region only",
         requestedChange: cleaned,
         preserve,
-        avoid: unique([...avoid, "changed face identity", "changed clothing", "changed background", "changed pose"]),
-        strength: "minimal-change",
-      };
+        avoid: [...avoid, "changed face identity", "changed clothing", "changed background", "changed pose"],
+      });
 
     case "expression":
-      return {
+      return planBase({
         category,
-        targetSubject: "main person",
-        localChangeZone: "eyes, eyebrows, mouth, cheeks and facial expression region only",
+        targetSubject: "main face or character expression",
+        localChangeZone: "expression region only: eyes, eyebrows, cheeks, mouth, and surrounding face",
         requestedChange: cleaned,
         preserve,
-        avoid: unique([...avoid, "changed hairstyle", "changed clothing", "changed background", "changed pose"]),
-        strength: "minimal-change",
-      };
+        avoid: [...avoid, "changed hairstyle", "changed clothing", "changed background", "changed pose"],
+      });
 
     case "clothing":
-      return {
+      return planBase({
         category,
-        targetSubject: "main person",
-        localChangeZone: "clothing and outfit area only",
+        targetSubject: "requested clothing or outfit area",
+        localChangeZone: "clothing, accessory, outfit, or wearable region only",
         requestedChange: cleaned,
         preserve,
-        avoid: unique([...avoid, "changed face", "changed hair", "changed background", "changed body pose"]),
-        strength: "minimal-change",
-      };
+        avoid: [...avoid, "changed face", "changed hair", "changed background", "changed body pose"],
+      });
 
     case "background":
-      return {
+      return planBase({
         category,
-        targetSubject: "main subject",
-        localChangeZone: "background and environment only",
+        targetSubject: "background or environment while preserving the foreground subject",
+        localChangeZone: "background, wall, sky, room, or environment only",
+        requestedChange: cleaned,
+        preserve: [
+          "same foreground subject identity",
+          "same subject pose",
+          "same subject placement",
+          "same clothing and materials unless explicitly changed",
+          "same foreground edges and silhouette",
+        ],
+        avoid: [...avoid, "changed foreground subject identity", "changed foreground subject clothing"],
+        strength: "moderate-change",
+      });
+
+    case "object-replace":
+      return planBase({
+        category,
+        targetSubject: "the object or region named by the request",
+        localChangeZone: "only the object or region being replaced",
+        requestedChange: cleaned,
+        preserve,
+        avoid: [...avoid, "unrelated replacements", "changed layout outside the target area"],
+      });
+
+    case "object-add-remove":
+      return planBase({
+        category,
+        targetSubject: "the object, subject, or region named by the request",
+        localChangeZone: "only the area where the requested object appears or should appear",
+        requestedChange: cleaned,
+        preserve,
+        avoid: [...avoid, "global scene rewrite", "unrelated object changes"],
+      });
+
+    case "color-change":
+      return planBase({
+        category,
+        targetSubject: "the requested object, clothing, background, or subject region",
+        localChangeZone: "only the explicitly requested color/material region",
+        requestedChange: cleaned,
+        preserve,
+        avoid: [...avoid, "changed unrelated colors", "changed image layout"],
+      });
+
+    case "lighting":
+      return planBase({
+        category,
+        targetSubject: "lighting, shadows, mood, exposure, or glow requested by the user",
+        localChangeZone: "lighting and tonal layer only while preserving subject geometry",
+        requestedChange: cleaned,
+        preserve,
+        avoid: [...avoid, "changed subject identity", "changed object layout", "overexposed result"],
+        strength: "moderate-change",
+      });
+
+    case "pose-composition":
+      return planBase({
+        category,
+        targetSubject: "pose, camera, framing, crop, or spatial placement requested by the user",
+        localChangeZone: "composition or pose region requested by the edit",
         requestedChange: cleaned,
         preserve: [
           "same main subject identity",
-          "same subject pose",
-          "same subject framing",
-          "same subject placement",
-          "same clothing unless explicitly changed",
-          "same foreground subject edges",
+          "same main object identity",
+          "same style and lighting continuity",
+          "same scene meaning",
         ],
-        avoid: unique([...avoid, "changed main subject identity", "changed subject clothing"]),
+        avoid: [...avoid, "unrelated redesign"],
         strength: "moderate-change",
-      };
+      });
 
-    case "object-add-remove":
-      return {
+    case "product-material":
+      return planBase({
         category,
-        targetSubject: "requested object or nearby subject",
-        localChangeZone: "only the object region relevant to the request",
+        targetSubject: "requested product, object, surface, or material",
+        localChangeZone: "only the named product, surface, material, reflection, or texture region",
         requestedChange: cleaned,
         preserve,
-        avoid: unique([...avoid, "global scene rewrite", "unrelated object changes"]),
-        strength: "minimal-change",
-      };
-
-    case "color-change":
-      return {
-        category,
-        targetSubject: "requested object or subject region",
-        localChangeZone: "only the explicitly requested color region",
-        requestedChange: cleaned,
-        preserve,
-        avoid: unique([...avoid, "changed unrelated colors", "changed image layout"]),
-        strength: "minimal-change",
-      };
+        avoid: [...avoid, "changed product shape unless requested", "changed branding unless requested"],
+      });
 
     case "text-edit":
-      return {
+      return planBase({
         category,
-        targetSubject: "text/sign/logo region requested by the user",
+        targetSubject: "text, sign, label, logo, or typography area requested by the user",
         localChangeZone: "only the text, sign, label, logo, or typography area",
         requestedChange: cleaned,
         preserve,
-        avoid: unique([...avoid, "wrong spelling", "garbled text", "changed unrelated image areas"]),
-        strength: "minimal-change",
-      };
+        avoid: [...avoid, "wrong spelling", "unreadable text", "changed unrelated image areas"],
+      });
 
     case "style-change":
-      return {
+      return planBase({
         category,
         targetSubject: "whole image style layer",
-        localChangeZone: "entire image style while preserving layout and identity",
+        localChangeZone: "entire visual style while preserving identity, layout, and subject arrangement as much as possible",
         requestedChange: cleaned,
         preserve: [
           "same composition",
           "same subject placement",
-          "same main subject identity where possible",
+          "same main subject or object identity where possible",
           "same object arrangement",
           "same scene meaning",
         ],
         avoid,
         strength: "broad-change",
-      };
+      });
 
     default:
-      return {
+      return planBase({
         category,
-        targetSubject: "main subject",
-        localChangeZone: "only the necessary region related to the request",
+        targetSubject: "the exact subject, object, area, or concept named by the user's edit request",
+        localChangeZone: "infer the smallest necessary edit area from the reference image and the user's wording",
         requestedChange: cleaned,
         preserve,
         avoid,
-        strength: "minimal-change",
-      };
+      });
   }
 }
 
@@ -254,37 +336,38 @@ export function buildPremiumEditPrompt(params: {
 
   const prompt = [
     "Premium local image edit mode.",
-    "Edit the provided reference image with strict consistency lock.",
-    params.hasReferenceImage ? "Use the selected source image as the identity, layout, and scene anchor." : "",
-    "Do not generate a new unrelated person or a new unrelated scene.",
-    "Do not perform a full scene rewrite unless the user explicitly requested a style or background overhaul.",
+    "Treat the reference image as the visual source of truth.",
+    "First infer the exact subject, object, area, material, or background element that the user wants changed from the selected image and the edit request.",
+    params.hasReferenceImage ? "Use the selected source image as the identity, layout, scene, and lighting anchor." : "",
+    "Do not generate a new unrelated subject or a new unrelated scene.",
+    "Do not perform a full scene rewrite unless the user explicitly requested a style, pose, background, or composition overhaul.",
     `Primary edit request: ${plan.requestedChange}.`,
-    `Target subject: ${plan.targetSubject}.`,
+    `Target subject or region: ${plan.targetSubject}.`,
     `Affected region: ${plan.localChangeZone}.`,
     `Edit strength: ${plan.strength}.`,
-    "Modify only the necessary region related to the request.",
-    "Preserve all unrelated parts of the image.",
+    "Modify only the necessary pixels and visual region related to the request.",
+    "Preserve every unrelated part of the source image as much as the model allows.",
     "Strict preservation rules:",
     ...plan.preserve.map((item) => `- ${item}`),
     "Things to avoid:",
     ...plan.avoid.map((item) => `- ${item}`),
     params.originalPrompt ? `Original generation context: ${params.originalPrompt}` : "",
-    "Final output must be clean, realistic, high-end, and professional.",
+    "Final output must be clean, realistic, premium, consistent, and production-ready.",
   ]
     .filter(Boolean)
     .join("\n");
 
   const negativePrompt = unique([
     ...plan.avoid,
-    "different person",
-    "different background",
+    "different main subject",
+    "different background unless requested",
     "full scene rewrite",
     "identity drift",
-    "deformed face",
-    "extra limbs",
+    "distorted details",
+    "unwanted extra objects",
     "blurry details",
     "low quality edit",
-    "unrequested object changes",
+    "unrequested changes",
   ]).join(", ");
 
   return {
