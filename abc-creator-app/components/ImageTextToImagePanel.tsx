@@ -17,10 +17,11 @@ type GeneratedImage = {
   height?: number;
   prompt?: string;
   parentIndex?: number;
-  kind?: "generated" | "edited";
+  kind?: "generated" | "edited" | "upscaled";
 };
 
-type UpscaledImage = { target: UpscaleTarget; dataUrl: string; filename: string; creditsCharged?: number };
+type PendingEdit = { index: number; sourceIndex: number };
+type UpscaledImage = { target: UpscaleTarget; dataUrl: string; filename: string; creditsCharged?: number; width?: number; height?: number };
 
 const MODEL_OPTIONS: Option[] = [
   { label: "M1", value: "M1", meta: "Max detail" },
@@ -72,6 +73,17 @@ function VerticalDivider() {
   return <span className="mx-1 hidden h-10 w-px shrink-0 bg-white/15 sm:block" />;
 }
 
+function LoadingTile({ label }: { label: string }) {
+  return (
+    <div className="grid aspect-square w-full place-items-center overflow-hidden rounded-xl border border-white/10 bg-white/[0.035]">
+      <div className="text-center">
+        <div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-purple-300/20 border-t-purple-200" />
+        <p className="mt-3 text-xs font-black text-white">{label}</p>
+      </div>
+    </div>
+  );
+}
+
 export function ImageTextToImagePanel() {
   const [prompt, setPrompt] = useState("");
   const [negativePrompt, setNegativePrompt] = useState("");
@@ -82,8 +94,10 @@ export function ImageTextToImagePanel() {
   const [style, setStyle] = useState("Photorealistic");
   const [seed, setSeed] = useState("");
   const [images, setImages] = useState<GeneratedImage[]>([]);
+  const [pendingEdit, setPendingEdit] = useState<PendingEdit | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [editPrompt, setEditPrompt] = useState("");
+  const [editPanelOpen, setEditPanelOpen] = useState(false);
   const [upscaled, setUpscaled] = useState<Record<string, UpscaledImage[]>>({});
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -94,6 +108,7 @@ export function ImageTextToImagePanel() {
   const [notice, setNotice] = useState("");
 
   const selectedImage = images.find((image) => image.index === selectedIndex) || null;
+  const selectedPendingEdit = pendingEdit && selectedIndex === pendingEdit.index ? pendingEdit : null;
   const creditEstimate = useMemo(() => CREDIT_MAP[model][resolution] * Math.min(Math.max(Number(imageCount) || 1, 1), 4), [imageCount, model, resolution]);
   const editCreditEstimate = CREDIT_MAP[model][resolution];
   const canGenerate = prompt.trim().length >= 6 && !loading;
@@ -108,6 +123,10 @@ export function ImageTextToImagePanel() {
     }, 450);
     return () => window.clearInterval(timer);
   }, [loading, editing]);
+
+  useEffect(() => {
+    setEditPanelOpen(false);
+  }, [selectedIndex]);
 
   function revealFinalImage() {
     window.setTimeout(() => setRevealReady(true), 120);
@@ -153,17 +172,24 @@ export function ImageTextToImagePanel() {
       setError("Select an image and describe what to change.");
       return;
     }
+
+    const sourceIndex = selectedImage.index;
+    const pendingIndex = Math.max(0, ...images.map((image) => image.index), pendingEdit?.index || 0) + 1;
+    const consistencyPrompt = [
+      "Use the selected image as the reference identity source.",
+      "Keep the main subject, styling, colors, proportions, materials, and recognizable visual identity consistent.",
+      selectedImage.prompt ? `Original generation prompt: ${selectedImage.prompt}` : "",
+      `Requested change: ${editPrompt.trim()}`,
+    ].filter(Boolean).join("\n");
+
     setEditing(true);
     setRevealReady(false);
     setGenerationProgress(1);
     setError("");
     setNotice("");
-    const consistencyPrompt = [
-      "Use the attached/selected reference image as the identity source.",
-      "Maintain character consistency: same main subject, body structure, face/helmet/design, color palette, clothing/armor, materials, proportions, and recognizable visual identity.",
-      selectedImage.prompt ? `Original generation prompt: ${selectedImage.prompt}` : "",
-      `Requested change: ${editPrompt.trim()}`,
-    ].filter(Boolean).join("\n");
+    setPendingEdit({ index: pendingIndex, sourceIndex });
+    setSelectedIndex(pendingIndex);
+
     try {
       const response = await fetch("/api/image/text-to-image", {
         method: "POST",
@@ -188,15 +214,17 @@ export function ImageTextToImagePanel() {
       const data = await response.json().catch(() => null) as { ok?: boolean; error?: string; details?: string; creditsCharged?: number; images?: GeneratedImage[] } | null;
       if (!response.ok || !data?.ok || !data.images?.length) throw new Error(data?.details || data?.error || "Image edit failed.");
       setGenerationProgress(100);
-      const nextIndex = Math.max(0, ...images.map((image) => image.index)) + 1;
-      const edited = { ...data.images[0], index: nextIndex, prompt: consistencyPrompt, parentIndex: selectedImage.index, kind: "edited" as const };
+      const edited = { ...data.images[0], index: pendingIndex, prompt: consistencyPrompt, parentIndex: sourceIndex, kind: "edited" as const };
       setImages((current) => [...current, edited]);
+      setPendingEdit(null);
       setSelectedIndex(edited.index);
       setEditPrompt("");
       revealFinalImage();
-      setNotice(`Created a consistent edit from image ${selectedImage.index}. Charged ${data.creditsCharged ?? editCreditEstimate} credits.`);
+      setNotice(`Created a consistent edit from image ${sourceIndex}. Charged ${data.creditsCharged ?? editCreditEstimate} credits.`);
     } catch (err) {
       setRevealReady(true);
+      setPendingEdit(null);
+      setSelectedIndex(sourceIndex);
       setError(err instanceof Error ? err.message : "Image edit failed.");
     } finally {
       setEditing(false);
@@ -215,10 +243,15 @@ export function ImageTextToImagePanel() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ imageDataUrl: image.dataUrl, target }),
       });
-      const data = await response.json().catch(() => null) as { ok?: boolean; error?: string; details?: string; creditsCharged?: number; image?: { dataUrl: string; filename?: string } } | null;
+      const data = await response.json().catch(() => null) as { ok?: boolean; error?: string; details?: string; creditsCharged?: number; image?: { dataUrl: string; filename?: string; width?: number; height?: number } } | null;
       if (!response.ok || !data?.ok || !data.image?.dataUrl) throw new Error(data?.details || data?.error || "Upscale failed.");
-      const next = { target, dataUrl: data.image.dataUrl, filename: data.image.filename || `upscaled-${target}-${image.index}.png`, creditsCharged: data.creditsCharged };
+      const next = { target, dataUrl: data.image.dataUrl, filename: data.image.filename || `upscaled-${target}-${image.index}.webp`, creditsCharged: data.creditsCharged, width: data.image.width, height: data.image.height };
       setUpscaled((current) => ({ ...current, [String(image.index)]: [...(current[String(image.index)] || []).filter((item) => item.target !== target), next] }));
+      const upscaledImage: GeneratedImage = { index: Math.max(0, ...images.map((item) => item.index)) + 1, dataUrl: next.dataUrl, filename: next.filename, width: next.width, height: next.height, prompt: image.prompt, parentIndex: image.index, kind: "upscaled" };
+      setImages((current) => [...current, upscaledImage]);
+      setSelectedIndex(upscaledImage.index);
+      setRevealReady(false);
+      revealFinalImage();
       setNotice(`Upscaled image ${image.index} to ${target.toUpperCase()} for ${data.creditsCharged ?? UPSCALE_CREDITS[target]} credits.`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upscale failed.");
@@ -227,12 +260,25 @@ export function ImageTextToImagePanel() {
     }
   }
 
+  function upscaleButton(image: GeneratedImage, target: UpscaleTarget) {
+    const active = upscalingKey === `${image.index}-${target}`;
+    return (
+      <button type="button" onClick={() => upscaleImage(image, target)} disabled={Boolean(upscalingKey)} className="group/upscale relative rounded-full px-4 py-2 text-xs font-black text-white transition hover:bg-white/[0.12] disabled:opacity-50">
+        <span>{active ? "..." : target.toUpperCase()}</span>
+        <span className="pointer-events-none absolute -top-10 left-1/2 z-20 -translate-x-1/2 rounded-full border border-white/15 bg-black/90 px-3 py-1.5 text-[11px] font-black text-white opacity-0 shadow-xl shadow-black/40 transition-opacity duration-100 group-hover/upscale:opacity-100">{UPSCALE_CREDITS[target]} credits</span>
+      </button>
+    );
+  }
+
   function imageActions(image: GeneratedImage) {
     return (
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <button type="button" onClick={() => downloadDataUrl(image.dataUrl, image.filename || `text-to-image-${image.index}.png`)} className="rounded-full border border-white/10 bg-white/[0.06] px-4 py-2 text-xs font-black text-white transition hover:bg-white/[0.11]">Download</button>
-        <button type="button" onClick={() => upscaleImage(image, "2k")} disabled={Boolean(upscalingKey)} className="rounded-full border border-emerald-300/20 bg-emerald-400/10 px-4 py-2 text-xs font-black text-emerald-100 transition hover:bg-emerald-400/20 disabled:opacity-50">{upscalingKey === `${image.index}-2k` ? "Upscaling..." : `2K · ${UPSCALE_CREDITS["2k"]} cr`}</button>
-        <button type="button" onClick={() => upscaleImage(image, "4k")} disabled={Boolean(upscalingKey)} className="rounded-full border border-fuchsia-300/20 bg-fuchsia-400/10 px-4 py-2 text-xs font-black text-fuchsia-100 transition hover:bg-fuchsia-400/20 disabled:opacity-50">{upscalingKey === `${image.index}-4k` ? "Upscaling..." : `4K · ${UPSCALE_CREDITS["4k"]} cr`}</button>
+        <div className="flex items-center rounded-full border border-white/15 bg-white/[0.035] p-1 backdrop-blur-xl">
+          {upscaleButton(image, "2k")}
+          <span className="h-6 w-px bg-white/10" />
+          {upscaleButton(image, "4k")}
+        </div>
       </div>
     );
   }
@@ -287,19 +333,28 @@ export function ImageTextToImagePanel() {
         </div>
       ) : null}
 
-      {selectedImage ? (
+      {selectedImage || selectedPendingEdit ? (
         <div className="mx-auto grid max-w-6xl gap-6 pt-6 lg:grid-cols-[minmax(0,1fr)_280px]">
-          <div className="rounded-[2rem] border border-white/25 bg-white/[0.035] p-3 shadow-2xl shadow-purple-950/25 backdrop-blur-2xl">
-            <div className="relative overflow-hidden rounded-[1.45rem] bg-black/45"><img src={selectedImage.dataUrl} alt={`Selected image ${selectedImage.index}`} className={`max-h-[620px] w-full object-contain transition-all duration-[1400ms] ease-out ${revealReady ? "scale-100 blur-0 opacity-100" : "scale-[1.035] blur-2xl opacity-55"}`} />{editing ? <span className="absolute right-4 top-4 rounded-full border border-white/15 bg-black/60 px-3 py-1.5 text-xs font-black text-white backdrop-blur-xl">{progressLabel}</span> : null}</div>
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 px-1"><div><p className="text-sm font-black text-white">Selected image {selectedImage.index}</p><p className="text-xs font-semibold text-slate-400">{selectedImage.kind === "edited" ? `Consistent edit from image ${selectedImage.parentIndex}` : "Click any thumbnail to switch reference"}</p></div>{imageActions(selectedImage)}</div>
-            <div className="mt-4 overflow-visible rounded-[1.6rem] border border-white/30 bg-white/[0.035] backdrop-blur-2xl">
-              <textarea value={editPrompt} onChange={(event) => setEditPrompt(event.target.value)} placeholder="What do you want to change? Character consistency stays locked to the selected image." className="min-h-[110px] w-full resize-none bg-transparent px-5 py-4 text-base font-semibold leading-7 text-white outline-none placeholder:text-slate-500" />
-              <div className="mx-5 h-px bg-white/15" />
-              <div className="flex flex-col gap-3 px-3 py-3 sm:flex-row sm:items-center sm:justify-between"><div className="flex flex-wrap items-center gap-y-3"><ImageComposerDropdown label="Model" value={model} options={MODEL_OPTIONS} onChange={(value) => setModel(value as ImageModelKey)} /><VerticalDivider /><ImageComposerDropdown label="Resolution" value={resolution} options={RESOLUTION_OPTIONS} onChange={(value) => setResolution(value as ImageResolution)} /><VerticalDivider /><ImageComposerDropdown label="Ratio" value={aspectRatio} options={ASPECT_OPTIONS} onChange={(value) => setAspectRatio(value as ImageAspectRatio)} /><VerticalDivider /><ImageComposerDropdown label="Style" value={style} options={STYLE_OPTIONS} onChange={setStyle} /></div><button type="button" onClick={makeConsistentEdit} disabled={!canEdit} className="group flex h-12 shrink-0 items-center justify-center gap-2 rounded-full border border-white/20 bg-white/[0.09] px-5 text-sm font-black text-white backdrop-blur-xl transition hover:bg-white/[0.14] disabled:cursor-not-allowed disabled:opacity-50"><span>{editing ? "Editing" : `${editCreditEstimate} cr`}</span><span className="grid h-7 w-7 place-items-center rounded-full bg-white/15 text-lg transition group-hover:translate-x-1">→</span></button></div>
+          <div onMouseEnter={() => setEditPanelOpen(true)} onMouseLeave={() => setEditPanelOpen(false)} className="rounded-[2rem] border border-white/25 bg-white/[0.035] p-3 shadow-2xl shadow-purple-950/25 backdrop-blur-2xl">
+            <div className="relative overflow-hidden rounded-[1.45rem] bg-black/45">
+              {selectedPendingEdit ? (
+                <div className="grid min-h-[460px] place-items-center"><div className="text-center"><div className="mx-auto h-16 w-16 animate-spin rounded-full border-2 border-purple-300/20 border-t-purple-200" /><p className="mt-5 text-base font-black text-white">Editing image...</p><p className="mt-2 text-sm font-semibold text-slate-400">{progressLabel}</p></div></div>
+              ) : selectedImage ? (
+                <img src={selectedImage.dataUrl} alt={`Selected image ${selectedImage.index}`} className={`max-h-[620px] w-full object-contain transition-all duration-[1400ms] ease-out ${revealReady ? "scale-100 blur-0 opacity-100" : "scale-[1.035] blur-2xl opacity-55"}`} />
+              ) : null}
+              {editing && !selectedPendingEdit ? <span className="absolute right-4 top-4 rounded-full border border-white/15 bg-black/60 px-3 py-1.5 text-xs font-black text-white backdrop-blur-xl">{progressLabel}</span> : null}
             </div>
-            {(upscaled[String(selectedImage.index)] || []).length ? <div className="mt-4 space-y-3 rounded-2xl border border-white/10 bg-black/35 p-3">{(upscaled[String(selectedImage.index)] || []).map((item) => <div key={item.target} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.035] p-3"><div><p className="text-sm font-black text-white">Upscaled {item.target.toUpperCase()}</p><p className="text-xs font-semibold text-slate-400">{item.creditsCharged ?? UPSCALE_CREDITS[item.target]} credits charged</p></div><button type="button" onClick={() => downloadDataUrl(item.dataUrl, item.filename)} className="rounded-full border border-purple-300/20 bg-purple-400/10 px-4 py-2 text-xs font-black text-purple-100 transition hover:bg-purple-400/20">Download upscale</button></div>)}</div> : null}
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 px-1"><div><p className="text-sm font-black text-white">{selectedPendingEdit ? `Editing image ${selectedPendingEdit.sourceIndex}` : selectedImage ? `Selected image ${selectedImage.index}` : "Selected image"}</p><p className="text-xs font-semibold text-slate-400">{selectedPendingEdit ? "Loading preview" : selectedImage?.kind === "edited" ? `Consistent edit from image ${selectedImage.parentIndex}` : selectedImage?.kind === "upscaled" ? `Upscaled from image ${selectedImage.parentIndex}` : "Hover the image to edit"}</p></div>{selectedImage ? imageActions(selectedImage) : null}</div>
+            {selectedImage ? (
+              <div className={`overflow-visible rounded-[1.6rem] border border-white/30 bg-white/[0.035] backdrop-blur-2xl transition-all duration-500 ease-[cubic-bezier(.16,1,.3,1)] ${editPanelOpen ? "mt-4 max-h-[460px] translate-y-0 opacity-100" : "mt-0 max-h-0 -translate-y-3 opacity-0 pointer-events-none"}`}>
+                <textarea value={editPrompt} onChange={(event) => setEditPrompt(event.target.value)} placeholder="What do you want to change? Character consistency stays locked to the selected image." className="min-h-[110px] w-full resize-none bg-transparent px-5 py-4 text-base font-semibold leading-7 text-white outline-none placeholder:text-slate-500" />
+                <div className="mx-5 h-px bg-white/15" />
+                <div className="flex flex-col gap-3 px-3 py-3 sm:flex-row sm:items-center sm:justify-between"><div className="flex flex-wrap items-center gap-y-3"><ImageComposerDropdown label="Model" value={model} options={MODEL_OPTIONS} onChange={(value) => setModel(value as ImageModelKey)} /><VerticalDivider /><ImageComposerDropdown label="Resolution" value={resolution} options={RESOLUTION_OPTIONS} onChange={(value) => setResolution(value as ImageResolution)} /><VerticalDivider /><ImageComposerDropdown label="Ratio" value={aspectRatio} options={ASPECT_OPTIONS} onChange={(value) => setAspectRatio(value as ImageAspectRatio)} /><VerticalDivider /><ImageComposerDropdown label="Style" value={style} options={STYLE_OPTIONS} onChange={setStyle} /></div><button type="button" onClick={makeConsistentEdit} disabled={!canEdit} className="group flex h-12 shrink-0 items-center justify-center gap-2 rounded-full border border-white/20 bg-white/[0.09] px-5 text-sm font-black text-white backdrop-blur-xl transition hover:bg-white/[0.14] disabled:cursor-not-allowed disabled:opacity-50"><span>{editing ? "Editing" : `${editCreditEstimate} cr`}</span><span className="grid h-7 w-7 place-items-center rounded-full bg-white/15 text-lg transition group-hover:translate-x-1">→</span></button></div>
+              </div>
+            ) : null}
+            {selectedImage && (upscaled[String(selectedImage.index)] || []).length ? <div className="mt-4 space-y-3 rounded-2xl border border-white/10 bg-black/35 p-3">{(upscaled[String(selectedImage.index)] || []).map((item) => <div key={item.target} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.035] p-3"><div><p className="text-sm font-black text-white">Upscaled {item.target.toUpperCase()}</p><p className="text-xs font-semibold text-slate-400">{item.width && item.height ? `${item.width}×${item.height} · ` : ""}{item.creditsCharged ?? UPSCALE_CREDITS[item.target]} credits charged</p></div><button type="button" onClick={() => downloadDataUrl(item.dataUrl, item.filename)} className="rounded-full border border-purple-300/20 bg-purple-400/10 px-4 py-2 text-xs font-black text-purple-100 transition hover:bg-purple-400/20">Download upscale</button></div>)}</div> : null}
           </div>
-          <div className="space-y-3"><p className="px-1 text-xs font-black uppercase tracking-[0.24em] text-purple-200/80">Session images</p>{images.map((image) => <button key={image.index} type="button" onClick={() => setSelectedIndex(image.index)} className={`block w-full overflow-hidden rounded-2xl border p-1 text-left transition ${selectedIndex === image.index ? "border-white/70 bg-white/[0.08]" : "border-white/10 bg-white/[0.03] hover:border-purple-300/35 hover:bg-white/[0.06]"}`}><img src={image.dataUrl} alt={`Thumbnail ${image.index}`} className="aspect-square w-full rounded-xl object-cover" /><span className="mt-2 block px-1 pb-1 text-xs font-black text-white">{image.kind === "edited" ? `Edit ${image.index}` : `Image ${image.index}`}</span></button>)}</div>
+          <div className="space-y-3"><p className="px-1 text-xs font-black uppercase tracking-[0.24em] text-purple-200/80">Session images</p>{images.map((image) => <button key={image.index} type="button" onClick={() => setSelectedIndex(image.index)} className={`block w-full overflow-hidden rounded-2xl border p-1 text-left transition ${selectedIndex === image.index ? "border-white/70 bg-white/[0.08]" : "border-white/10 bg-white/[0.03] hover:border-purple-300/35 hover:bg-white/[0.06]"}`}><img src={image.dataUrl} alt={`Thumbnail ${image.index}`} className="aspect-square w-full rounded-xl object-cover" /><span className="mt-2 block px-1 pb-1 text-xs font-black text-white">{image.kind === "edited" ? `Edit ${image.index}` : image.kind === "upscaled" ? `${image.width && image.height ? `${image.width}×${image.height}` : "Upscaled"}` : `Image ${image.index}`}</span></button>)}{pendingEdit ? <button type="button" onClick={() => setSelectedIndex(pendingEdit.index)} className={`block w-full overflow-hidden rounded-2xl border p-1 text-left transition ${selectedIndex === pendingEdit.index ? "border-white/70 bg-white/[0.08]" : "border-white/10 bg-white/[0.03]"}`}><LoadingTile label="Editing" /><span className="mt-2 block px-1 pb-1 text-xs font-black text-white">Edit loading</span></button> : null}</div>
         </div>
       ) : null}
     </div>
