@@ -1,4 +1,5 @@
 import sharp from "sharp";
+import { getImageDimensions, type ImageAspectRatio, type ImageResolution } from "./image-models";
 
 export type OutputPolishMode = "generate" | "edit";
 
@@ -24,7 +25,11 @@ function parseImageDataUrl(dataUrl: string) {
   };
 }
 
-export async function polishImageDataUrl(dataUrl: string, mode: OutputPolishMode): Promise<PolishedImageDataUrl> {
+export async function polishImageDataUrl(
+  dataUrl: string,
+  mode: OutputPolishMode,
+  target?: { resolution: ImageResolution; aspectRatio: ImageAspectRatio }
+): Promise<PolishedImageDataUrl> {
   const parsed = parseImageDataUrl(dataUrl);
 
   if (!parsed || !parsed.buffer.length) {
@@ -36,8 +41,20 @@ export async function polishImageDataUrl(dataUrl: string, mode: OutputPolishMode
       ? { sigma: 0.35, m1: 0.35, m2: 1.1 }
       : { sigma: 0.45, m1: 0.45, m2: 1.35 };
 
-    const { data, info } = await sharp(parsed.buffer)
-      .rotate()
+    let pipeline = sharp(parsed.buffer).rotate();
+
+    if (target) {
+      const { width, height } = getImageDimensions(target.resolution, target.aspectRatio);
+      pipeline = pipeline.resize({
+        width,
+        height,
+        fit: "cover",
+        position: sharp.strategy.attention,
+        withoutEnlargement: false,
+      });
+    }
+
+    const { data, info } = await pipeline
       .sharpen(sharpen)
       .png({ compressionLevel: 9, adaptiveFiltering: true })
       .toBuffer({ resolveWithObject: true });
