@@ -84,6 +84,23 @@ function LoadingTile({ label }: { label: string }) {
   );
 }
 
+function GradientArrowButton({ children, disabled, onClick, ariaLabel }: { children: React.ReactNode; disabled?: boolean; onClick: () => void; ariaLabel?: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={ariaLabel}
+      className="group relative flex h-14 shrink-0 items-center justify-center gap-4 overflow-hidden rounded-full border border-indigo-200/25 px-7 text-base font-black text-white shadow-2xl shadow-purple-950/40 transition hover:scale-[1.015] disabled:cursor-not-allowed disabled:opacity-50"
+      style={{ backgroundImage: "linear-gradient(120deg,#4f46e5,#7c3aed,#c026d3,#4f46e5)", backgroundSize: "240% 240%", animation: "abcImageGradientMove 5.5s ease infinite" }}
+    >
+      <span className="pointer-events-none absolute inset-0 bg-white/10 opacity-0 transition group-hover:opacity-100" />
+      <span className="relative z-10">{children}</span>
+      <span className="relative z-10 text-2xl leading-none transition-transform group-hover:translate-x-1">→</span>
+    </button>
+  );
+}
+
 export function ImageTextToImagePanel() {
   const [prompt, setPrompt] = useState("");
   const [negativePrompt, setNegativePrompt] = useState("");
@@ -285,6 +302,7 @@ export function ImageTextToImagePanel() {
 
   return (
     <div className="space-y-10">
+      <style>{`@keyframes abcImageGradientMove{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}`}</style>
       <div className="mx-auto max-w-6xl overflow-visible rounded-[2rem] border border-white/55 bg-white/[0.035] shadow-2xl shadow-purple-950/20 backdrop-blur-2xl">
         <div className="px-6 pt-6 sm:px-8 sm:pt-8">
           <div className="mb-4 flex items-center justify-between gap-4">
@@ -315,7 +333,7 @@ export function ImageTextToImagePanel() {
             <VerticalDivider />
             <ImageComposerDropdown label="Style" value={style} options={STYLE_OPTIONS} onChange={setStyle} />
           </div>
-          <button type="button" onClick={generate} disabled={!canGenerate} className="group flex h-14 shrink-0 items-center justify-center gap-3 rounded-full border border-white/20 bg-white/[0.09] px-6 text-base font-black text-white backdrop-blur-xl transition hover:bg-white/[0.14] disabled:cursor-not-allowed disabled:opacity-50" aria-label="Generate image"><span>{loading ? "Generating" : "Generate"}</span><span className="grid h-9 w-9 place-items-center rounded-full bg-white/15 text-xl transition group-hover:translate-x-1">→</span></button>
+          <GradientArrowButton onClick={generate} disabled={!canGenerate} ariaLabel="Generate image">{loading ? "Generating" : "Generate"}</GradientArrowButton>
         </div>
       </div>
 
@@ -349,7 +367,7 @@ export function ImageTextToImagePanel() {
               <div className={`overflow-visible rounded-[1.6rem] border border-white/30 bg-white/[0.035] backdrop-blur-2xl transition-all duration-500 ease-[cubic-bezier(.16,1,.3,1)] ${editPanelOpen ? "mt-4 max-h-[460px] translate-y-0 opacity-100" : "mt-0 max-h-0 -translate-y-3 opacity-0 pointer-events-none"}`}>
                 <textarea value={editPrompt} onChange={(event) => setEditPrompt(event.target.value)} placeholder="What do you want to change? Character consistency stays locked to the selected image." className="min-h-[110px] w-full resize-none bg-transparent px-5 py-4 text-base font-semibold leading-7 text-white outline-none placeholder:text-slate-500" />
                 <div className="mx-5 h-px bg-white/15" />
-                <div className="flex flex-col gap-3 px-3 py-3 sm:flex-row sm:items-center sm:justify-between"><div className="flex flex-wrap items-center gap-y-3"><ImageComposerDropdown label="Model" value={model} options={MODEL_OPTIONS} onChange={(value) => setModel(value as ImageModelKey)} /><VerticalDivider /><ImageComposerDropdown label="Resolution" value={resolution} options={RESOLUTION_OPTIONS} onChange={(value) => setResolution(value as ImageResolution)} /><VerticalDivider /><ImageComposerDropdown label="Ratio" value={aspectRatio} options={ASPECT_OPTIONS} onChange={(value) => setAspectRatio(value as ImageAspectRatio)} /><VerticalDivider /><ImageComposerDropdown label="Style" value={style} options={STYLE_OPTIONS} onChange={setStyle} /></div><button type="button" onClick={makeConsistentEdit} disabled={!canEdit} className="group flex h-12 shrink-0 items-center justify-center gap-2 rounded-full border border-white/20 bg-white/[0.09] px-5 text-sm font-black text-white backdrop-blur-xl transition hover:bg-white/[0.14] disabled:cursor-not-allowed disabled:opacity-50"><span>{editing ? "Editing" : `${editCreditEstimate} cr`}</span><span className="grid h-7 w-7 place-items-center rounded-full bg-white/15 text-lg transition group-hover:translate-x-1">→</span></button></div>
+                <div className="flex flex-col gap-3 px-3 py-3 sm:flex-row sm:items-center sm:justify-between"><div className="flex flex-wrap items-center gap-y-3"><ImageComposerDropdown label="Model" value={model} options={MODEL_OPTIONS} onChange={(value) => setModel(value as ImageModelKey)} /><VerticalDivider /><ImageComposerDropdown label="Resolution" value={resolution} options={RESOLUTION_OPTIONS} onChange={(value) => setResolution(value as ImageResolution)} /><VerticalDivider /><ImageComposerDropdown label="Ratio" value={aspectRatio} options={ASPECT_OPTIONS} onChange={(value) => setAspectRatio(value as ImageAspectRatio)} /><VerticalDivider /><ImageComposerDropdown label="Style" value={style} options={STYLE_OPTIONS} onChange={setStyle} /></div><GradientArrowButton onClick={makeConsistentEdit} disabled={!canEdit}>{editing ? "Editing" : `${editCreditEstimate} cr`}</GradientArrowButton></div>
               </div>
             ) : null}
             {selectedImage && (upscaled[String(selectedImage.index)] || []).length ? <div className="mt-4 space-y-3 rounded-2xl border border-white/10 bg-black/35 p-3">{(upscaled[String(selectedImage.index)] || []).map((item) => <div key={item.target} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.035] p-3"><div><p className="text-sm font-black text-white">Upscaled {item.target.toUpperCase()}</p><p className="text-xs font-semibold text-slate-400">{item.width && item.height ? `${item.width}×${item.height} · ` : ""}{item.creditsCharged ?? UPSCALE_CREDITS[item.target]} credits charged</p></div><button type="button" onClick={() => downloadDataUrl(item.dataUrl, item.filename)} className="rounded-full border border-purple-300/20 bg-purple-400/10 px-4 py-2 text-xs font-black text-purple-100 transition hover:bg-purple-400/20">Download upscale</button></div>)}</div> : null}
