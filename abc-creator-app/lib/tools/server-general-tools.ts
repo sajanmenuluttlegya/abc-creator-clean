@@ -90,11 +90,14 @@ Strict prompt generator rules:
 - No package title, no strategy, no variations, no variables, no checklist, no notes, no explanation, no safety section, no table.
 - Do not use headings such as AI Prompt Package, Prompt Strategy, Main Copy-Ready Prompt, Prompt Variations, Variables to Customize, Quality Checklist, Best Use Notes, or Avoid Notes.
 - Do not mention image upload, image addition, hover controls, generated images, or visual blocks.
-- If the selected type is image generation prompt, return only the actual image prompt to paste into an image model.
+- Do not put the entire prompt on one long line.
+- Do not wrap the prompt in a fenced code block.
+- Format the final prompt with natural line breaks and short readable paragraphs.
+- If the selected type is image generation prompt, return only the actual image prompt to paste into an image model, formatted as readable multiline text.
 - Make the prompt detailed only when the selected depth asks for detail, but still return a single prompt, not a prompt package.
 - Respect the target AI/platform, audience, tone, output format, constraints, and language from the user's form.`,
     outputGuide:
-      "Return only the final prompt text. Prefer a single fenced code block containing the prompt and nothing else. Do not add a title, intro sentence, table, checklist, variations, variables, notes, or explanation.",
+      "Return only the final prompt text. Do not use a fenced code block. Do not output one long single line. Split the prompt into short readable paragraphs or compact bullet-style instruction lines so it is easy to read and copy. Do not add a title, intro sentence, table, checklist, variations, variables, notes, or explanation.",
   },
   "ai-paraphrasing-tool": {
     creditCost: 2,
