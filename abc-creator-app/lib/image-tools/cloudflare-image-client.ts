@@ -1,4 +1,6 @@
+import { ALL_CLOUDFLARE_KEYS_EXHAUSTED_MESSAGE, isCloudflareKeyExhausted, shouldRotateCloudflareCredential } from "./cloudflare-failover";
 import { getActiveCloudflareAICredentials, type CloudflareAICredential } from "./cloudflare-credentials";
+import { polishImageDataUrl } from "./image-output-polish";
 import {
   getImageDimensions,
   IMAGE_MODEL_OPTIONS,
@@ -42,8 +44,7 @@ const MODEL_REQUEST_FORMAT: Record<ImageModelKey, RequestFormat> = {
   M6: "json-flux1",
 };
 
-const PROVIDER_REFUSAL_MESSAGE = "The image provider rejected this prompt or reference image combination. Try a different prompt, a different reference image, or remove sensitive wording.";
-const ALL_KEYS_EXHAUSTED_MESSAGE = "All active Cloudflare AI keys have reached their daily image allocation. The system tried the available keys, but none had capacity left. Add more active keys, wait for Cloudflare's daily reset, or upgrade the exhausted Cloudflare accounts.";
+const PROVIDER_REFUSAL_MESSAGE = "The image provider rejected this prompt or reference image combination. Try a different prompt, a different reference image, or a simpler wording.";
 
 export function getEffectiveEditModel(requestedModel: ImageModelKey): ImageModelKey {
   return requestedModel === "M1" || requestedModel === "M2" ? requestedModel : "M2";
@@ -51,16 +52,6 @@ export function getEffectiveEditModel(requestedModel: ImageModelKey): ImageModel
 
 function isProviderRefusal(message: string) {
   return /flagged|policy|blocked|choose another prompt|input image combination|output has been/i.test(message);
-}
-
-function isKeyExhausted(message: string, status: number) {
-  return status === 429 || /daily\s+free\s+allocation|used\s+up.*allocation|10,?000\s+neurons|workers\s+paid\s+plan|quota\s+exceeded|rate\s*limit|too\s+many\s+requests|capacity/i.test(message);
-}
-
-function shouldTryNextKey(status: number, providerRefused = false, keyExhausted = false) {
-  if (keyExhausted) return true;
-  if (providerRefused) return false;
-  return status === 0 || status === 408 || status === 409 || status === 425 || status === 429 || status >= 500;
 }
 
 function timeoutSignal(timeoutMs: number) {
@@ -131,7 +122,7 @@ function buildRequestFields(input: GenerateImageInput) {
     if (negativePrompt) fields.negative_prompt = negativePrompt;
     if (seed !== null) fields.seed = seed;
   } else {
-    fields = { prompt, steps: Math.min(Math.max(steps, 1), 8) };
+    fields = { prompt, width, height, steps: Math.min(Math.max(steps, 1), 8) };
     if (seed !== null) fields.seed = seed;
   }
 
@@ -166,7 +157,7 @@ async function parseCloudflareResponse(res: Response): Promise<ParsedResponse> {
     const buffer = Buffer.from(await res.arrayBuffer());
     if (!res.ok || !buffer.length) {
       const rawError = `Cloudflare image generation failed with HTTP ${res.status}`;
-      const keyExhausted = isKeyExhausted(rawError, res.status);
+      const keyExhausted = isCloudflareKeyExhausted(rawError, res.status);
       return { ok: false, error: rawError, keyExhausted };
     }
     return { ok: true, dataUrl: `data:${contentType};base64,${buffer.toString("base64")}` };
@@ -176,7 +167,7 @@ async function parseCloudflareResponse(res: Response): Promise<ParsedResponse> {
   const imageBase64 = data?.result?.image || data?.image || "";
   if (!res.ok || !data?.success || !imageBase64) {
     const rawError = cloudflareErrorMessage(data, res.status);
-    const keyExhausted = isKeyExhausted(rawError, res.status);
+    const keyExhausted = isCloudflareKeyExhausted(rawError, res.status);
     const providerRefused = !keyExhausted && isProviderRefusal(rawError);
     return { ok: false, error: providerRefused ? PROVIDER_REFUSAL_MESSAGE : rawError, providerRefused, keyExhausted };
   }
@@ -203,7 +194,7 @@ async function callCloudflareOnce(credential: CloudflareAICredential, input: Gen
     if (!parsed.ok) {
       return {
         ok: false as const,
-        tryNext: shouldTryNextKey(res.status, parsed.providerRefused, parsed.keyExhausted),
+        tryNext: shouldRotateCloudflareCredential(res.status, parsed.error, parsed.providerRefused),
         providerRefused: parsed.providerRefused || false,
         keyExhausted: parsed.keyExhausted || false,
         status: res.status,
@@ -211,14 +202,26 @@ async function callCloudflareOnce(credential: CloudflareAICredential, input: Gen
       };
     }
 
-    return { ok: true as const, dataUrl: parsed.dataUrl, modelId: model.modelId, credentialSlot: credential.key_slot, width, height };
+    const polished = await polishImageDataUrl(parsed.dataUrl, input.operation === "edit" ? "edit" : "generate", {
+      resolution: input.resolution,
+      aspectRatio: input.aspectRatio,
+    });
+
+    return {
+      ok: true as const,
+      dataUrl: polished.dataUrl,
+      modelId: model.modelId,
+      credentialSlot: credential.key_slot,
+      width: polished.width ?? width,
+      height: polished.height ?? height,
+    };
   } catch (error) {
     const isTimeout = error instanceof Error && error.name === "AbortError";
     const message = isTimeout ? `Cloudflare request timed out after ${credential.timeout_ms || 90000}ms.` : error instanceof Error ? error.message : String(error);
-    const keyExhausted = isKeyExhausted(message, 0);
+    const keyExhausted = isCloudflareKeyExhausted(message, 0);
     return {
       ok: false as const,
-      tryNext: true,
+      tryNext: shouldRotateCloudflareCredential(0, message),
       providerRefused: false,
       keyExhausted,
       status: 0,
@@ -242,7 +245,7 @@ export async function generateCloudflareImageWithManualFailover(input: GenerateI
 
     if (result.keyExhausted) {
       exhaustedKeys += 1;
-      failures.push(`Key slot ${credential.key_slot}: daily allocation exhausted`);
+      failures.push(`Key slot ${credential.key_slot}: daily allocation exhausted or busy`);
       continue;
     }
 
@@ -253,7 +256,7 @@ export async function generateCloudflareImageWithManualFailover(input: GenerateI
   }
 
   if (exhaustedKeys > 0 && exhaustedKeys === credentials.length) {
-    throw new Error(ALL_KEYS_EXHAUSTED_MESSAGE);
+    throw new Error(ALL_CLOUDFLARE_KEYS_EXHAUSTED_MESSAGE);
   }
 
   throw new Error(`Image generation failed after rotating Cloudflare keys. ${failures.join(" | ")}`);
