@@ -14,9 +14,13 @@ function parseImageDataUrl(dataUrl: string) {
   const match = /^data:(image\/(?:png|jpeg|jpg|webp));base64,(.+)$/i.exec(dataUrl.trim());
   if (!match) return null;
 
+  const mimeType = match[1] || "image/png";
+  const base64 = match[2] || "";
+  if (!base64) return null;
+
   return {
-    mimeType: match[1].toLowerCase(),
-    buffer: Buffer.from(match[2], "base64"),
+    mimeType: mimeType.toLowerCase(),
+    buffer: Buffer.from(base64, "base64"),
   };
 }
 
@@ -35,7 +39,7 @@ export async function polishImageDataUrl(dataUrl: string, mode: OutputPolishMode
     const { data, info } = await sharp(parsed.buffer)
       .rotate()
       .sharpen(sharpen)
-      .png({ compressionLevel: 9, adaptiveFiltering: true, effort: 7 })
+      .png({ compressionLevel: 9, adaptiveFiltering: true })
       .toBuffer({ resolveWithObject: true });
 
     return {
