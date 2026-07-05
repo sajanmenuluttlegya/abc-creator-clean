@@ -67,6 +67,14 @@ function resizeForLongSide(width: number | undefined, height: number | undefined
   return { height: longSide };
 }
 
+function normalizeFileStem(value: string) {
+  return value
+    .replace(/\.[^.]+$/, "")
+    .replace(/[^a-z0-9-]+/gi, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 70) || "image";
+}
+
 export async function POST(req: NextRequest) {
   let reservedTransactionId: string | null = null;
   let supabase: Awaited<ReturnType<typeof createClient>> | null = null;
@@ -99,6 +107,7 @@ export async function POST(req: NextRequest) {
     const contentType = req.headers.get("content-type") || "";
     let imageBuffer: Buffer;
     let target: UpscaleTarget;
+    let sourceName = "image";
 
     if (contentType.includes("multipart/form-data")) {
       const formData = await req.formData();
@@ -113,6 +122,7 @@ export async function POST(req: NextRequest) {
         return Response.json({ ok: false, error: "Image is too large. Upload an image under 12 MB." }, { status: 400 });
       }
 
+      sourceName = normalizeFileStem(upload.name || "image");
       imageBuffer = Buffer.from(await upload.arrayBuffer());
     } else {
       const body = (await req.json()) as UpscaleBody;
@@ -161,24 +171,28 @@ export async function POST(req: NextRequest) {
       return Response.json({ ok: false, error: "Credit reservation failed.", code: "CREDIT_RESERVATION_MISSING_ID" }, { status: 500 });
     }
 
-    const metadata = await sharp(imageBuffer).metadata();
+    const metadata = await sharp(imageBuffer, { failOnError: false }).rotate().metadata();
     const longSide = UPSCALE_LONG_SIDE[target];
     const resize = resizeForLongSide(metadata.width, metadata.height, longSide);
 
-    const outputBuffer = await sharp(imageBuffer)
+    const outputBuffer = await sharp(imageBuffer, { failOnError: false })
+      .rotate()
       .resize({
         ...resize,
         fit: "inside",
         withoutEnlargement: false,
         kernel: sharp.kernel.lanczos3,
       })
-      .png({ quality: 100, compressionLevel: 9 })
+      .sharpen({ sigma: 1, m1: 0.4, m2: 0.8 })
+      .webp({ quality: 96, smartSubsample: true })
       .toBuffer();
+
+    const outputMetadata = await sharp(outputBuffer).metadata();
 
     const spendResponse = await supabase.rpc("spend_reserved_credits", {
       p_transaction_id: reservedTransactionId,
-      p_provider: "image:upscale:sharp",
-      p_model: `sharp-lanczos3-${target}`,
+      p_provider: "image:upscale:sharp-lanczos3-webp",
+      p_model: `sharp-lanczos3-${target}-${outputMetadata.width || longSide}x${outputMetadata.height || longSide}`,
     });
 
     if (spendResponse.error) {
@@ -205,9 +219,11 @@ export async function POST(req: NextRequest) {
       target,
       creditsCharged: requiredCredits,
       image: {
-        dataUrl: `data:image/png;base64,${outputBuffer.toString("base64")}`,
-        mimeType: "image/png",
-        filename: `upscaled-${target}.png`,
+        dataUrl: `data:image/webp;base64,${outputBuffer.toString("base64")}`,
+        mimeType: "image/webp",
+        filename: `${sourceName}-upscaled-${target}-${outputMetadata.width || longSide}x${outputMetadata.height || longSide}.webp`,
+        width: outputMetadata.width,
+        height: outputMetadata.height,
       },
     });
   } catch (error) {
