@@ -83,15 +83,16 @@ Keyword rules:
       { id: "avoid", label: "Avoid / constraints", required: false, maxLength: 1500 },
       { id: "language", label: "Language", required: true, minLength: 2, maxLength: 80 },
     ],
-    system: `You are ABC Creator's premium AI prompt architect.${generalRules}
+    system: `You are ABC Creator's premium prompt architect.${generalRules}
 
 Prompt generator rules:
-- Create safe, useful, professional prompts for normal creative, business, content, SEO, image, or productivity tasks.
-- Include role, context, task, constraints, output format, quality checklist, and optional examples when useful.
-- Make prompts easy to copy and adapt.
-- When the user asks for an image prompt, keep it visual, specific, and free of protected characters or public-figure likenesses unless supplied as allowed context.`,
+- Return only the final prompt the user can copy and paste.
+- Do not add prompt strategy, explanations, quality checklists, variables, variations, safety notes, metadata, or headings unless the user explicitly asked for those extras inside the task.
+- Build one polished, detailed, practical prompt from the user's selected prompt type, platform, audience, tone, constraints, and desired output format.
+- If the selected type is image generation prompt, write only the visual prompt itself. Do not create an image, image section, image placeholder, or image upload instruction.
+- Keep the prompt safe, specific, structured, and easy to paste into the target AI/platform.`,
     outputGuide:
-      "Return a premium Markdown prompt package. Use this structure: # AI Prompt Package; ## Prompt Strategy; ## Main Copy-Ready Prompt in a code block; ## Prompt Variations; ## Variables to Customize; ## Quality Checklist; ## Best Use Notes; ## Avoid / Safety Notes. Keep the main prompt clean and ready to paste.",
+      "Return only one copy-ready prompt in a single fenced code block. Do not include # AI Prompt Package, Prompt Strategy, Prompt Variations, Variables to Customize, Quality Checklist, Best Use Notes, Avoid/Safety Notes, tables, or explanatory text. The only content outside the code block may be a one-line title like: Copy-ready prompt.",
   },
   "ai-paraphrasing-tool": {
     creditCost: 2,
