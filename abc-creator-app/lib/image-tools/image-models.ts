@@ -85,47 +85,55 @@ export const IMAGE_MODEL_OPTIONS: Record<ImageModelKey, {
   },
 };
 
-const RESOLUTION_LONG_SIDE: Record<ImageResolution, number> = {
-  "360p": 360,
-  "480p": 480,
-  "720p": 720,
-  "1080p": 1024,
-};
-
-const ASPECT_RATIO_NUMBERS: Record<ImageAspectRatio, [number, number]> = {
-  "1:1": [1, 1],
-  "16:9": [16, 9],
-  "9:16": [9, 16],
-  "4:5": [4, 5],
-  "3:4": [3, 4],
-  "4:3": [4, 3],
-  "3:2": [3, 2],
-  "2:3": [2, 3],
-};
-
 export const IMAGE_MODEL_KEYS = Object.keys(IMAGE_MODEL_OPTIONS) as ImageModelKey[];
 export const IMAGE_RESOLUTIONS: ImageResolution[] = ["360p", "480p", "720p", "1080p"];
 export const IMAGE_ASPECT_RATIOS: ImageAspectRatio[] = ["1:1", "16:9", "9:16", "4:5", "3:4", "4:3", "3:2", "2:3"];
 
-function roundToMultipleOf8(value: number) {
-  return Math.max(64, Math.round(value / 8) * 8);
-}
+export const IMAGE_DIMENSIONS: Record<ImageResolution, Record<ImageAspectRatio, { width: number; height: number }>> = {
+  "360p": {
+    "16:9": { width: 640, height: 360 },
+    "9:16": { width: 360, height: 640 },
+    "1:1": { width: 640, height: 640 },
+    "4:5": { width: 512, height: 640 },
+    "3:4": { width: 480, height: 640 },
+    "4:3": { width: 640, height: 480 },
+    "3:2": { width: 640, height: 424 },
+    "2:3": { width: 424, height: 640 },
+  },
+  "480p": {
+    "16:9": { width: 856, height: 480 },
+    "9:16": { width: 480, height: 856 },
+    "1:1": { width: 856, height: 856 },
+    "4:5": { width: 688, height: 856 },
+    "3:4": { width: 640, height: 856 },
+    "4:3": { width: 856, height: 640 },
+    "3:2": { width: 856, height: 568 },
+    "2:3": { width: 568, height: 856 },
+  },
+  "720p": {
+    "16:9": { width: 1280, height: 720 },
+    "9:16": { width: 720, height: 1280 },
+    "1:1": { width: 1280, height: 1280 },
+    "4:5": { width: 1024, height: 1280 },
+    "3:4": { width: 960, height: 1280 },
+    "4:3": { width: 1280, height: 960 },
+    "3:2": { width: 1280, height: 856 },
+    "2:3": { width: 856, height: 1280 },
+  },
+  "1080p": {
+    "16:9": { width: 1920, height: 1080 },
+    "9:16": { width: 1080, height: 1920 },
+    "1:1": { width: 1080, height: 1080 },
+    "4:5": { width: 864, height: 1080 },
+    "3:4": { width: 808, height: 1080 },
+    "4:3": { width: 1440, height: 1080 },
+    "3:2": { width: 1624, height: 1080 },
+    "2:3": { width: 1080, height: 1624 },
+  },
+};
 
 export function getImageDimensions(resolution: ImageResolution, aspectRatio: ImageAspectRatio) {
-  const longSide = RESOLUTION_LONG_SIDE[resolution];
-  const [w, h] = ASPECT_RATIO_NUMBERS[aspectRatio];
-
-  if (w >= h) {
-    return {
-      width: roundToMultipleOf8(longSide),
-      height: roundToMultipleOf8((longSide * h) / w),
-    };
-  }
-
-  return {
-    width: roundToMultipleOf8((longSide * w) / h),
-    height: roundToMultipleOf8(longSide),
-  };
+  return IMAGE_DIMENSIONS[resolution][aspectRatio];
 }
 
 export function getTextToImageCredits(model: ImageModelKey, resolution: ImageResolution, imageCount: number) {
