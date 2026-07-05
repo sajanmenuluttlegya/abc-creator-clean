@@ -6,6 +6,7 @@ import { UPSCALE_CREDITS, UPSCALE_LONG_SIDE, type UpscaleTarget } from "@/lib/im
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 300;
 
 type UpscaleBody = {
   imageDataUrl?: string;
@@ -56,23 +57,28 @@ function dataUrlToBuffer(dataUrl: string) {
   return Buffer.from(match[1], "base64");
 }
 
-function resizeForLongSide(width: number | undefined, height: number | undefined, longSide: number) {
-  const safeWidth = width || longSide;
-  const safeHeight = height || longSide;
-
-  if (safeWidth >= safeHeight) {
-    return { width: longSide };
-  }
-
-  return { height: longSide };
-}
-
 function normalizeFileStem(value: string) {
   return value
     .replace(/\.[^.]+$/, "")
     .replace(/[^a-z0-9-]+/gi, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 70) || "image";
+}
+
+function realResizeOptions(width: number, height: number, targetLongSide: number) {
+  const sourceLongSide = Math.max(width, height);
+
+  if (sourceLongSide >= targetLongSide) {
+    return null;
+  }
+
+  return width >= height
+    ? { width: targetLongSide }
+    : { height: targetLongSide };
+}
+
+function outputLongSide(width?: number, height?: number) {
+  return Math.max(width || 0, height || 0);
 }
 
 export async function POST(req: NextRequest) {
@@ -171,28 +177,45 @@ export async function POST(req: NextRequest) {
       return Response.json({ ok: false, error: "Credit reservation failed.", code: "CREDIT_RESERVATION_MISSING_ID" }, { status: 500 });
     }
 
-    const metadata = await sharp(imageBuffer, { failOnError: false }).rotate().metadata();
-    const longSide = UPSCALE_LONG_SIDE[target];
-    const resize = resizeForLongSide(metadata.width, metadata.height, longSide);
+    const rotatedInput = sharp(imageBuffer).rotate();
+    const metadata = await rotatedInput.metadata();
+    const sourceWidth = metadata.width || 0;
+    const sourceHeight = metadata.height || 0;
 
-    const outputBuffer = await sharp(imageBuffer, { failOnError: false })
-      .rotate()
-      .resize({
+    if (!sourceWidth || !sourceHeight) {
+      throw new Error("Could not read image dimensions for upscale.");
+    }
+
+    const targetLongSide = UPSCALE_LONG_SIDE[target];
+    const resize = realResizeOptions(sourceWidth, sourceHeight, targetLongSide);
+    const pipeline = sharp(imageBuffer).rotate();
+
+    if (resize) {
+      pipeline.resize({
         ...resize,
         fit: "inside",
         withoutEnlargement: false,
         kernel: sharp.kernel.lanczos3,
-      })
-      .sharpen({ sigma: 1, m1: 0.4, m2: 0.8 })
-      .webp({ quality: 96, smartSubsample: true })
+      });
+    }
+
+    const outputBuffer = await pipeline
+      .sharpen({ sigma: 1, m1: 0.35, m2: 0.85 })
+      .webp({ quality: 96, smartSubsample: true, effort: 5 })
       .toBuffer();
 
     const outputMetadata = await sharp(outputBuffer).metadata();
+    const finalLongSide = outputLongSide(outputMetadata.width, outputMetadata.height);
+    const sourceLongSide = Math.max(sourceWidth, sourceHeight);
+
+    if (sourceLongSide < targetLongSide && finalLongSide < targetLongSide) {
+      throw new Error(`Upscale validation failed. Expected long side ${targetLongSide}px, got ${finalLongSide}px.`);
+    }
 
     const spendResponse = await supabase.rpc("spend_reserved_credits", {
       p_transaction_id: reservedTransactionId,
-      p_provider: "image:upscale:sharp-lanczos3-webp",
-      p_model: `sharp-lanczos3-${target}-${outputMetadata.width || longSide}x${outputMetadata.height || longSide}`,
+      p_provider: "image:upscale:sharp-lanczos3-real-resize",
+      p_model: `sharp-lanczos3-${target}-${sourceWidth}x${sourceHeight}-to-${outputMetadata.width || targetLongSide}x${outputMetadata.height || targetLongSide}`,
     });
 
     if (spendResponse.error) {
@@ -218,10 +241,14 @@ export async function POST(req: NextRequest) {
       toolSlug: "image-upscale",
       target,
       creditsCharged: requiredCredits,
+      source: {
+        width: sourceWidth,
+        height: sourceHeight,
+      },
       image: {
         dataUrl: `data:image/webp;base64,${outputBuffer.toString("base64")}`,
         mimeType: "image/webp",
-        filename: `${sourceName}-upscaled-${target}-${outputMetadata.width || longSide}x${outputMetadata.height || longSide}.webp`,
+        filename: `${sourceName}-upscaled-${target}-${outputMetadata.width || targetLongSide}x${outputMetadata.height || targetLongSide}.webp`,
         width: outputMetadata.width,
         height: outputMetadata.height,
       },
