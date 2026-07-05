@@ -1,7 +1,11 @@
 import { NextRequest } from "next/server";
 import { randomUUID } from "crypto";
 import { createClient } from "@/lib/supabase/server";
-import { generateCloudflareImageWithManualFailover } from "@/lib/image-tools/cloudflare-image-client";
+import {
+  generateCloudflareImageWithManualFailover,
+  getEffectiveEditModel,
+} from "@/lib/image-tools/cloudflare-image-client";
+import { buildPremiumEditPrompt } from "@/lib/image-tools/edit-planner";
 import {
   getTextToImageCredits,
   IMAGE_ASPECT_RATIOS,
@@ -68,7 +72,7 @@ function userSafeProviderError(error: unknown) {
   const raw = error instanceof Error ? error.message : String(error);
   const lower = raw.toLowerCase();
 
-  if (lower.includes("flag" + "ged") || lower.includes("choose another prompt") || lower.includes("output has been")) {
+  if (lower.includes("flag" + "ged") || lower.includes("choose another prompt") || lower.includes("output has been") || lower.includes("provider rejected")) {
     return "The image provider rejected this prompt or reference image combination. Try a different prompt, a different reference image, or remove sensitive wording.";
   }
 
@@ -111,16 +115,16 @@ function parseStyle(value: unknown) {
   return (IMAGE_STYLE_OPTIONS as readonly string[]).includes(style) ? style : "";
 }
 
-function buildEditPrompt(prompt: string, editPrompt: string, hasReference: boolean) {
-  if (!hasReference) return prompt;
-
-  return [
-    "Edit the provided reference image. Do not generate a new unrelated person or scene.",
-    "Preserve the same subject, pose, camera angle, lighting, clothing, background, and composition unless the user explicitly asks to change them.",
-    "Apply only the requested local change as cleanly and realistically as possible.",
-    editPrompt ? `Requested edit: ${editPrompt}` : prompt,
-    prompt,
-  ].filter(Boolean).join("\n");
+function mergeNegativePrompts(...values: string[]) {
+  return Array.from(
+    new Set(
+      values
+        .join(", ")
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean)
+    )
+  ).join(", ");
 }
 
 export async function POST(req: NextRequest) {
@@ -155,29 +159,49 @@ export async function POST(req: NextRequest) {
     const body = (await req.json()) as TextToImageBody;
 
     const rawPrompt = cleanText(body.prompt, 4000);
-    const editPrompt = cleanText(body.editPrompt, 1200);
-    const negativePrompt = cleanText(body.negativePrompt, 1200);
+    const rawEditPrompt = cleanText(body.editPrompt, 1200);
+    const negativePromptBase = cleanText(body.negativePrompt, 1200);
     const style = parseStyle(body.style);
     const seed = cleanText(body.seed, 80);
-    const model = parseModel(body.model);
+    const requestedModel = parseModel(body.model);
     const resolution = parseResolution(body.resolution);
     const aspectRatio = parseAspectRatio(body.aspectRatio);
     const operation = body.operation === "edit" ? "edit" : "generate";
     const sourceImageDataUrl = cleanDataUrl(body.sourceImageDataUrl || body.referenceImageDataUrl);
     const hasReference = operation === "edit" && Boolean(sourceImageDataUrl);
-    const prompt = operation === "edit" ? buildEditPrompt(rawPrompt, editPrompt, hasReference) : rawPrompt;
     const imageCount = operation === "edit" ? 1 : safeImageCount(body.imageCount);
+    const effectiveModel = operation === "edit" ? getEffectiveEditModel(requestedModel) : requestedModel;
+
+    let prompt = rawPrompt;
+    let negativePrompt = negativePromptBase;
+    let editPlan = null as ReturnType<typeof buildPremiumEditPrompt>["plan"] | null;
+
+    if (operation === "edit") {
+      const premiumEdit = buildPremiumEditPrompt({
+        originalPrompt: rawPrompt,
+        userEditPrompt: rawEditPrompt || rawPrompt,
+        hasReferenceImage: hasReference,
+      });
+
+      prompt = premiumEdit.prompt;
+      negativePrompt = mergeNegativePrompts(negativePromptBase, premiumEdit.negativePrompt);
+      editPlan = premiumEdit.plan;
+    }
 
     if (prompt.length < 6) {
       return Response.json({ ok: false, error: "Prompt must be at least 6 characters.", code: "PROMPT_REQUIRED" }, { status: 400 });
     }
 
-    const requiredCredits = getTextToImageCredits(model, resolution, imageCount);
+    if (operation === "edit" && !hasReference) {
+      return Response.json({ ok: false, error: "Select a source image before editing.", code: "REFERENCE_IMAGE_REQUIRED" }, { status: 400 });
+    }
+
+    const requiredCredits = getTextToImageCredits(effectiveModel, resolution, imageCount);
 
     const reserveResponse = await supabase.rpc("reserve_credits", {
       p_tool_slug: "text-to-image-generator",
       p_amount: requiredCredits,
-      p_idempotency_key: `${user.id}:text-to-image-generator:${operation}:${model}:${resolution}:${randomUUID()}`,
+      p_idempotency_key: `${user.id}:text-to-image-generator:${operation}:${requestedModel}->${effectiveModel}:${resolution}:${randomUUID()}`,
     });
 
     if (reserveResponse.error) {
@@ -214,7 +238,7 @@ export async function POST(req: NextRequest) {
       const result = await generateCloudflareImageWithManualFailover({
         prompt,
         negativePrompt,
-        model,
+        model: effectiveModel,
         resolution,
         aspectRatio,
         style,
@@ -227,10 +251,12 @@ export async function POST(req: NextRequest) {
       images.push({
         index: index + 1,
         dataUrl: result.dataUrl,
-        filename: operation === "edit" ? `image-edit-${model}-${resolution}-${index + 1}.png` : `text-to-image-${model}-${resolution}-${index + 1}.png`,
+        filename: operation === "edit" ? `image-edit-${effectiveModel}-${resolution}-${index + 1}.png` : `text-to-image-${effectiveModel}-${resolution}-${index + 1}.png`,
         provider: "cloudflare-workers-ai",
         model: result.modelId,
-        modelLabel: model,
+        modelLabel: effectiveModel,
+        requestedModel,
+        modelUsed: effectiveModel,
         credentialSlot: result.credentialSlot,
         width: result.width,
         height: result.height,
@@ -239,8 +265,8 @@ export async function POST(req: NextRequest) {
 
     const spendResponse = await supabase.rpc("spend_reserved_credits", {
       p_transaction_id: reservedTransactionId,
-      p_provider: operation === "edit" ? "image:edit:cloudflare-workers-ai" : "image:text-to-image:cloudflare-workers-ai",
-      p_model: model,
+      p_provider: operation === "edit" ? "image:premium-edit:cloudflare-workers-ai" : "image:text-to-image:cloudflare-workers-ai",
+      p_model: operation === "edit" ? `${requestedModel}->${effectiveModel}` : effectiveModel,
     });
 
     if (spendResponse.error) {
@@ -264,7 +290,12 @@ export async function POST(req: NextRequest) {
     return Response.json({
       ok: true,
       toolSlug: "text-to-image-generator",
-      model,
+      model: requestedModel,
+      modelRequested: requestedModel,
+      modelUsed: effectiveModel,
+      effectiveModel,
+      editMode: operation === "edit" ? "premium-consistency-lock" : undefined,
+      editPlan,
       resolution,
       aspectRatio,
       style,
