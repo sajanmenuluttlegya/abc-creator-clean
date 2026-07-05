@@ -36,8 +36,9 @@ function rpcErrorMessage(error: unknown) {
 
 function dataUrlToBuffer(dataUrl: string) {
   const match = /^data:image\/(?:png|jpeg|jpg|webp);base64,(.+)$/i.exec(dataUrl.trim());
-  if (!match?.[1]) throw new Error("Invalid image data.");
-  return Buffer.from(match[1], "base64");
+  const base64 = match?.[1];
+  if (!base64) throw new Error("Invalid image data.");
+  return Buffer.from(base64, "base64");
 }
 
 function getNestedValue(value: unknown, path: string[]) {
@@ -48,7 +49,7 @@ function getNestedValue(value: unknown, path: string[]) {
 }
 
 function extractImageBufferFromJson(data: CloudflareJsonResponse | null) {
-  const candidates = [data?.image, data?.data, data?.result, getNestedValue(data, ["result", "image"]), getNestedValue(data, ["result", "data"]), getNestedValue(data, ["result", "output"]), getNestedValue(data, ["data", "image"])]
+  const candidates = [data?.image, data?.data, data?.result, getNestedValue(data, ["result", "image"]), getNestedValue(data, ["result", "data"]), getNestedValue(data, ["result", "output"]), getNestedValue(data, ["data", "image"])];
   for (const candidate of candidates) {
     if (typeof candidate === "string" && candidate.trim()) {
       const clean = candidate.trim().replace(/^data:image\/[a-z0-9.+-]+;base64,/i, "");
@@ -149,9 +150,11 @@ export async function POST(req: NextRequest) {
     const normalized = await normalizeInput(dataUrlToBuffer(body.imageDataUrl));
     const subject = await getSubjectCutout(normalized);
     const metadata = await sharp(normalized).metadata();
+    const outputWidth = metadata.width || 1024;
+    const outputHeight = metadata.height || 1024;
     const blurAmount = Math.min(28, Math.max(6, Number(body.blur) || 14));
     const blurred = await sharp(normalized).blur(blurAmount).png({ compressionLevel: 9, adaptiveFiltering: true }).toBuffer();
-    const subjectPng = await sharp(subject.buffer).resize({ width: metadata.width, height: metadata.height, fit: "fill" }).png({ compressionLevel: 9 }).toBuffer();
+    const subjectPng = await sharp(subject.buffer).resize({ width: outputWidth, height: outputHeight, fit: "fill" }).png({ compressionLevel: 9 }).toBuffer();
     const output = await sharp(blurred).composite([{ input: subjectPng, blend: "over" }]).png({ compressionLevel: 9, adaptiveFiltering: true }).toBuffer();
     const outputMetadata = await sharp(output).metadata();
 
@@ -160,7 +163,7 @@ export async function POST(req: NextRequest) {
     const spendData = spendResponse.data as CreditSpendResult | null;
     if (spendData?.ok === false) { await refundIfReserved("background_blur_spend_rejected"); return Response.json({ ok: false, error: "Could not finalize credit spend.", code: spendData.code || "SPEND_FAILED", status: spendData.status }, { status: 500 }); }
 
-    return Response.json({ ok: true, toolSlug: "background-blur", creditsCharged: requiredCredits, credentialSlot: subject.credentialSlot, image: { dataUrl: `data:image/png;base64,${output.toString("base64")}`, mimeType: "image/png", filename: `background-blur-${outputMetadata.width || metadata.width}x${outputMetadata.height || metadata.height}.png`, width: outputMetadata.width, height: outputMetadata.height } });
+    return Response.json({ ok: true, toolSlug: "background-blur", creditsCharged: requiredCredits, credentialSlot: subject.credentialSlot, image: { dataUrl: `data:image/png;base64,${output.toString("base64")}`, mimeType: "image/png", filename: `background-blur-${outputMetadata.width || outputWidth}x${outputMetadata.height || outputHeight}.png`, width: outputMetadata.width, height: outputMetadata.height } });
   } catch (error) {
     await refundIfReserved("background_blur_failed");
     return Response.json({ ok: false, error: "Failed to edit. There are too many requests at this moment.", details: error instanceof Error ? error.message : String(error) }, { status: 500 });
