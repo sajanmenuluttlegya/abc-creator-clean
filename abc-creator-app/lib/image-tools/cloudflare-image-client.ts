@@ -31,6 +31,7 @@ type CloudflareRunResult = {
 
 type RequestFormat = "multipart" | "json-flux1" | "json-leonardo-lucid" | "json-leonardo-phoenix";
 type ParsedResponse = { ok: true; dataUrl: string } | { ok: false; error: string; providerRefused?: boolean };
+type RequestPayload = { headers: HeadersInit; body: BodyInit };
 
 const MODEL_REQUEST_FORMAT: Record<ImageModelKey, RequestFormat> = {
   M1: "multipart",
@@ -68,9 +69,10 @@ function safeStyle(style: string | undefined) {
 }
 
 function buildPrompt(input: GenerateImageInput) {
+  const style = safeStyle(input.style);
   return [
     input.prompt.trim(),
-    safeStyle(input.style) ? `Style: ${safeStyle(input.style)}` : "",
+    style ? `Style: ${style}` : "",
     input.negativePrompt?.trim() ? `Avoid: ${input.negativePrompt.trim()}` : "",
   ].filter(Boolean).join("\n");
 }
@@ -130,7 +132,7 @@ function buildRequestFields(input: GenerateImageInput) {
   return { fields, width, height, model, format };
 }
 
-function buildRequestPayload(format: RequestFormat, fields: Record<string, string | number>, input: GenerateImageInput) {
+function buildRequestPayload(format: RequestFormat, fields: Record<string, string | number>, input: GenerateImageInput): RequestPayload {
   if (format !== "multipart") {
     return { headers: { "Content-Type": "application/json" }, body: JSON.stringify(fields) };
   }
@@ -175,11 +177,13 @@ async function callCloudflareOnce(credential: CloudflareAICredential, input: Gen
   const { fields, width, height, model, format } = buildRequestFields(input);
   const requestPayload = buildRequestPayload(format, fields, input);
   const { controller, timer } = timeoutSignal(credential.timeout_ms || 90000);
+  const headers = new Headers(requestPayload.headers);
+  headers.set("Authorization", `Bearer ${credential.api_token}`);
 
   try {
     const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${credential.account_id}/ai/run/${model.modelId}`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${credential.api_token}`, ...requestPayload.headers },
+      headers,
       body: requestPayload.body,
       signal: controller.signal,
     });
