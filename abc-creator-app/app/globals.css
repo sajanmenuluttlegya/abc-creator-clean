@@ -58,25 +58,39 @@ html {
 
 select {
   color-scheme: dark;
+  appearance: none;
+  -webkit-appearance: none;
   border-radius: 1rem;
   background-color: rgba(255, 255, 255, 0.055);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.055), 0 18px 45px rgba(0,0,0,0.2);
+  background-image: linear-gradient(45deg, transparent 50%, rgba(233, 213, 255, 0.92) 50%), linear-gradient(135deg, rgba(233, 213, 255, 0.92) 50%, transparent 50%), radial-gradient(circle at 50% 50%, rgba(168, 85, 247, 0.16), rgba(255, 255, 255, 0.035));
+  background-position: calc(100% - 20px) 52%, calc(100% - 14px) 52%, calc(100% - 18px) 50%;
+  background-size: 6px 6px, 6px 6px, 30px 30px;
+  background-repeat: no-repeat;
+  padding-right: 3rem !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 18px 45px rgba(0,0,0,0.24);
   backdrop-filter: blur(18px);
+  transition: border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
 }
 
 select:hover {
-  background-color: rgba(255, 255, 255, 0.075);
+  background-color: rgba(255, 255, 255, 0.085);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 20px 55px rgba(88, 28, 135, 0.22);
+}
+
+select:focus {
+  outline: none;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 0 0 2px rgba(168,85,247,0.7), 0 20px 55px rgba(88, 28, 135, 0.24);
 }
 
 select option {
-  background: rgba(5, 5, 8, 0.96);
+  background: rgba(5, 5, 8, 0.98);
   color: #f8fafc;
-  padding: 0.8rem 1rem;
+  padding: 0.95rem 1rem;
 }
 
 select option:checked,
 select option:hover {
-  background: rgba(124, 58, 237, 0.35);
+  background: rgba(124, 58, 237, 0.38);
   color: #ffffff;
 }
 
