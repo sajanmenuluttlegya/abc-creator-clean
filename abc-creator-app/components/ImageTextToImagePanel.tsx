@@ -182,7 +182,7 @@ export function ImageTextToImagePanel() {
       if (quickTool === "transparent") returned = await callTransparentBackground(selectedImage, pendingIndex);
       else if (quickTool === "blur") returned = await callBackgroundBlur(selectedImage, pendingIndex);
       else {
-        const response = await fetch("/api/image/text-to-image", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt: consistencyPrompt, editPrompt: editPrompt.trim(), negativePrompt, model, resolution, aspectRatio, imageCount: 1, style, seed, operation: "edit", maintainConsistency: true, sourceImageDataUrl: selectedImage.dataUrl, referenceImageDataUrl: selectedImage.dataUrl, parentImageIndex: selectedImage.index, toolPreset: quickTool === "transparent" ? "transparent-background" : quickTool }) });
+        const response = await fetch("/api/image/text-to-image", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt: consistencyPrompt, editPrompt: editPrompt.trim(), negativePrompt, model, resolution, aspectRatio, imageCount: 1, style, seed, operation: "edit", maintainConsistency: true, sourceImageDataUrl: selectedImage.dataUrl, referenceImageDataUrl: selectedImage.dataUrl, parentImageIndex: selectedImage.index, toolPreset: quickTool }) });
         const data = await response.json().catch(() => null) as { ok?: boolean; error?: string; details?: string; creditsCharged?: number; images?: GeneratedImage[] } | null;
         if (!response.ok || !data?.ok || !data.images?.length) throw new Error(data?.details || data?.error || "Image edit failed.");
         returned = { image: data.images[0], credits: data.creditsCharged };
