@@ -7,6 +7,7 @@ import { PresetBlogOutputPanel } from "./PresetBlogOutputPanel";
 import { ThemeIcon } from "./ThemeIcon";
 import { EditableBlogOutlinePanel } from "./EditableBlogOutlinePanel";
 import { ImageToInstagramCaptionPanel } from "./ImageToInstagramCaptionPanel";
+import { SmoothSelect } from "./SmoothSelect";
 import type { Tool, ToolInput } from "@/lib/tools/public-tools";
 import { getToolCreditEstimate } from "@/lib/tools/credit-costs";
 
@@ -201,8 +202,7 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
     return () => window.clearTimeout(timer);
   }, [tool.slug]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { id, value } = e.target;
+  const setInputValue = (id: string, value: string) => {
     setFormData((prev) => {
       if (tool.slug === "blog-content-calendar" && id === "posting_frequency" && value !== CALENDAR_CUSTOM_FREQUENCY_OPTION) {
         const { custom_post_count: _customPostCount, ...rest } = prev;
@@ -217,6 +217,11 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
       }
       return { ...prev, [id]: value };
     });
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { id, value } = e.target;
+    setInputValue(id, value);
   };
 
   const handleFileInput = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -450,10 +455,7 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
                     ) : input.type === "textarea" ? (
                       <textarea id={input.id} placeholder={input.placeholder} value={formData[input.id] || ""} onChange={handleInputChange} required={isInputRequired(input)} className="h-28 w-full resize-none rounded-xl border border-purple-500/20 bg-white/5 px-4 py-3 text-white placeholder-gray-500 transition-all duration-200 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-purple-500" />
                     ) : input.type === "select" ? (
-                      <select id={input.id} value={formData[input.id] || ""} onChange={handleInputChange} required={isInputRequired(input)} className="w-full cursor-pointer appearance-none rounded-xl border border-purple-500/20 bg-white/5 px-4 py-3 text-white transition-all duration-200 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-purple-500">
-                        <option value="" className="bg-black text-white">Select an option</option>
-                        {input.options?.map((option) => <option key={option} value={option} className="bg-black text-white">{option}</option>)}
-                      </select>
+                      <SmoothSelect id={input.id} value={formData[input.id] || ""} options={input.options || []} required={isInputRequired(input)} onChange={setInputValue} />
                     ) : (
                       <input id={input.id} type="text" placeholder={input.placeholder} value={formData[input.id] || ""} onChange={handleInputChange} required={isInputRequired(input)} className="w-full rounded-xl border border-purple-500/20 bg-white/5 px-4 py-3 text-white placeholder-gray-500 transition-all duration-200 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-purple-500" />
                     )}
