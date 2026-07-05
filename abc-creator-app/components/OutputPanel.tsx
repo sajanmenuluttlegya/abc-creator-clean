@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ChangeEvent, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { Components } from "react-markdown";
@@ -25,6 +26,7 @@ const IMAGE_OUTPUT_TOOLS = new Set([
 type OutputPanelDownloadFormat = OutputDownloadFormat | "html";
 type SideImageRatio = "1:1" | "4:3" | "3:4";
 type SideImagePlacement = "left" | "right" | "top" | "bottom";
+type MenuOption<T extends string> = { label: string; value: T };
 
 type MarkdownDiagramSegment =
   | { type: "markdown"; content: string; id: string }
@@ -40,6 +42,7 @@ type SideImageState = {
   ratio: SideImageRatio;
   placement: SideImagePlacement;
   widthPercent: number;
+  filename?: string;
 };
 
 interface OutputPanelProps {
@@ -50,6 +53,9 @@ interface OutputPanelProps {
   toolSlug?: string;
   inputs?: Record<string, string>;
 }
+
+const actionButtonClass = "rounded-full border border-white/15 bg-white/[0.055] px-4 py-2 text-xs font-bold text-white/90 shadow-lg shadow-black/20 backdrop-blur-xl transition hover:border-white/30 hover:bg-white/[0.11] disabled:cursor-not-allowed disabled:opacity-50";
+const dangerButtonClass = "inline-flex h-9 w-9 items-center justify-center rounded-full border border-red-300/30 bg-red-500/15 text-sm text-red-100 shadow-lg shadow-red-950/20 transition hover:bg-red-500/25";
 
 const markdownComponents: Components = {
   h1: ({ children }) => <h1 className="mb-5 mt-2 text-3xl font-bold text-white">{children}</h1>,
@@ -71,30 +77,75 @@ const markdownComponents: Components = {
   td: ({ children }) => <td className="border-b border-purple-500/10 px-4 py-3 text-gray-200">{children}</td>,
 };
 
+function PremiumMenu<T extends string>({ label, valueLabel, options, disabled, onSelect, align = "right" }: { label: string; valueLabel?: string; options: MenuOption<T>[]; disabled?: boolean; onSelect: (value: T) => void; align?: "left" | "right" }) {
+  const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [rect, setRect] = useState<{ left: number; top: number; width: number } | null>(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    if (!open) return;
+    const update = () => {
+      const button = buttonRef.current;
+      if (!button) return;
+      const bounds = button.getBoundingClientRect();
+      const width = Math.max(bounds.width, 180);
+      const left = align === "right" ? Math.max(12, bounds.right - width) : bounds.left;
+      setRect({ left, top: bounds.bottom + 10, width });
+    };
+    update();
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+    };
+  }, [align, open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      const menu = document.getElementById(`${label.replace(/\s+/g, "-").toLowerCase()}-premium-menu`);
+      if (target && (rootRef.current?.contains(target) || menu?.contains(target))) return;
+      setOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [label, open]);
+
+  const menu = open && mounted && rect ? createPortal(
+    <div id={`${label.replace(/\s+/g, "-").toLowerCase()}-premium-menu`} className="fixed z-[2147483647] rounded-[1.35rem] border border-purple-300/25 bg-[#07050d]/98 p-2 shadow-[0_28px_90px_rgba(88,28,135,0.55)] backdrop-blur-2xl" style={{ left: rect.left, top: rect.top, width: rect.width }}>
+      {options.map((option) => (
+        <button key={option.value} type="button" onClick={() => { onSelect(option.value); setOpen(false); }} className="block w-full rounded-2xl px-4 py-3 text-left text-sm font-semibold text-slate-100 transition hover:bg-purple-500/25 hover:text-white">
+          {option.label}
+        </button>
+      ))}
+    </div>,
+    document.body
+  ) : null;
+
+  return (
+    <div ref={rootRef} className="relative inline-flex">
+      <button ref={buttonRef} type="button" disabled={disabled} onClick={() => setOpen((current) => !current)} className="inline-flex min-h-10 items-center gap-3 rounded-full border border-purple-300/30 bg-white/[0.055] px-4 py-2 text-sm font-bold text-white shadow-lg shadow-purple-950/20 backdrop-blur-xl transition hover:border-purple-200/50 hover:bg-white/[0.11] disabled:cursor-not-allowed disabled:opacity-60">
+        <span>{valueLabel || label}</span>
+        <span className={`h-2.5 w-2.5 border-b-2 border-r-2 border-purple-100/85 transition-transform ${open ? "-rotate-135" : "rotate-45"}`} />
+      </button>
+      {menu}
+    </div>
+  );
+}
+
 function normalizeHeadingLabel(line: string) {
   return line.replace(/^#{1,6}\s*/, "").replace(/^\d+[.)]\s*/, "").replace(/[*_`]/g, "").replace(/:$/, "").trim().toLowerCase();
 }
 
 function isRemovedBlogSectionHeading(line: string) {
   const normalized = normalizeHeadingLabel(line);
-  return [
-    "verify before publishing notes",
-    "verify before publishing",
-    "final on-page seo checklist",
-    "on-page seo checklist",
-    "final seo checklist",
-    "publisher notes",
-    "meta data suggestions",
-    "metadata suggestions",
-    "meta title",
-    "meta description",
-    "slug",
-    "internal link placeholder ideas",
-    "internal-link placeholder ideas",
-    "change log",
-    "verification checklist",
-    "verification checklist for factual claims",
-  ].includes(normalized);
+  return ["verify before publishing notes", "verify before publishing", "final on-page seo checklist", "on-page seo checklist", "final seo checklist", "publisher notes", "meta data suggestions", "metadata suggestions", "meta title", "meta description", "slug", "internal link placeholder ideas", "internal-link placeholder ideas", "change log", "verification checklist", "verification checklist for factual claims"].includes(normalized);
 }
 
 function cleanOutputForDisplay(value: string) {
@@ -210,11 +261,23 @@ function sideImageContainerStyle(placement: SideImagePlacement): CSSProperties {
 }
 
 function sideImageFrameStyle(image: SideImageState): CSSProperties {
-  if (image.placement === "left" || image.placement === "right") {
-    return { width: `${Math.min(image.widthPercent, 44)}%`, minWidth: 220, maxWidth: 420, flexShrink: 0 };
-  }
+  if (image.placement === "left" || image.placement === "right") return { width: `${Math.min(image.widthPercent, 44)}%`, minWidth: 220, maxWidth: 420, flexShrink: 0 };
   if (image.placement === "top") return { width: `${image.widthPercent}%`, margin: "0 auto 20px" };
   return { width: `${image.widthPercent}%`, margin: "20px auto 0" };
+}
+
+function uploadedFilename(file: File) {
+  const extension = file.type.split("/")[1] || "png";
+  return (file.name || `section-image.${extension}`).replace(/[^a-z0-9._-]+/gi, "-").replace(/^-+|-+$/g, "") || `section-image.${extension}`;
+}
+
+function downloadDataUrl(dataUrl: string, filename: string) {
+  const link = document.createElement("a");
+  link.href = dataUrl;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
 }
 
 export function OutputPanel({ isLoading, output, recommendedNextActions = [], downloadFileBaseName = "abc-creator-output", toolSlug = "", inputs = {} }: OutputPanelProps) {
@@ -228,12 +291,16 @@ export function OutputPanel({ isLoading, output, recommendedNextActions = [], do
   const [regeneratingBlockId, setRegeneratingBlockId] = useState<string | null>(null);
   const [sectionActionMessage, setSectionActionMessage] = useState("");
   const [sideImages, setSideImages] = useState<Record<string, SideImageState>>({});
+  const [previousSideImages, setPreviousSideImages] = useState<Record<string, SideImageState | null>>({});
   const [activeImageBlockId, setActiveImageBlockId] = useState<string | null>(null);
   const [imagePrompt, setImagePrompt] = useState("");
   const [imageRatio, setImageRatio] = useState<SideImageRatio>("1:1");
   const [imagePlacement, setImagePlacement] = useState<SideImagePlacement>("bottom");
   const [generatingImageBlockId, setGeneratingImageBlockId] = useState<string | null>(null);
+  const [uploadingImageBlockId, setUploadingImageBlockId] = useState<string | null>(null);
   const exportContentRef = useRef<HTMLDivElement | null>(null);
+  const uploadInputRef = useRef<HTMLInputElement | null>(null);
+
   const displayOutput = useMemo(() => cleanOutputForDisplay(output), [output]);
   const outputBlocks = useMemo(() => splitOutputIntoDeletableBlocks(displayOutput), [displayOutput]);
   const visibleOutputBlocks = useMemo(() => outputBlocks.filter((block) => !deletedBlockIds.has(block.id)).map((block) => ({ ...block, content: blockOverrides[block.id] ?? block.content })), [outputBlocks, deletedBlockIds, blockOverrides]);
@@ -254,12 +321,16 @@ export function OutputPanel({ isLoading, output, recommendedNextActions = [], do
     setRegeneratingBlockId(null);
     setSectionActionMessage("");
     setSideImages({});
+    setPreviousSideImages({});
     setActiveImageBlockId(null);
     setImagePrompt("");
     setImageRatio("1:1");
     setImagePlacement("bottom");
     setGeneratingImageBlockId(null);
+    setUploadingImageBlockId(null);
   }, [displayOutput]);
+
+  const rememberSideImageUndo = (blockId: string) => setPreviousSideImages((current) => ({ ...current, [blockId]: sideImages[blockId] || null }));
 
   const fallbackCopy = () => {
     const textarea = document.createElement("textarea");
@@ -382,12 +453,13 @@ export function OutputPanel({ isLoading, output, recommendedNextActions = [], do
     }
   };
 
-  const openImagePanel = (block: DeletableOutputBlock) => {
+  const openImagePanel = (block: DeletableOutputBlock, mode: "generate" | "edit" = "generate") => {
+    const existing = sideImages[block.id];
     setActiveRegenerateBlockId(null);
     setActiveImageBlockId((current) => (current === block.id ? null : block.id));
-    setImagePrompt(defaultSideImagePrompt(block.content, inputs));
-    setImageRatio("1:1");
-    setImagePlacement("bottom");
+    setImagePrompt(mode === "edit" && existing ? `Improve this image while keeping it consistent with the section.\n\n${existing.prompt}` : defaultSideImagePrompt(block.content, inputs));
+    setImageRatio(existing?.ratio || "1:1");
+    setImagePlacement(existing?.placement || "bottom");
     setSectionActionMessage("");
   };
 
@@ -397,10 +469,12 @@ export function OutputPanel({ isLoading, output, recommendedNextActions = [], do
       setSectionActionMessage("Add an image prompt first.");
       return;
     }
+    const existing = sideImages[block.id];
+    const operation = existing ? "edit" : "generate";
     setGeneratingImageBlockId(block.id);
     setSectionActionMessage("");
     try {
-      const response = await fetch("/api/generate/image", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ operation: "generate", toolSlug, prompt, sourceText: block.content, aspectRatio: imageRatio, imageCount: 1, inputs: { ...inputs, output_image_placement: imagePlacement } }) });
+      const response = await fetch("/api/generate/image", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ operation, toolSlug, prompt, sourceText: block.content, aspectRatio: imageRatio, imageCount: 1, inputs: { ...inputs, output_image_placement: imagePlacement }, sourceImageDataUrl: existing?.dataUrl || "" }) });
       const data = (await response.json()) as OutputImageResponse;
       if (!response.ok || !data.ok) {
         if (response.status === 402 || data.code === "INSUFFICIENT_CREDITS") setSectionActionMessage(`Not enough credits. This image needs ${data.requiredCredits ?? 1} credit. You currently have ${data.currentCredits ?? 0}.`);
@@ -412,10 +486,11 @@ export function OutputPanel({ isLoading, output, recommendedNextActions = [], do
         setSectionActionMessage("Image generation finished but no image was returned.");
         return;
       }
-      setSideImages((current) => ({ ...current, [block.id]: { dataUrl: image.dataUrl, prompt, ratio: imageRatio, placement: imagePlacement, widthPercent: imagePlacement === "left" || imagePlacement === "right" ? 42 : 100 } }));
+      rememberSideImageUndo(block.id);
+      setSideImages((current) => ({ ...current, [block.id]: { dataUrl: image.dataUrl, prompt, ratio: imageRatio, placement: imagePlacement, widthPercent: imagePlacement === "left" || imagePlacement === "right" ? 42 : 100, filename: image.filename } }));
       setActiveImageBlockId(null);
       setImagePrompt("");
-      setSectionActionMessage("Image added to this section.");
+      setSectionActionMessage(operation === "edit" ? "Image edited." : "Image added to this section.");
     } catch (error) {
       setSectionActionMessage(error instanceof Error ? error.message : String(error));
     } finally {
@@ -445,16 +520,75 @@ export function OutputPanel({ isLoading, output, recommendedNextActions = [], do
     window.addEventListener("pointerup", onUp);
   };
 
-  const renderSideImage = (blockId: string, image: SideImageState) => (
+  const beginUploadSideImage = (blockId: string) => {
+    setUploadingImageBlockId(blockId);
+    uploadInputRef.current?.click();
+  };
+
+  const handleUploadSideImage = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.currentTarget.files?.[0];
+    event.currentTarget.value = "";
+    const blockId = uploadingImageBlockId;
+    setUploadingImageBlockId(null);
+    if (!file || !blockId) return;
+    if (!file.type.startsWith("image/")) {
+      setSectionActionMessage("Please upload a valid image file.");
+      return;
+    }
+    if (file.size > 20 * 1024 * 1024) {
+      setSectionActionMessage("Please upload an image smaller than 20 MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = typeof reader.result === "string" ? reader.result : "";
+      if (!dataUrl.startsWith("data:image/")) {
+        setSectionActionMessage("Could not read the uploaded image file.");
+        return;
+      }
+      rememberSideImageUndo(blockId);
+      const current = sideImages[blockId];
+      setSideImages((items) => ({ ...items, [blockId]: { dataUrl, prompt: current?.prompt || "Uploaded image", ratio: current?.ratio || "1:1", placement: current?.placement || "bottom", widthPercent: current?.widthPercent || 100, filename: uploadedFilename(file) } }));
+      setSectionActionMessage("Image uploaded.");
+    };
+    reader.onerror = () => setSectionActionMessage("Could not read the uploaded image file.");
+    reader.readAsDataURL(file);
+  };
+
+  const undoSideImage = (blockId: string) => {
+    const previous = previousSideImages[blockId];
+    if (previous === undefined) return;
+    if (previous) setSideImages((current) => ({ ...current, [blockId]: previous }));
+    else setSideImages((current) => { const next = { ...current }; delete next[blockId]; return next; });
+    setPreviousSideImages((current) => { const next = { ...current }; delete next[blockId]; return next; });
+    setSectionActionMessage("Image change undone.");
+  };
+
+  const deleteSideImage = (blockId: string) => {
+    rememberSideImageUndo(blockId);
+    setSideImages((current) => { const next = { ...current }; delete next[blockId]; return next; });
+    setSectionActionMessage("Image removed.");
+  };
+
+  const renderSideImage = (block: DeletableOutputBlock, image: SideImageState) => (
     <figure className="group/side-image relative overflow-hidden rounded-2xl border border-transparent bg-black/45 p-2 shadow-lg shadow-emerald-950/20 transition hover:border-emerald-300/20" style={sideImageFrameStyle(image)} data-abc-side-image-placement={image.placement}>
       <img src={image.dataUrl} alt={image.prompt || "Generated section image"} className="w-full rounded-xl object-cover" data-generated-blog-image="true" />
-      <button type="button" title="Delete image" aria-label="Delete image" onClick={() => setSideImages((current) => { const next = { ...current }; delete next[blockId]; return next; })} data-export-ignore="true" className="absolute right-3 top-3 h-8 w-8 rounded-full border border-red-300/30 bg-black/75 text-sm text-red-100 opacity-0 transition hover:bg-red-500/30 group-hover/side-image:opacity-100">🗑</button>
-      <button type="button" title="Drag to resize image" aria-label="Drag to resize image" onPointerDown={(event) => startSideImageResize(event, blockId)} data-export-ignore="true" className={`absolute ${image.placement === "right" ? "left-0" : "right-0"} top-0 h-full w-3 cursor-ew-resize bg-emerald-300/5 opacity-0 transition hover:bg-emerald-300/20 group-hover/side-image:opacity-100`} />
+      <div data-export-ignore="true" className="pointer-events-none absolute inset-0 flex items-start justify-end p-3 opacity-0 transition duration-200 group-hover/side-image:opacity-100">
+        <div className="pointer-events-auto flex max-w-full flex-wrap gap-2 rounded-2xl border border-white/15 bg-black/50 p-2 shadow-xl shadow-black/25 backdrop-blur-2xl">
+          <button type="button" onClick={() => openImagePanel(block, "edit")} className={actionButtonClass}>Edit</button>
+          <button type="button" onClick={() => beginUploadSideImage(block.id)} className={actionButtonClass}>Upload</button>
+          {previousSideImages[block.id] !== undefined ? <button type="button" onClick={() => undoSideImage(block.id)} className={actionButtonClass}>Undo</button> : null}
+          <button type="button" onClick={() => downloadDataUrl(image.dataUrl, image.filename || `section-image-${block.id}.png`)} className={actionButtonClass}>Download</button>
+          <button type="button" title="Delete image" aria-label="Delete image" onClick={() => deleteSideImage(block.id)} className={dangerButtonClass}>🗑</button>
+        </div>
+      </div>
+      <button type="button" title="Drag to resize image" aria-label="Drag to resize image" onPointerDown={(event) => startSideImageResize(event, block.id)} data-export-ignore="true" className={`absolute ${image.placement === "right" ? "left-0" : "right-0"} top-0 h-full w-3 cursor-ew-resize bg-emerald-300/5 opacity-0 transition hover:bg-emerald-300/20 group-hover/side-image:opacity-100`} />
     </figure>
   );
 
   return (
     <div className="rounded-3xl border border-purple-500/25 bg-black/45 p-8 shadow-2xl shadow-purple-950/25 backdrop-blur-2xl">
+      <input ref={uploadInputRef} type="file" accept="image/*" onChange={handleUploadSideImage} className="hidden" aria-label="Upload section image" />
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-3">
           <h2 className="text-2xl font-bold text-white">Output</h2>
@@ -463,13 +597,12 @@ export function OutputPanel({ isLoading, output, recommendedNextActions = [], do
         {hasVisibleOutput ? (
           <div className="flex flex-wrap items-center gap-3">
             <button type="button" onClick={copyOutput} className="rounded-full border border-purple-400/30 bg-purple-500/10 px-4 py-2 text-sm font-semibold text-purple-100 transition hover:bg-purple-500/20">{copied ? "Copied!" : "Copy"}</button>
-            <select aria-label="Download output" defaultValue="" disabled={isDownloading} onChange={(event) => { const format = event.currentTarget.value as OutputPanelDownloadFormat | ""; event.currentTarget.value = ""; if (format) void handleDownload(format); }} className="cursor-pointer rounded-full border border-purple-400/30 bg-purple-500/10 px-4 py-2 text-sm font-semibold text-purple-100 transition hover:bg-purple-500/20 disabled:cursor-not-allowed disabled:opacity-60">
-              <option value="" className="bg-black text-white">Download</option>
-              <option value="html" className="bg-black text-white">HTML</option>
-              <option value="pdf" className="bg-black text-white">PDF</option>
-              <option value="docx" className="bg-black text-white">DOCX</option>
-              <option value="txt" className="bg-black text-white">Text file</option>
-            </select>
+            <PremiumMenu<OutputPanelDownloadFormat>
+              label="Download"
+              disabled={isDownloading}
+              options={[{ label: "HTML", value: "html" }, { label: "PDF", value: "pdf" }, { label: "DOCX", value: "docx" }, { label: "Text file", value: "txt" }]}
+              onSelect={(format) => void handleDownload(format)}
+            />
           </div>
         ) : null}
       </div>
@@ -485,17 +618,17 @@ export function OutputPanel({ isLoading, output, recommendedNextActions = [], do
               const contentNode = <div className="min-w-0 flex-1 pr-8">{splitOutputIntoImageSegments(block.content).map((segment) => segment.type === "image" ? <InlineImageBlock key={segment.id} blockId={segment.id} markdown={segment.content} prompt={segment.prompt} toolSlug={toolSlug} inputs={inputs} autoGenerate={autoGenerateBlogImages} /> : <div key={segment.id}>{renderMarkdownWithDiagrams(segment.content, segment.id)}</div>)}</div>;
               const imageAndContent = sideImage ? (
                 <div style={sideImageContainerStyle(sideImage.placement)} data-abc-image-placement={sideImage.placement}>
-                  {sideImage.placement === "top" ? renderSideImage(block.id, sideImage) : null}
-                  {sideImage.placement === "left" || sideImage.placement === "right" ? renderSideImage(block.id, sideImage) : null}
+                  {sideImage.placement === "top" ? renderSideImage(block, sideImage) : null}
+                  {sideImage.placement === "left" || sideImage.placement === "right" ? renderSideImage(block, sideImage) : null}
                   {contentNode}
-                  {sideImage.placement === "bottom" ? renderSideImage(block.id, sideImage) : null}
+                  {sideImage.placement === "bottom" ? renderSideImage(block, sideImage) : null}
                 </div>
               ) : contentNode;
               return (
                 <div key={block.id} className="group relative rounded-2xl border border-transparent p-1 transition hover:border-cyan-300/20 hover:bg-white/[0.015]">
                   <div data-export-ignore="true" className="absolute right-2 top-2 z-10 flex flex-wrap justify-end gap-2 opacity-0 transition group-hover:opacity-100">
                     <button type="button" aria-label="Regenerate this output section" title="Regenerate this output section" onClick={() => openRegeneratePanel(block)} className="inline-flex h-8 items-center justify-center rounded-full border border-cyan-300/30 bg-cyan-500/15 px-3 text-xs font-semibold text-cyan-100 shadow-lg shadow-cyan-950/20 transition hover:bg-cyan-500/25">Regenerate</button>
-                    {canGenerateSectionImage ? <button type="button" aria-label="Add image beside this output section" title="Add image to this output section" onClick={() => openImagePanel(block)} className="inline-flex h-8 items-center justify-center rounded-full border border-emerald-300/30 bg-emerald-500/15 px-3 text-xs font-semibold text-emerald-100 shadow-lg shadow-emerald-950/20 transition hover:bg-emerald-500/25">Add image — 1 credit</button> : null}
+                    {canGenerateSectionImage ? <button type="button" aria-label="Add image beside this output section" title="Add image to this output section" onClick={() => openImagePanel(block)} className="inline-flex h-8 items-center justify-center rounded-full border border-emerald-300/30 bg-emerald-500/15 px-3 text-xs font-semibold text-emerald-100 shadow-lg shadow-emerald-950/20 transition hover:bg-emerald-500/25">Add image</button> : null}
                     <button type="button" aria-label="Delete this output section" title="Delete this output section" onClick={() => deleteOutputBlock(block.id)} className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-red-300/30 bg-red-500/15 text-sm text-red-100 shadow-lg shadow-red-950/20 transition hover:bg-red-500/25">🗑</button>
                   </div>
                   {activeRegenerateBlockId === block.id ? (
@@ -515,10 +648,10 @@ export function OutputPanel({ isLoading, output, recommendedNextActions = [], do
                       <label className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-200">Image for this section</label>
                       <textarea value={imagePrompt} onChange={(event) => setImagePrompt(event.currentTarget.value)} className="mt-3 h-28 w-full resize-none rounded-2xl border border-emerald-300/20 bg-black/40 px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
                       <div className="mt-3 flex flex-wrap items-center gap-2">
-                        <select value={imageRatio} onChange={(event) => setImageRatio(event.currentTarget.value as SideImageRatio)} className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white"><option value="1:1" className="bg-black text-white">1:1</option><option value="4:3" className="bg-black text-white">4:3</option><option value="3:4" className="bg-black text-white">3:4</option></select>
-                        <select value={imagePlacement} onChange={(event) => setImagePlacement(event.currentTarget.value as SideImagePlacement)} className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white"><option value="top" className="bg-black text-white">Image above text</option><option value="bottom" className="bg-black text-white">Image below text</option><option value="left" className="bg-black text-white">Image left</option><option value="right" className="bg-black text-white">Image right</option></select>
-                        <button type="button" onClick={() => void generateSideImage(block)} disabled={generatingImageBlockId === block.id} className="rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-1.5 text-xs font-semibold text-white disabled:opacity-60">{generatingImageBlockId === block.id ? "Generating..." : "Generate image — 1 credit"}</button>
-                        <button type="button" onClick={() => setActiveImageBlockId(null)} disabled={generatingImageBlockId === block.id} className="rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-semibold text-slate-200">Cancel</button>
+                        <PremiumMenu<SideImageRatio> label="Ratio" valueLabel={imageRatio} options={[{ label: "1:1", value: "1:1" }, { label: "4:3", value: "4:3" }, { label: "3:4", value: "3:4" }]} onSelect={setImageRatio} align="left" />
+                        <PremiumMenu<SideImagePlacement> label="Placement" valueLabel={imagePlacement === "top" ? "Image above text" : imagePlacement === "bottom" ? "Image below text" : imagePlacement === "left" ? "Image left" : "Image right"} options={[{ label: "Image above text", value: "top" }, { label: "Image below text", value: "bottom" }, { label: "Image left", value: "left" }, { label: "Image right", value: "right" }]} onSelect={setImagePlacement} align="left" />
+                        <button type="button" onClick={() => void generateSideImage(block)} disabled={generatingImageBlockId === block.id} className="abc-premium-generate-button rounded-full px-4 py-2 text-xs font-semibold text-white disabled:opacity-60">{generatingImageBlockId === block.id ? "Generating..." : sideImages[block.id] ? "Apply edit" : "Generate image"}</button>
+                        <button type="button" onClick={() => setActiveImageBlockId(null)} disabled={generatingImageBlockId === block.id} className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-slate-200">Cancel</button>
                       </div>
                     </div>
                   ) : null}
