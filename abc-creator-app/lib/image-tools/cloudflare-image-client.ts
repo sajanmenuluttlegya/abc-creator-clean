@@ -30,7 +30,7 @@ type CloudflareRunResult = {
 };
 
 type RequestFormat = "multipart" | "json-flux1" | "json-leonardo-lucid" | "json-leonardo-phoenix";
-type ParsedResponse = { ok: true; dataUrl: string } | { ok: false; error: string; providerRefused?: boolean };
+type ParsedResponse = { ok: true; dataUrl: string } | { ok: false; error: string; providerRefused?: boolean; keyExhausted?: boolean };
 type RequestPayload = { headers: HeadersInit; body: BodyInit };
 
 const MODEL_REQUEST_FORMAT: Record<ImageModelKey, RequestFormat> = {
@@ -43,6 +43,7 @@ const MODEL_REQUEST_FORMAT: Record<ImageModelKey, RequestFormat> = {
 };
 
 const PROVIDER_REFUSAL_MESSAGE = "The image provider rejected this prompt or reference image combination. Try a different prompt, a different reference image, or remove sensitive wording.";
+const ALL_KEYS_EXHAUSTED_MESSAGE = "All active Cloudflare AI keys have reached their daily image allocation. The system tried the available keys, but none had capacity left. Add more active keys, wait for Cloudflare's daily reset, or upgrade the exhausted Cloudflare accounts.";
 
 export function getEffectiveEditModel(requestedModel: ImageModelKey): ImageModelKey {
   return requestedModel === "M1" || requestedModel === "M2" ? requestedModel : "M2";
@@ -52,9 +53,14 @@ function isProviderRefusal(message: string) {
   return /flagged|policy|blocked|choose another prompt|input image combination|output has been/i.test(message);
 }
 
-function shouldTryNextKey(status: number, providerRefused = false) {
+function isKeyExhausted(message: string, status: number) {
+  return status === 429 || /daily\s+free\s+allocation|used\s+up.*allocation|10,?000\s+neurons|workers\s+paid\s+plan|quota\s+exceeded|rate\s*limit|too\s+many\s+requests|capacity/i.test(message);
+}
+
+function shouldTryNextKey(status: number, providerRefused = false, keyExhausted = false) {
+  if (keyExhausted) return true;
   if (providerRefused) return false;
-  return status === 0 || status === 408 || status >= 500;
+  return status === 0 || status === 408 || status === 409 || status === 425 || status === 429 || status >= 500;
 }
 
 function timeoutSignal(timeoutMs: number) {
@@ -158,7 +164,11 @@ async function parseCloudflareResponse(res: Response): Promise<ParsedResponse> {
 
   if (contentType.startsWith("image/")) {
     const buffer = Buffer.from(await res.arrayBuffer());
-    if (!res.ok || !buffer.length) return { ok: false, error: `Cloudflare image generation failed with HTTP ${res.status}` };
+    if (!res.ok || !buffer.length) {
+      const rawError = `Cloudflare image generation failed with HTTP ${res.status}`;
+      const keyExhausted = isKeyExhausted(rawError, res.status);
+      return { ok: false, error: rawError, keyExhausted };
+    }
     return { ok: true, dataUrl: `data:${contentType};base64,${buffer.toString("base64")}` };
   }
 
@@ -166,8 +176,9 @@ async function parseCloudflareResponse(res: Response): Promise<ParsedResponse> {
   const imageBase64 = data?.result?.image || data?.image || "";
   if (!res.ok || !data?.success || !imageBase64) {
     const rawError = cloudflareErrorMessage(data, res.status);
-    const providerRefused = isProviderRefusal(rawError);
-    return { ok: false, error: providerRefused ? PROVIDER_REFUSAL_MESSAGE : rawError, providerRefused };
+    const keyExhausted = isKeyExhausted(rawError, res.status);
+    const providerRefused = !keyExhausted && isProviderRefusal(rawError);
+    return { ok: false, error: providerRefused ? PROVIDER_REFUSAL_MESSAGE : rawError, providerRefused, keyExhausted };
   }
 
   return { ok: true, dataUrl: `data:image/png;base64,${imageBase64}` };
@@ -192,8 +203,9 @@ async function callCloudflareOnce(credential: CloudflareAICredential, input: Gen
     if (!parsed.ok) {
       return {
         ok: false as const,
-        tryNext: shouldTryNextKey(res.status, parsed.providerRefused),
+        tryNext: shouldTryNextKey(res.status, parsed.providerRefused, parsed.keyExhausted),
         providerRefused: parsed.providerRefused || false,
+        keyExhausted: parsed.keyExhausted || false,
         status: res.status,
         error: parsed.error,
       };
@@ -202,12 +214,15 @@ async function callCloudflareOnce(credential: CloudflareAICredential, input: Gen
     return { ok: true as const, dataUrl: parsed.dataUrl, modelId: model.modelId, credentialSlot: credential.key_slot, width, height };
   } catch (error) {
     const isTimeout = error instanceof Error && error.name === "AbortError";
+    const message = isTimeout ? `Cloudflare request timed out after ${credential.timeout_ms || 90000}ms.` : error instanceof Error ? error.message : String(error);
+    const keyExhausted = isKeyExhausted(message, 0);
     return {
       ok: false as const,
       tryNext: true,
       providerRefused: false,
+      keyExhausted,
       status: 0,
-      error: isTimeout ? `Cloudflare request timed out after ${credential.timeout_ms || 90000}ms.` : error instanceof Error ? error.message : String(error),
+      error: message,
     };
   } finally {
     clearTimeout(timer);
@@ -219,13 +234,27 @@ export async function generateCloudflareImageWithManualFailover(input: GenerateI
   if (!credentials.length) throw new Error("No active Cloudflare AI credentials found. Add up to 10000 rows in Supabase and set is_active=true.");
 
   const failures: string[] = [];
+  let exhaustedKeys = 0;
+
   for (const credential of credentials) {
     const result = await callCloudflareOnce(credential, input);
     if (result.ok) return result;
+
+    if (result.keyExhausted) {
+      exhaustedKeys += 1;
+      failures.push(`Key slot ${credential.key_slot}: daily allocation exhausted`);
+      continue;
+    }
+
     if (result.providerRefused) throw new Error(result.error);
+
     failures.push(`Key slot ${credential.key_slot}: ${result.error}`);
     if (!result.tryNext) break;
   }
 
-  throw new Error(`Image generation failed. ${failures.join(" | ")}`);
+  if (exhaustedKeys > 0 && exhaustedKeys === credentials.length) {
+    throw new Error(ALL_KEYS_EXHAUSTED_MESSAGE);
+  }
+
+  throw new Error(`Image generation failed after rotating Cloudflare keys. ${failures.join(" | ")}`);
 }
