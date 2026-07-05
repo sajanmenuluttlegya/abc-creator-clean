@@ -151,11 +151,11 @@ export function ImageTextToImagePanel() {
       const data = await response.json().catch(() => null) as { ok?: boolean; error?: string; details?: string; creditsCharged?: number; images?: GeneratedImage[] } | null;
       if (!response.ok || !data?.ok || !data.images?.length) throw new Error(data?.details || data?.error || "Image generation failed.");
       setGenerationProgress(100);
-      const enriched = data.images.map((image) => ({ ...image, prompt, kind: "generated" as const }));
-      setImages(enriched);
+      const startIndex = Math.max(0, ...images.map((image) => image.index), pendingEdit?.index || 0) + 1;
+      const enriched = data.images.map((image, offset) => ({ ...image, index: startIndex + offset, prompt, kind: "generated" as const }));
+      setImages((current) => [...current, ...enriched]);
       setSelectedIndex(enriched[0]?.index || null);
       setEditPrompt("");
-      setUpscaled({});
       revealFinalImage();
       setNotice(`Generated ${enriched.length} image${enriched.length === 1 ? "" : "s"}. Charged ${data.creditsCharged ?? creditEstimate} credits.`);
     } catch (err) {
