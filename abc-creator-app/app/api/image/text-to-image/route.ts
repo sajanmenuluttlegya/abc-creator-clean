@@ -6,6 +6,10 @@ import {
   getEffectiveEditModel,
 } from "@/lib/image-tools/cloudflare-image-client";
 import { buildPremiumEditPrompt } from "@/lib/image-tools/edit-planner";
+import {
+  buildImageEditToolInstruction,
+  parseImageEditToolPreset,
+} from "@/lib/image-tools/edit-tool-presets";
 import { buildPremiumGenerationPrompt } from "@/lib/image-tools/premium-prompts";
 import {
   getTextToImageCredits,
@@ -37,6 +41,8 @@ type TextToImageBody = {
   sourceImageDataUrl?: string;
   referenceImageDataUrl?: string;
   parentImageIndex?: number;
+  toolPreset?: unknown;
+  toolOptions?: Record<string, unknown>;
 };
 
 type CreditReservation = {
@@ -172,6 +178,9 @@ export async function POST(req: NextRequest) {
     const hasReference = operation === "edit" && Boolean(sourceImageDataUrl);
     const imageCount = operation === "edit" ? 1 : safeImageCount(body.imageCount);
     const effectiveModel = operation === "edit" ? getEffectiveEditModel(requestedModel) : requestedModel;
+    const toolPreset = parseImageEditToolPreset(body.toolPreset);
+    const toolInstruction = buildImageEditToolInstruction({ preset: toolPreset, options: body.toolOptions });
+    const editRequestText = [toolInstruction, rawEditPrompt || rawPrompt].filter(Boolean).join("\n");
 
     if (operation === "generate" && rawPrompt.length < 6) {
       return Response.json({ ok: false, error: "Prompt must be at least 6 characters.", code: "PROMPT_REQUIRED" }, { status: 400 });
@@ -181,7 +190,7 @@ export async function POST(req: NextRequest) {
       return Response.json({ ok: false, error: "Select a source image before editing.", code: "REFERENCE_IMAGE_REQUIRED" }, { status: 400 });
     }
 
-    if (operation === "edit" && (rawEditPrompt || rawPrompt).length < 3) {
+    if (operation === "edit" && editRequestText.length < 3) {
       return Response.json({ ok: false, error: "Describe what to edit.", code: "EDIT_PROMPT_REQUIRED" }, { status: 400 });
     }
 
@@ -193,7 +202,7 @@ export async function POST(req: NextRequest) {
     if (operation === "edit") {
       const premiumEdit = buildPremiumEditPrompt({
         originalPrompt: rawPrompt,
-        userEditPrompt: rawEditPrompt || rawPrompt,
+        userEditPrompt: editRequestText,
         hasReferenceImage: hasReference,
       });
 
@@ -314,6 +323,7 @@ export async function POST(req: NextRequest) {
       effectiveModel,
       promptMode: operation === "edit" ? "premium-edit-planner" : "premium-generation-enhancer",
       editMode: operation === "edit" ? "premium-consistency-lock" : undefined,
+      toolPreset,
       editPlan,
       generationIntent,
       resolution,
