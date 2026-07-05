@@ -37,6 +37,17 @@ type ParsedCloudflareResponse =
   | { ok: true; dataUrl: string }
   | { ok: false; error: string };
 
+type CloudflareImageRequestFormat = "multipart" | "json-flux1" | "json-leonardo-lucid" | "json-leonardo-phoenix";
+
+const MODEL_REQUEST_FORMAT: Record<ImageModelKey, CloudflareImageRequestFormat> = {
+  M1: "multipart", // @cf/black-forest-labs/flux-2-dev
+  M2: "multipart", // @cf/black-forest-labs/flux-2-klein-9b
+  M3: "json-leonardo-lucid", // @cf/leonardo/lucid-origin
+  M4: "json-leonardo-phoenix", // @cf/leonardo/phoenix-1.0
+  M5: "multipart", // @cf/black-forest-labs/flux-2-klein-4b
+  M6: "json-flux1", // @cf/black-forest-labs/flux-1-schnell
+};
+
 function shouldTryNextKey(status: number) {
   if (status === 0) return true;    // network / timeout
   if (status === 408) return true;  // timeout
@@ -74,37 +85,54 @@ function cloudflareErrorMessage(data: CloudflareRunResult | null, status: number
   return apiErrors || `Cloudflare image generation failed with HTTP ${status}`;
 }
 
-function buildBaseFields(input: GenerateImageInput) {
-  const model = IMAGE_MODEL_OPTIONS[input.model];
-  const { width, height } = getImageDimensions(input.resolution, input.aspectRatio);
-  const fields: Record<string, string | number> = {
-    prompt: buildPrompt(input),
-    width,
-    height,
-    steps: model.defaultSteps,
-  };
+function cleanSeed(seed: string | undefined) {
+  const value = seed?.trim();
+  if (!value) return null;
 
-  if (input.seed?.trim()) {
-    const numericSeed = Number(input.seed.trim());
-    fields.seed = Number.isFinite(numericSeed) ? Math.floor(numericSeed) : input.seed.trim();
+  const numericSeed = Number(value);
+  if (!Number.isFinite(numericSeed)) return null;
+
+  return Math.max(0, Math.floor(numericSeed));
+}
+
+function buildRequestFields(input: GenerateImageInput) {
+  const model = IMAGE_MODEL_OPTIONS[input.model];
+  const format = MODEL_REQUEST_FORMAT[input.model];
+  const { width, height } = getImageDimensions(input.resolution, input.aspectRatio);
+  const prompt = buildPrompt(input);
+  const seed = cleanSeed(input.seed);
+  const steps = model.defaultSteps;
+  const negativePrompt = input.negativePrompt?.trim();
+  let fields: Record<string, string | number>;
+
+  if (format === "multipart") {
+    fields = { prompt, width, height, steps };
+    if (seed !== null) fields.seed = seed;
+  } else if (format === "json-leonardo-lucid") {
+    fields = { prompt, width, height, num_steps: Math.min(Math.max(steps, 1), 40), guidance: 4.5 };
+    if (seed !== null) fields.seed = seed;
+  } else if (format === "json-leonardo-phoenix") {
+    fields = { prompt, width, height, num_steps: Math.min(Math.max(steps, 1), 50), guidance: 2 };
+    if (negativePrompt) fields.negative_prompt = negativePrompt;
+    if (seed !== null) fields.seed = seed;
+  } else {
+    // FLUX.1 schnell does not expose width/height in the Workers AI REST schema.
+    fields = { prompt, steps: Math.min(Math.max(steps, 1), 8) };
+    if (seed !== null) fields.seed = seed;
   }
 
-  return { fields, width, height, model };
+  return { fields, width, height, model, format };
 }
 
-function requiresMultipartForm(modelId: string) {
-  return modelId.includes("/flux-2-");
-}
-
-function buildRequestPayload(modelId: string, fields: Record<string, string | number>): RequestPayload {
-  if (requiresMultipartForm(modelId)) {
+function buildRequestPayload(format: CloudflareImageRequestFormat, fields: Record<string, string | number>): RequestPayload {
+  if (format === "multipart") {
     const form = new FormData();
 
     for (const [key, value] of Object.entries(fields)) {
       form.append(key, String(value));
     }
 
-    // Do not manually set Content-Type here. fetch adds the multipart boundary automatically.
+    // Do not set Content-Type for FormData. fetch adds the multipart boundary automatically.
     return { headers: {}, body: form };
   }
 
@@ -138,8 +166,8 @@ async function parseCloudflareResponse(res: Response): Promise<ParsedCloudflareR
 }
 
 async function callCloudflareOnce(credential: CloudflareAICredential, input: GenerateImageInput) {
-  const { fields, width, height, model } = buildBaseFields(input);
-  const requestPayload = buildRequestPayload(model.modelId, fields);
+  const { fields, width, height, model, format } = buildRequestFields(input);
+  const requestPayload = buildRequestPayload(format, fields);
   const { controller, timer } = timeoutSignal(credential.timeout_ms || 90000);
 
   try {
@@ -163,7 +191,7 @@ async function callCloudflareOnce(credential: CloudflareAICredential, input: Gen
         ok: false as const,
         tryNext: shouldTryNextKey(res.status),
         status: res.status,
-        error: parsed.error,
+        error: `${input.model} ${format}: ${parsed.error}`,
       };
     }
 
