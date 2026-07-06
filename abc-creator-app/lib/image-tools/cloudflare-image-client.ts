@@ -35,9 +35,19 @@ type CloudflareRunResult = {
 };
 
 type RequestFormat = "multipart" | "json-flux1" | "json-leonardo-lucid" | "json-leonardo-phoenix";
-type ParsedResponse = { ok: true; dataUrl: string } | { ok: false; error: string; providerRefused?: boolean; keyExhausted?: boolean };
+type ParsedResponse = { ok: true; dataUrl: string } | { ok: false; error: string; providerRefused?: boolean; keyExhausted?: boolean; modelUnavailable?: boolean };
 type RequestPayload = { headers: HeadersInit; body: BodyInit };
 type ImageCandidate = { base64: string; mimeType: string };
+
+type CloudflareAttemptFailure = {
+  ok: false;
+  tryNext: boolean;
+  providerRefused: boolean;
+  keyExhausted: boolean;
+  modelUnavailable: boolean;
+  status: number;
+  error: string;
+};
 
 const MODEL_REQUEST_FORMAT: Record<ImageModelKey, RequestFormat> = {
   M1: "multipart",
@@ -57,7 +67,11 @@ export function getEffectiveEditModel(requestedModel: ImageModelKey): ImageModel
 }
 
 function isProviderRefusal(message: string) {
-  return /flagged|policy|blocked|choose another prompt|input image combination|output has been/i.test(message);
+  return /flagged|policy|blocked|choose another prompt|input image combination|output has been|provider rejected|safety/i.test(message);
+}
+
+function isModelUnavailable(message: string, status = 0) {
+  return status === 404 || /no route for that uri|model not found|model unavailable|not available for this account|unsupported model|unknown model|invalid model/i.test(message);
 }
 
 function timeoutSignal(timeoutMs: number) {
@@ -216,7 +230,8 @@ async function parseCloudflareResponse(res: Response): Promise<ParsedResponse> {
     if (!res.ok || !buffer.length) {
       const rawError = `Cloudflare image generation failed with HTTP ${res.status}`;
       const keyExhausted = isCloudflareKeyExhausted(rawError, res.status);
-      return { ok: false, error: rawError, keyExhausted };
+      const modelUnavailable = isModelUnavailable(rawError, res.status);
+      return { ok: false, error: rawError, keyExhausted, modelUnavailable };
     }
     return { ok: true, dataUrl: `data:${contentType.startsWith("image/") ? contentType : "image/jpeg"};base64,${buffer.toString("base64")}` };
   }
@@ -237,8 +252,9 @@ async function parseCloudflareResponse(res: Response): Promise<ParsedResponse> {
   if (!res.ok || successFlag === false || !image) {
     const rawError = cloudflareErrorMessage(data, res.status, rawText);
     const keyExhausted = isCloudflareKeyExhausted(rawError, res.status);
-    const providerRefused = !keyExhausted && isProviderRefusal(rawError);
-    return { ok: false, error: providerRefused ? PROVIDER_REFUSAL_MESSAGE : rawError, providerRefused, keyExhausted };
+    const modelUnavailable = !keyExhausted && isModelUnavailable(rawError, res.status);
+    const providerRefused = !keyExhausted && !modelUnavailable && isProviderRefusal(rawError);
+    return { ok: false, error: providerRefused ? PROVIDER_REFUSAL_MESSAGE : rawError, providerRefused, keyExhausted, modelUnavailable };
   }
 
   return { ok: true, dataUrl: `data:${image.mimeType};base64,${image.base64}` };
@@ -261,20 +277,23 @@ async function callCloudflareOnce(credential: CloudflareAICredential, input: Gen
 
     const parsed = await parseCloudflareResponse(res);
     if (!parsed.ok) {
+      const modelUnavailable = parsed.modelUnavailable || false;
       return {
         ok: false as const,
-        tryNext: shouldRotateCloudflareCredential(res.status, parsed.error, parsed.providerRefused),
+        tryNext: modelUnavailable || shouldRotateCloudflareCredential(res.status, parsed.error, parsed.providerRefused),
         providerRefused: parsed.providerRefused || false,
         keyExhausted: parsed.keyExhausted || false,
+        modelUnavailable,
         status: res.status,
         error: parsed.error,
-      };
+      } satisfies CloudflareAttemptFailure;
     }
 
     return {
       ok: true as const,
       dataUrl: parsed.dataUrl,
       modelId: model.modelId,
+      modelKey: input.model,
       credentialSlot: credential.key_slot,
       width,
       height,
@@ -283,45 +302,103 @@ async function callCloudflareOnce(credential: CloudflareAICredential, input: Gen
     const isTimeout = error instanceof Error && error.name === "AbortError";
     const message = isTimeout ? `Cloudflare request timed out after ${credential.timeout_ms || 90000}ms.` : error instanceof Error ? error.message : String(error);
     const keyExhausted = isCloudflareKeyExhausted(message, 0);
+    const modelUnavailable = isModelUnavailable(message, 0);
     return {
       ok: false as const,
-      tryNext: shouldRotateCloudflareCredential(0, message),
+      tryNext: modelUnavailable || shouldRotateCloudflareCredential(0, message),
       providerRefused: false,
       keyExhausted,
+      modelUnavailable,
       status: 0,
       error: message,
-    };
+    } satisfies CloudflareAttemptFailure;
   } finally {
     clearTimeout(timer);
   }
 }
 
-export async function generateCloudflareImageWithManualFailover(input: GenerateImageInput) {
-  const credentials = await getActiveCloudflareAICredentials();
-  if (!credentials.length) throw new Error("No active Cloudflare AI credentials found. Add up to 10000 rows in Supabase and set is_active=true.");
+function uniqueModels(models: ImageModelKey[]) {
+  return Array.from(new Set(models));
+}
 
-  const failures: string[] = [];
-  let exhaustedKeys = 0;
-
-  for (const credential of credentials) {
-    const result = await callCloudflareOnce(credential, input);
-    if (result.ok) return result;
-
-    if (result.keyExhausted) {
-      exhaustedKeys += 1;
-      failures.push(`Key slot ${credential.key_slot}: daily allocation exhausted or busy`);
-      continue;
-    }
-
-    if (result.providerRefused) throw new Error(result.error);
-
-    failures.push(`Key slot ${credential.key_slot}: ${result.error}`);
-    if (!result.tryNext) break;
+function modelFallbackOrder(input: GenerateImageInput): ImageModelKey[] {
+  const operation = input.operation || "generate";
+  if (operation === "edit" || operation === "combine") {
+    if (input.model === "M1") return uniqueModels(["M1", "M2", "M5"]);
+    return uniqueModels([input.model, "M2", "M5", "M1"]);
   }
 
-  if (exhaustedKeys > 0 && exhaustedKeys === credentials.length) {
+  const stableFallbacks: ImageModelKey[] = ["M5", "M2", "M6", "M1", "M3", "M4"];
+  return uniqueModels([input.model, ...stableFallbacks]);
+}
+
+function rescuePrompt(input: GenerateImageInput) {
+  const isEdit = input.operation === "edit" || input.operation === "combine";
+  const compact = input.prompt
+    .replace(/\b(?:copyrighted|trademarked|celebrity|real person|brand logo|logo|watermark|nsfw|explicit)\b/gi, "original")
+    .replace(/\s+/g, " ")
+    .trim();
+  const base = clampProviderText(compact, 820);
+  const instruction = isEdit
+    ? "Apply a clean local image edit using the reference image as the source of truth. Preserve identity, composition, lighting, pose, and all unrelated areas. Only change the requested part. Keep the result realistic, polished, and safe for a general audience."
+    : "Create a clean original image matching the user request. Use a polished premium composition, natural lighting, coherent details, no readable text, no logos, no watermark, and safe general-audience presentation.";
+
+  return [instruction, base].filter(Boolean).join("\n");
+}
+
+function rescueNegativePrompt(input: GenerateImageInput) {
+  return [
+    input.negativePrompt || "",
+    "logos, watermark, unreadable text, extra limbs, distorted hands, duplicate subject, broken anatomy, oversaturated artifacts, messy composition, policy-sensitive wording",
+  ].filter(Boolean).join(", ");
+}
+
+function attemptInputs(input: GenerateImageInput) {
+  const rescued = rescuePrompt(input);
+  if (!rescued || rescued === input.prompt) return [input];
+  return [input, { ...input, prompt: rescued, negativePrompt: rescueNegativePrompt(input), seed: "" }];
+}
+
+export async function generateCloudflareImageWithManualFailover(input: GenerateImageInput) {
+  const credentials = await getActiveCloudflareAICredentials();
+  if (!credentials.length) throw new Error("No active Cloudflare AI credentials found. Add active Cloudflare AI credentials in Supabase and set is_active=true.");
+
+  const failures: string[] = [];
+  let exhaustedAttempts = 0;
+  let totalCredentialAttempts = 0;
+  const models = modelFallbackOrder(input);
+
+  for (const modelKey of models) {
+    for (const candidateInput of attemptInputs({ ...input, model: modelKey })) {
+      for (const credential of credentials) {
+        totalCredentialAttempts += 1;
+        const result = await callCloudflareOnce(credential, candidateInput);
+        if (result.ok) {
+          return {
+            ...result,
+            requestedModelKey: input.model,
+            fallbackModelUsed: modelKey !== input.model,
+            promptRescueUsed: candidateInput.prompt !== input.prompt,
+          };
+        }
+
+        if (result.keyExhausted) {
+          exhaustedAttempts += 1;
+          failures.push(`M${modelKey.slice(1)} key slot ${credential.key_slot}: daily allocation exhausted or busy`);
+          continue;
+        }
+
+        failures.push(`M${modelKey.slice(1)} key slot ${credential.key_slot}: ${result.error}`);
+
+        if (result.providerRefused || result.modelUnavailable) break;
+        if (!result.tryNext) break;
+      }
+    }
+  }
+
+  if (totalCredentialAttempts > 0 && exhaustedAttempts === totalCredentialAttempts) {
     throw new Error(ALL_CLOUDFLARE_KEYS_EXHAUSTED_MESSAGE);
   }
 
-  throw new Error(`Image generation failed after rotating Cloudflare keys. ${failures.join(" | ")}`);
+  throw new Error(`Image generation failed after trying model fallback and rotating Cloudflare keys. ${failures.slice(-8).join(" | ")}`);
 }
