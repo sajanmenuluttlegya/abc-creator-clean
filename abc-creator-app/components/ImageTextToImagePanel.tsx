@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ImageComposerDropdown } from "./ImageComposerDropdown";
 
 type ImageModelKey = "M1" | "M2" | "M3" | "M4" | "M5" | "M6";
@@ -77,6 +77,11 @@ function dataUrlToBlob(dataUrl: string) {
   return new Blob([bytes], { type: mime });
 }
 
+function friendlyImageUtilityError(value: string) {
+  if (/no route for that uri/i.test(value)) return "This image utility has moved to the local pipeline. Redeploy latest main and try again.";
+  return value;
+}
+
 function VerticalDivider() {
   return <span className="mx-1 hidden h-10 w-px shrink-0 bg-white/15 sm:block" />;
 }
@@ -121,9 +126,11 @@ export function ImageTextToImagePanel() {
   const [upscalingKey, setUpscalingKey] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const hoverLeaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const selectedImage = images.find((image) => image.index === selectedIndex) || null;
   const selectedPendingEdit = pendingEdit && selectedIndex === pendingEdit.index ? pendingEdit : null;
+  const selectedImageMeta = selectedImage?.kind === "edited" ? `Edited from image ${selectedImage.parentIndex}` : selectedImage?.kind === "upscaled" ? `Upscaled from image ${selectedImage.parentIndex}` : "";
   const creditEstimate = useMemo(() => CREDIT_MAP[model][resolution] * Math.min(Math.max(Number(imageCount) || 1, 1), 4), [imageCount, model, resolution]);
   const canGenerate = prompt.trim().length >= 6 && !loading;
   const canEdit = Boolean(selectedImage) && editPrompt.trim().length >= 3 && !editing;
@@ -133,12 +140,21 @@ export function ImageTextToImagePanel() {
     setIsEditorHovered(false);
     setIsComposerPinned(false);
     setQuickTool(null);
+    if (hoverLeaveTimer.current) clearTimeout(hoverLeaveTimer.current);
   }, [selectedIndex]);
+
+  useEffect(() => () => { if (hoverLeaveTimer.current) clearTimeout(hoverLeaveTimer.current); }, []);
 
   function revealFinalImage() { window.setTimeout(() => setRevealReady(true), 80); }
   function nextIndex() { return Math.max(0, ...images.map((image) => image.index), pendingEdit?.index || 0) + 1; }
-  function closeComposer() { setIsComposerPinned(false); setIsEditorHovered(false); setQuickTool(null); }
-  function handleEditorLeave() { if (!isComposerPinned && !editing && !editPrompt.trim()) setIsEditorHovered(false); }
+  function closeComposer() { setIsComposerPinned(false); setIsEditorHovered(false); setQuickTool(null); if (hoverLeaveTimer.current) clearTimeout(hoverLeaveTimer.current); }
+  function openHoverEditor() { if (hoverLeaveTimer.current) clearTimeout(hoverLeaveTimer.current); setIsEditorHovered(true); }
+  function closeHoverEditor() {
+    if (hoverLeaveTimer.current) clearTimeout(hoverLeaveTimer.current);
+    hoverLeaveTimer.current = setTimeout(() => {
+      if (!isComposerPinned && !editing && !editPrompt.trim()) setIsEditorHovered(false);
+    }, 160);
+  }
 
   function openQuickTool(tool: QuickTool) {
     setQuickTool(tool);
@@ -160,9 +176,8 @@ export function ImageTextToImagePanel() {
       setSelectedIndex(enriched[0]?.index || null);
       setEditPrompt(""); closeComposer(); revealFinalImage();
       setNotice(`Generated ${enriched.length} image${enriched.length === 1 ? "" : "s"}. Charged ${data.creditsCharged ?? creditEstimate} credits.`);
-    } catch (err) {
-      setRevealReady(true); setError(err instanceof Error ? err.message : "Image generation failed.");
-    } finally { setLoading(false); }
+    } catch (err) { setRevealReady(true); setError(err instanceof Error ? err.message : "Image generation failed."); }
+    finally { setLoading(false); }
   }
 
   async function callTransparentBackground(image: GeneratedImage) {
@@ -170,14 +185,14 @@ export function ImageTextToImagePanel() {
     form.append("image", dataUrlToBlob(image.dataUrl), "source.png");
     const response = await fetch("/api/image/background-remover", { method: "POST", body: form });
     const data = await response.json().catch(() => null) as { ok?: boolean; error?: string; details?: string; creditsCharged?: number; image?: { dataUrl: string; filename?: string; width?: number; height?: number } } | null;
-    if (!response.ok || !data?.ok || !data.image?.dataUrl) throw new Error(data?.details || data?.error || "Background removal failed.");
+    if (!response.ok || !data?.ok || !data.image?.dataUrl) throw new Error(friendlyImageUtilityError(data?.details || data?.error || "Background removal failed."));
     return { image: data.image, credits: data.creditsCharged };
   }
 
   async function callBackgroundBlur(image: GeneratedImage) {
     const response = await fetch("/api/image/background-blur", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ imageDataUrl: image.dataUrl }) });
     const data = await response.json().catch(() => null) as { ok?: boolean; error?: string; details?: string; creditsCharged?: number; image?: { dataUrl: string; filename?: string; width?: number; height?: number } } | null;
-    if (!response.ok || !data?.ok || !data.image?.dataUrl) throw new Error(data?.details || data?.error || "Background blur failed.");
+    if (!response.ok || !data?.ok || !data.image?.dataUrl) throw new Error(friendlyImageUtilityError(data?.details || data?.error || "Background blur failed."));
     return { image: data.image, credits: data.creditsCharged };
   }
 
@@ -201,9 +216,8 @@ export function ImageTextToImagePanel() {
       setImages((current) => [...current, edited]);
       setPendingEdit(null); setSelectedIndex(edited.index); setEditPrompt(""); closeComposer(); revealFinalImage();
       setNotice(`Edited image ${sourceIndex}. Charged ${returned.credits ?? "the required"} credits.`);
-    } catch (err) {
-      setRevealReady(true); setPendingEdit(null); setSelectedIndex(sourceIndex); setError(err instanceof Error ? err.message : "Image edit failed. Try again in a few minutes.");
-    } finally { setEditing(false); }
+    } catch (err) { setRevealReady(true); setPendingEdit(null); setSelectedIndex(sourceIndex); setError(err instanceof Error ? err.message : "Image edit failed. Try again in a few minutes."); }
+    finally { setEditing(false); }
   }
 
   async function upscaleImage(image: GeneratedImage, target: UpscaleTarget) {
@@ -235,7 +249,7 @@ export function ImageTextToImagePanel() {
       {error ? <div className="mx-auto max-w-6xl rounded-2xl border border-red-400/25 bg-red-500/10 px-5 py-4 text-sm font-semibold text-red-100">{error}</div> : null}
       {notice ? <div className="mx-auto max-w-6xl rounded-2xl border border-emerald-400/25 bg-emerald-500/10 px-5 py-4 text-sm font-semibold text-emerald-100">{notice}</div> : null}
       {loading ? <div className="mx-auto grid max-w-6xl gap-5 pt-2 md:grid-cols-2">{Array.from({ length: Number(imageCount) || 1 }).map((_, index) => <div key={index} className="grid aspect-square place-items-center overflow-hidden rounded-[2rem] border border-white/25 bg-white/[0.035] shadow-2xl shadow-purple-950/20 backdrop-blur-xl"><div className="text-center"><div className="mx-auto h-14 w-14 animate-spin rounded-full border-2 border-purple-300/20 border-t-purple-200" /><p className="mt-4 text-sm font-black text-white">Generating image...</p></div></div>)}</div> : null}
-      {selectedImage || selectedPendingEdit ? <div className="mx-auto grid max-w-6xl items-start gap-6 pt-2 lg:grid-cols-[minmax(0,1fr)_260px]"><div onMouseEnter={() => setIsEditorHovered(true)} onMouseLeave={handleEditorLeave} className="group rounded-[2rem] border border-white/25 bg-white/[0.035] p-3 shadow-2xl shadow-purple-950/25 backdrop-blur-2xl"><div className="relative overflow-hidden rounded-[1.45rem] bg-black/45">{selectedPendingEdit ? <div className="grid aspect-square place-items-center"><div className="text-center"><div className="mx-auto h-14 w-14 animate-spin rounded-full border-2 border-purple-300/20 border-t-purple-200" /><p className="mt-4 text-sm font-black text-white">Editing</p></div></div> : selectedImage ? <img src={selectedImage.dataUrl} alt={`Selected image ${selectedImage.index}`} className={`max-h-[720px] w-full object-contain transition-all duration-700 ease-out ${revealReady ? "scale-100 blur-0 opacity-100" : "scale-[1.02] blur-xl opacity-60"}`} /> : null}{selectedImage ? <div className="pointer-events-none absolute inset-x-3 bottom-3 z-30 flex translate-y-2 flex-wrap justify-center gap-2 rounded-2xl border border-white/15 bg-black/25 p-2 opacity-0 backdrop-blur-2xl transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">{QUICK_TOOLS.map((item) => <button key={item.tool} type="button" onClick={() => openQuickTool(item.tool)} className="pointer-events-auto rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-left text-white transition hover:-translate-y-0.5 hover:bg-white/20"><span className="block text-xs font-black">{item.label}</span><span className="block text-[10px] font-semibold text-white/60">{item.hint}</span></button>)}</div> : null}</div><div className="mt-4 flex flex-wrap items-center justify-between gap-3 px-1"><div><p className="text-sm font-black text-white">{selectedPendingEdit ? `Editing image ${selectedPendingEdit.sourceIndex}` : selectedImage ? `Selected image ${selectedImage.index}` : "Selected image"}</p><p className="text-xs font-semibold text-slate-400">{selectedImage?.kind === "edited" ? `Edited from image ${selectedImage.parentIndex}` : selectedImage?.kind === "upscaled" ? `Upscaled from image ${selectedImage.parentIndex}` : "Ready"}</p></div>{selectedImage ? imageActions(selectedImage) : null}</div>{selectedImage ? <div onMouseEnter={() => setIsEditorHovered(true)} onMouseLeave={handleEditorLeave} className={`overflow-visible rounded-[1.6rem] border border-white/30 bg-white/[0.035] backdrop-blur-2xl transition-all duration-300 ease-out ${showComposer ? "mt-4 max-h-[520px] translate-y-0 scale-100 opacity-100 blur-0 pointer-events-auto" : "mt-0 max-h-0 -translate-y-3 scale-[0.985] opacity-0 blur-sm pointer-events-none"}`}><textarea value={editPrompt} onFocus={() => setIsComposerPinned(true)} onChange={(event) => { setEditPrompt(event.target.value); setIsComposerPinned(true); }} placeholder="What do you want to change?" className="min-h-[110px] w-full resize-none bg-transparent px-5 py-4 text-base font-semibold leading-7 text-white outline-none placeholder:text-slate-500" /><div className="mx-5 h-px bg-white/15" /><div className="flex flex-col gap-3 px-3 py-3 sm:flex-row sm:items-center sm:justify-between"><div className="flex flex-wrap items-center gap-y-3"><ImageComposerDropdown label="Model" value={model} options={MODEL_OPTIONS} onChange={(value) => setModel(value as ImageModelKey)} /><VerticalDivider /><ImageComposerDropdown label="Resolution" value={resolution} options={RESOLUTION_OPTIONS} onChange={(value) => setResolution(value as ImageResolution)} /><VerticalDivider /><ImageComposerDropdown label="Ratio" value={aspectRatio} options={ASPECT_OPTIONS} onChange={(value) => setAspectRatio(value as ImageAspectRatio)} /><VerticalDivider /><ImageComposerDropdown label="Style" value={style} options={STYLE_OPTIONS} onChange={setStyle} /></div><div className="flex gap-2"><button type="button" onClick={() => { setEditPrompt(""); closeComposer(); }} disabled={editing} className="rounded-full border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-black text-white/80 transition hover:bg-white/[0.1] disabled:opacity-50">Close</button><PrimaryButton onClick={makeConsistentEdit} disabled={!canEdit}>{editing ? "Editing" : "Edit"}</PrimaryButton></div></div></div> : null}</div><div className="space-y-3"><p className="px-1 text-xs font-black uppercase tracking-[0.24em] text-purple-200/80">Session images</p>{images.map((image) => <button key={image.index} type="button" onClick={() => setSelectedIndex(image.index)} className={`block w-full overflow-hidden rounded-2xl border p-1 text-left transition ${selectedIndex === image.index ? "border-white/70 bg-white/[0.08]" : "border-white/10 bg-white/[0.03] hover:border-purple-300/35 hover:bg-white/[0.06]"}`}><img src={image.dataUrl} alt={`Thumbnail ${image.index}`} className="aspect-square w-full rounded-xl object-cover" /><span className="mt-2 block px-1 pb-1 text-xs font-black text-white">{image.kind === "edited" ? `Edit ${image.index}` : image.kind === "upscaled" ? `${image.width && image.height ? `${image.width}×${image.height}` : "Upscaled"}` : `Image ${image.index}`}</span></button>)}{pendingEdit ? <button type="button" onClick={() => setSelectedIndex(pendingEdit.index)} className={`block w-full overflow-hidden rounded-2xl border p-1 text-left transition ${selectedIndex === pendingEdit.index ? "border-white/70 bg-white/[0.08]" : "border-white/10 bg-white/[0.03]"}`}><div className="grid aspect-square place-items-center rounded-xl border border-white/10 bg-white/[0.035]"><div className="text-center"><div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-purple-300/20 border-t-purple-200" /><p className="mt-3 text-xs font-black text-white">Editing</p></div></div><span className="mt-2 block px-1 pb-1 text-xs font-black text-white">Edit loading</span></button> : null}</div></div> : null}
+      {selectedImage || selectedPendingEdit ? <div className="mx-auto grid max-w-6xl items-start gap-6 pt-2 lg:grid-cols-[minmax(0,1fr)_260px]"><div onMouseEnter={openHoverEditor} onMouseLeave={closeHoverEditor} className="group rounded-[2rem] border border-white/25 bg-white/[0.035] p-3 shadow-2xl shadow-purple-950/25 backdrop-blur-2xl"><div className="relative overflow-hidden rounded-[1.45rem] bg-black/45">{selectedPendingEdit ? <div className="grid aspect-square place-items-center"><div className="text-center"><div className="mx-auto h-14 w-14 animate-spin rounded-full border-2 border-purple-300/20 border-t-purple-200" /><p className="mt-4 text-sm font-black text-white">Editing</p></div></div> : selectedImage ? <img src={selectedImage.dataUrl} alt={`Selected image ${selectedImage.index}`} className={`max-h-[720px] w-full object-contain transition-all duration-700 ease-out ${revealReady ? "scale-100 blur-0 opacity-100" : "scale-[1.02] blur-xl opacity-60"}`} /> : null}{selectedImage ? <div className="pointer-events-none absolute inset-x-3 bottom-3 z-30 flex translate-y-2 flex-wrap justify-center gap-2 rounded-2xl border border-white/15 bg-black/25 p-2 opacity-0 backdrop-blur-2xl transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:translate-y-0 group-hover:opacity-100">{QUICK_TOOLS.map((item) => <button key={item.tool} type="button" onClick={() => openQuickTool(item.tool)} className="pointer-events-auto rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-left text-white transition hover:-translate-y-0.5 hover:bg-white/20"><span className="block text-xs font-black">{item.label}</span><span className="block text-[10px] font-semibold text-white/60">{item.hint}</span></button>)}</div> : null}</div><div className="mt-4 flex flex-wrap items-center justify-between gap-3 px-1"><div><p className="text-sm font-black text-white">{selectedPendingEdit ? `Editing image ${selectedPendingEdit.sourceIndex}` : selectedImage ? `Selected image ${selectedImage.index}` : "Selected image"}</p>{selectedImageMeta ? <p className="text-xs font-semibold text-slate-400">{selectedImageMeta}</p> : null}</div>{selectedImage ? imageActions(selectedImage) : null}</div>{selectedImage ? <div onMouseEnter={openHoverEditor} onMouseLeave={closeHoverEditor} className={`overflow-hidden rounded-[1.6rem] border border-white/30 bg-white/[0.035] backdrop-blur-2xl transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${showComposer ? "mt-4 max-h-[520px] translate-y-0 scale-100 opacity-100 blur-0 pointer-events-auto" : "mt-0 max-h-0 translate-y-4 scale-[0.985] opacity-0 blur-sm pointer-events-none"}`}><textarea value={editPrompt} onFocus={() => setIsComposerPinned(true)} onChange={(event) => { setEditPrompt(event.target.value); setIsComposerPinned(true); }} placeholder="What do you want to change?" className="min-h-[110px] w-full resize-none bg-transparent px-5 py-4 text-base font-semibold leading-7 text-white outline-none placeholder:text-slate-500" /><div className="mx-5 h-px bg-white/15" /><div className="flex flex-col gap-3 px-3 py-3 sm:flex-row sm:items-center sm:justify-between"><div className="flex flex-wrap items-center gap-y-3"><ImageComposerDropdown label="Model" value={model} options={MODEL_OPTIONS} onChange={(value) => setModel(value as ImageModelKey)} /><VerticalDivider /><ImageComposerDropdown label="Resolution" value={resolution} options={RESOLUTION_OPTIONS} onChange={(value) => setResolution(value as ImageResolution)} /><VerticalDivider /><ImageComposerDropdown label="Ratio" value={aspectRatio} options={ASPECT_OPTIONS} onChange={(value) => setAspectRatio(value as ImageAspectRatio)} /><VerticalDivider /><ImageComposerDropdown label="Style" value={style} options={STYLE_OPTIONS} onChange={setStyle} /></div><div className="flex gap-2"><button type="button" onClick={() => { setEditPrompt(""); closeComposer(); }} disabled={editing} className="rounded-full border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-black text-white/80 transition hover:bg-white/[0.1] disabled:opacity-50">Close</button><PrimaryButton onClick={makeConsistentEdit} disabled={!canEdit}>{editing ? "Editing" : "Edit"}</PrimaryButton></div></div></div> : null}</div><div className="space-y-3"><p className="px-1 text-xs font-black uppercase tracking-[0.24em] text-purple-200/80">Session images</p>{images.map((image) => <button key={image.index} type="button" onClick={() => setSelectedIndex(image.index)} className={`block w-full overflow-hidden rounded-2xl border p-1 text-left transition ${selectedIndex === image.index ? "border-white/70 bg-white/[0.08]" : "border-white/10 bg-white/[0.03] hover:border-purple-300/35 hover:bg-white/[0.06]"}`}><img src={image.dataUrl} alt={`Thumbnail ${image.index}`} className="aspect-square w-full rounded-xl object-cover" /><span className="mt-2 block px-1 pb-1 text-xs font-black text-white">{image.kind === "edited" ? `Edit ${image.index}` : image.kind === "upscaled" ? `${image.width && image.height ? `${image.width}×${image.height}` : "Upscaled"}` : `Image ${image.index}`}</span></button>)}{pendingEdit ? <button type="button" onClick={() => setSelectedIndex(pendingEdit.index)} className={`block w-full overflow-hidden rounded-2xl border p-1 text-left transition ${selectedIndex === pendingEdit.index ? "border-white/70 bg-white/[0.08]" : "border-white/10 bg-white/[0.03]"}`}><div className="grid aspect-square place-items-center rounded-xl border border-white/10 bg-white/[0.035]"><div className="text-center"><div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-purple-300/20 border-t-purple-200" /><p className="mt-3 text-xs font-black text-white">Editing</p></div></div><span className="mt-2 block px-1 pb-1 text-xs font-black text-white">Edit loading</span></button> : null}</div></div> : null}
     </div>
   );
 }
