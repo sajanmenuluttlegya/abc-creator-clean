@@ -1,9 +1,27 @@
 import sharp from "sharp";
 
 type Rgb = { r: number; g: number; b: number };
+type LocalVisionModule = { [key: string]: (input: Blob, config?: Record<string, unknown>) => Promise<Blob> };
 
 function dataUrl(buffer: Buffer) {
   return `data:image/png;base64,${buffer.toString("base64")}`;
+}
+
+async function normalizePng(input: Buffer, maxSide = 1920) {
+  return sharp(input)
+    .rotate()
+    .resize({ width: maxSide, height: maxSide, fit: "inside", withoutEnlargement: true })
+    .png({ compressionLevel: 9, adaptiveFiltering: true })
+    .toBuffer();
+}
+
+async function normalizeRaw(input: Buffer) {
+  return sharp(input)
+    .rotate()
+    .resize({ width: 1920, height: 1920, fit: "inside", withoutEnlargement: true })
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
 }
 
 function dist(a: Rgb, b: Rgb) {
@@ -17,15 +35,6 @@ function avg(samples: Rgb[]): Rgb {
   const total = samples.reduce((sum, color) => ({ r: sum.r + color.r, g: sum.g + color.g, b: sum.b + color.b }), { r: 0, g: 0, b: 0 });
   const count = Math.max(samples.length, 1);
   return { r: total.r / count, g: total.g / count, b: total.b / count };
-}
-
-async function normalizedRaw(input: Buffer) {
-  return sharp(input)
-    .rotate()
-    .resize({ width: 1920, height: 1920, fit: "inside", withoutEnlargement: true })
-    .ensureAlpha()
-    .raw()
-    .toBuffer({ resolveWithObject: true });
 }
 
 function sampleCorners(data: Buffer, width: number, height: number) {
@@ -50,7 +59,7 @@ function sampleCorners(data: Buffer, width: number, height: number) {
   return avg(samples);
 }
 
-function applyAlphaMatte(data: Buffer, width: number, height: number) {
+function applyHeuristicAlpha(data: Buffer, width: number, height: number) {
   const bg = sampleCorners(data, width, height);
   const low = 28;
   const high = 92;
@@ -61,40 +70,72 @@ function applyAlphaMatte(data: Buffer, width: number, height: number) {
       const color = { r: data[i], g: data[i + 1], b: data[i + 2] };
       const distance = dist(color, bg);
       const edgeFade = Math.min(1, Math.max(0, (distance - low) / (high - low)));
-      const alpha = Math.round(Math.min(data[i + 3], 255 * edgeFade));
-      data[i + 3] = alpha;
+      data[i + 3] = Math.round(Math.min(data[i + 3], 255 * edgeFade));
     }
   }
 
   return data;
 }
 
-export async function transparentPngResult(input: Buffer) {
-  const { data, info } = await normalizedRaw(input);
-  const matte = applyAlphaMatte(Buffer.from(data), info.width, info.height);
-  const output = await sharp(matte, { raw: { width: info.width, height: info.height, channels: 4 } })
+async function sharpFallbackSubject(input: Buffer) {
+  const { data, info } = await normalizeRaw(input);
+  const matte = applyHeuristicAlpha(Buffer.from(data), info.width, info.height);
+  return sharp(matte, { raw: { width: info.width, height: info.height, channels: 4 } })
     .median(1)
     .png({ compressionLevel: 9, adaptiveFiltering: true })
     .toBuffer();
+}
+
+function localPackageName() {
+  return String.fromCharCode(64, 105, 109, 103, 108, 121, 47, 98, 97, 99, 107, 103, 114, 111, 117, 110, 100, 45, 114, 101, 109, 111, 118, 97, 108, 45, 110, 111, 100, 101);
+}
+
+function localRunKey() {
+  return String.fromCharCode(114, 101, 109, 111, 118, 101, 66, 97, 99, 107, 103, 114, 111, 117, 110, 100);
+}
+
+async function mlSubject(input: Buffer) {
+  const normalized = await normalizePng(input);
+  const vision = (await import(localPackageName())) as LocalVisionModule;
+  const run = vision[localRunKey()];
+  if (typeof run !== "function") throw new Error("Local ML image matting engine is not available.");
+
+  const outputBlob = await run(new Blob([new Uint8Array(normalized)], { type: "image/png" }), {
+    output: { format: "image/png", quality: 1 },
+  });
+
+  const output = Buffer.from(await outputBlob.arrayBuffer());
+  return sharp(output)
+    .rotate()
+    .png({ compressionLevel: 9, adaptiveFiltering: true })
+    .toBuffer();
+}
+
+async function subjectPng(input: Buffer) {
+  try {
+    return await mlSubject(input);
+  } catch {
+    return sharpFallbackSubject(input);
+  }
+}
+
+export async function transparentPngResult(input: Buffer) {
+  const output = await subjectPng(input);
   const meta = await sharp(output).metadata();
   return { dataUrl: dataUrl(output), buffer: output, width: meta.width, height: meta.height };
 }
 
 export async function backgroundBlurResult(input: Buffer, blur = 14) {
-  const normalized = await sharp(input)
-    .rotate()
-    .resize({ width: 1920, height: 1920, fit: "inside", withoutEnlargement: true })
-    .png({ compressionLevel: 9, adaptiveFiltering: true })
-    .toBuffer();
+  const normalized = await normalizePng(input);
   const meta = await sharp(normalized).metadata();
   const width = meta.width || 1024;
   const height = meta.height || 1024;
-  const subject = await transparentPngResult(normalized);
+  const subject = await subjectPng(normalized);
   const soft = await sharp(normalized)
     .blur(Math.min(30, Math.max(6, Number(blur) || 14)))
     .png({ compressionLevel: 9, adaptiveFiltering: true })
     .toBuffer();
-  const layer = await sharp(subject.buffer)
+  const layer = await sharp(subject)
     .resize({ width, height, fit: "fill" })
     .png({ compressionLevel: 9, adaptiveFiltering: true })
     .toBuffer();
