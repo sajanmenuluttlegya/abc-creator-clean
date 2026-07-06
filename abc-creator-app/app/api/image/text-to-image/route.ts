@@ -80,11 +80,11 @@ function userSafeProviderError(error: unknown) {
   const lower = raw.toLowerCase();
 
   if (lower.includes("flag" + "ged") || lower.includes("choose another prompt") || lower.includes("output has been") || lower.includes("provider rejected")) {
-    return "The image provider rejected this prompt or reference image combination. Try a different prompt or a different reference image.";
+    return "The image provider rejected this prompt or reference image combination after automatic safe retry. Try a different prompt or a different reference image.";
   }
 
   if (lower.includes("failed to fetch")) {
-    return "The image request timed out or the provider connection dropped. Try again with M2 or a lower resolution, then retry M1 after deployment finishes.";
+    return "The image request timed out or the provider connection dropped. The system will retry other keys/models on the next request.";
   }
 
   return raw;
@@ -260,6 +260,9 @@ export async function POST(req: NextRequest) {
     }
 
     const images = [];
+    const actualModelLabels = new Set<ImageModelKey>();
+    let usedPromptRescue = false;
+    let usedModelFallback = false;
 
     for (let index = 0; index < imageCount; index += 1) {
       const result = await generateCloudflareImageWithManualFailover({
@@ -275,26 +278,34 @@ export async function POST(req: NextRequest) {
         referenceImageDataUrl: hasReference ? sourceImageDataUrl : undefined,
       });
 
+      actualModelLabels.add(result.modelKey || effectiveModel);
+      usedPromptRescue = usedPromptRescue || Boolean(result.promptRescueUsed);
+      usedModelFallback = usedModelFallback || Boolean(result.fallbackModelUsed);
+
       images.push({
         index: index + 1,
         dataUrl: result.dataUrl,
-        filename: operation === "edit" ? `image-edit-${effectiveModel}-${resolution}-${index + 1}.png` : `text-to-image-${effectiveModel}-${resolution}-${index + 1}.png`,
+        filename: operation === "edit" ? `image-edit-${result.modelKey || effectiveModel}-${resolution}-${index + 1}.png` : `text-to-image-${result.modelKey || effectiveModel}-${resolution}-${index + 1}.png`,
         provider: "cloudflare-workers-ai",
         postProcess: "provider-native",
         model: result.modelId,
-        modelLabel: effectiveModel,
+        modelLabel: result.modelKey || effectiveModel,
         requestedModel,
-        modelUsed: effectiveModel,
+        modelUsed: result.modelKey || effectiveModel,
+        effectiveModel,
+        fallbackModelUsed: result.fallbackModelUsed,
+        promptRescueUsed: result.promptRescueUsed,
         credentialSlot: result.credentialSlot,
         width: result.width,
         height: result.height,
       });
     }
 
+    const actualModelSummary = Array.from(actualModelLabels).join(",") || effectiveModel;
     const spendResponse = await supabase.rpc("spend_reserved_credits", {
       p_transaction_id: reservedTransactionId,
       p_provider: operation === "edit" ? "image:premium-edit:cloudflare-workers-ai" : "image:premium-generation:cloudflare-workers-ai",
-      p_model: operation === "edit" ? `${requestedModel}->${effectiveModel}` : effectiveModel,
+      p_model: operation === "edit" ? `${requestedModel}->${effectiveModel}->${actualModelSummary}` : `${effectiveModel}->${actualModelSummary}`,
     });
 
     if (spendResponse.error) {
@@ -320,8 +331,10 @@ export async function POST(req: NextRequest) {
       toolSlug: "text-to-image-generator",
       model: requestedModel,
       modelRequested: requestedModel,
-      modelUsed: effectiveModel,
+      modelUsed: actualModelSummary,
       effectiveModel,
+      fallbackModelUsed: usedModelFallback,
+      promptRescueUsed: usedPromptRescue,
       promptMode: operation === "edit" ? "premium-edit-planner" : "premium-generation-enhancer",
       editMode: operation === "edit" ? "premium-consistency-lock" : undefined,
       toolPreset,
