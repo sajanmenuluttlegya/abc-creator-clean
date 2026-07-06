@@ -52,12 +52,12 @@ export async function POST(req: NextRequest) {
     if (!tx) return Response.json({ ok: false, error: "Credit reservation failed.", code: "CREDIT_RESERVATION_MISSING_ID" }, { status: 500 });
 
     const result = await transparentPngResult(Buffer.from(await upload.arrayBuffer()));
-    const spent = await supabase.rpc("spend_reserved_credits", { p_transaction_id: tx, p_provider: "image:utility:local-sharp", p_model: "sharp-local-alpha" });
+    const spent = await supabase.rpc("spend_reserved_credits", { p_transaction_id: tx, p_provider: "image:utility:local-matting", p_model: result.engine });
     if (spent.error) { await refund("image_utility_spend_failed"); return Response.json({ ok: false, error: "Could not finalize credit spend.", details: errText(spent.error) }, { status: 500 }); }
     const spendData = spent.data as SpendResult | null;
     if (spendData?.ok === false) { await refund("image_utility_spend_rejected"); return Response.json({ ok: false, error: "Could not finalize credit spend.", code: spendData.code || "SPEND_FAILED", status: spendData.status }, { status: 500 }); }
 
-    return Response.json({ ok: true, toolSlug: TOOL_SLUG, creditsCharged: CREDITS, image: { dataUrl: result.dataUrl, mimeType: "image/png", filename: `${upload.name.replace(/\.[^.]+$/, "") || "image"}-transparent.png`, width: result.width, height: result.height } });
+    return Response.json({ ok: true, toolSlug: TOOL_SLUG, creditsCharged: CREDITS, engine: result.engine, image: { dataUrl: result.dataUrl, mimeType: "image/png", filename: `${upload.name.replace(/\.[^.]+$/, "") || "image"}-transparent.png`, width: result.width, height: result.height } });
   } catch (error) {
     await refund("image_utility_failed");
     return Response.json({ ok: false, error: "Image utility failed.", details: error instanceof Error ? error.message : String(error) }, { status: 500 });
