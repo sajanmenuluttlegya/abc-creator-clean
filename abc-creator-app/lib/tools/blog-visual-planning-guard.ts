@@ -19,6 +19,7 @@ export function getBlogVisualPlanningGuard(toolSlug: string) {
 Blog visual planning:
 - Keep the blog visual system active for article generators. Do not remove useful graphs, flowcharts, visual illustrations, tables, image blocks, or abc-diagram blocks from blog content.
 - Select visuals by article length, article depth, available input data, visual_mode, chart_preference, and section relevance.
+- Use the data/content type map before choosing the visual: comparison -> table/matrix/bar; numeric categories -> bar/column; trend over time -> line/area; phases -> timeline/roadmap; distribution -> histogram/scatter/heatmap; process -> flowchart/workflow; directional source-to-destination movement -> sankey; hierarchy or lineage -> tree/taxonomy/lineage; relationships -> graph/knowledge graph; system structure -> architecture/ERD/block diagram; spatial content -> map; editorial mood -> textless image.
 - Keep workflow, network, radial, concentric, lineage, sankey, chart, graph, matrix, timeline, roadmap, map, architecture, taxonomy, and bar visual options available.
 - Use workflow visuals for processes, systems, pipelines, and step sequences.
 - Use radial, concentric, web, network, or lineage visuals for relationships, layers, ecosystems, dependencies, clusters, and signal networks.
