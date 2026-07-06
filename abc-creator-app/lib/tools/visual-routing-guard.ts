@@ -1,11 +1,25 @@
 import { WORKFLOW_REVIEW_WORDING } from "./workflow-ai-review";
 
+const BLOG_VISUAL_TOOL_SLUGS = new Set([
+  "blog-content",
+  "pro-image-brief-for-blog",
+  "human-style-blog-post",
+  "seo-optimized-blog-post",
+  "advanced-blog-post",
+  "quick-1-click-blog-post",
+  "comparison-blog-writer",
+  "youtube-video-to-blog-post",
+  "video-to-article-converter",
+  "rewrite-article-with-keywords",
+]);
+
 export function getVisualRoutingGuard(toolSlug: string) {
-  if (toolSlug !== "blog-content" && toolSlug !== "pro-image-brief-for-blog") return "";
+  if (!BLOG_VISUAL_TOOL_SLUGS.has(toolSlug)) return "";
 
   return `
 
 Visual routing:
+- Blog/article generators must preserve the visual system. Do not remove graphs, flowcharts, diagrams, visual illustrations, image prompts, tables, or abc-diagram blocks when they help the article.
 - Use abc-diagram blocks for workflows, charts, graphs, dashboards, sankeys, taxonomies, pipelines, arrows, axes, legends, callouts, stage names, and visuals requiring readable labels.
 - Keep image blocks enabled when the user selected images. Do not remove images just because coded diagrams are present.
 - Generated images are for clean, relevant, textless illustrations: hero art, editorial scenes, abstract metaphors, photoreal supporting visuals, or atmospheric section art.
@@ -20,6 +34,23 @@ Visual routing:
 - Use ${WORKFLOW_REVIEW_WORDING} as the review step before the final action step.
 - Do not include a feedback step in workflow diagrams.
 - Workflow sequence: Data Ingestion -> Cleaning & Alignment -> Feature Engineering -> Model Inference -> Risk Scoring -> ${WORKFLOW_REVIEW_WORDING} -> Action.
+
+Visual selection by content type:
+- Process, sequence, implementation steps, pipelines, onboarding, automations, approvals, or workflows -> flowchart, process map, workflow diagram, pipeline diagram, swimlane, roadmap, or timeline.
+- Comparison, choices, prioritization, options, pros/cons, tradeoffs, pricing placeholders, selection criteria, or strategy matrix -> table, decision matrix, priority matrix, 2x2 matrix, bar chart, radar/spider chart, or quadrant chart.
+- Time, trend, phases, milestones, chronology, publication plan, rollout, or before/after path -> timeline, roadmap, line chart, area chart, milestone chart, calendar view, or waterfall when meaningful.
+- Relationships, dependencies, ecosystems, causes, entities, audiences, channels, signals, or connected concepts -> network graph, node-link diagram, knowledge graph, dependency graph, causal graph, or concept map.
+- Hierarchy, categories, taxonomy, lineage, ancestry, topic clusters, content clusters, or nested frameworks -> taxonomy tree, tree diagram, hierarchy chart, lineage graph, mind map, or concept map.
+- Source-to-destination movement of value, data, traffic, energy, attention, leads, or conversions -> Sankey only when a clear flow exists.
+- System, architecture, data stack, software structure, product components, or infrastructure -> architecture diagram, system diagram, component diagram, ERD, database schema, class/object diagram, or block diagram.
+- Spatial, geographic, route, journey, site, floor, map, region, or location-based content -> map, route map, site map, journey map, conceptual map, or floor plan.
+- Abstract, emotional, brand, storytelling, hero support, or section atmosphere without labels -> image block / visual illustration, not abc-diagram.
+
+Placement rules:
+- Decide the visual immediately after understanding the nearby section's reader job, then place it close to the paragraph/section it clarifies.
+- Do not dump visuals at the end. Do not force a visual into every section.
+- Keep at least one meaningful prose paragraph between any two visuals.
+- For very short outputs use 0-1 visuals; for standard/long article generators use useful visuals according to article length and section need.
 
 Data-backed visual rules:
 - Do not invent raw internet data, charts, statistics, source-backed insights, competitor facts, market share, rankings, prices, or timelines.
