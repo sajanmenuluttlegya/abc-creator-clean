@@ -13,7 +13,7 @@ import { routeToImage } from "@/lib/ai/routeToImage";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const BLOG_OUTPUT_IMAGE_TOOLS = new Set([
+const OUTPUT_IMAGE_TOOLS = new Set([
   "blog-content",
   "pro-image-brief-for-blog",
   "human-style-blog-post",
@@ -22,6 +22,18 @@ const BLOG_OUTPUT_IMAGE_TOOLS = new Set([
   "quick-1-click-blog-post",
   "comparison-blog-writer",
   "youtube-video-to-blog-post",
+  "book-idea-generator",
+  "book-title-generator",
+  "book-bible-generator",
+  "character-builder",
+  "worldbuilding-builder",
+  "book-outline-generator",
+  "chapter-outline-generator",
+  "scene-generator",
+  "chapter-writer",
+  "chapter-rewriter-humanizer",
+  "continuity-checker",
+  "book-blurb-generator",
 ]);
 
 type GenerateImageBody = {
@@ -82,7 +94,7 @@ function hasEnoughPromptMaterial(body: GenerateImageBody) {
 }
 
 function supportsOutputImageForTool(toolSlug: string) {
-  return BLOG_OUTPUT_IMAGE_TOOLS.has(toolSlug) && supportsImageGeneration(toolSlug);
+  return OUTPUT_IMAGE_TOOLS.has(toolSlug) && supportsImageGeneration(toolSlug);
 }
 
 export async function POST(req: NextRequest) {
@@ -109,7 +121,7 @@ export async function POST(req: NextRequest) {
     const operation = getOperation(body);
 
     if (!supportsOutputImageForTool(toolSlug)) {
-      return Response.json({ ok: false, error: "Output image insertion is enabled for selected blog image tools only.", code: "IMAGE_TOOL_NOT_ALLOWED" }, { status: 400 });
+      return Response.json({ ok: false, error: "Output image insertion is enabled for supported blog and book tools only.", code: "IMAGE_TOOL_NOT_ALLOWED" }, { status: 400 });
     }
 
     if (!hasEnoughPromptMaterial(body)) {
