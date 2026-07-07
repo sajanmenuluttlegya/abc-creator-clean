@@ -1,7 +1,10 @@
+import { serverBookTools } from "./server-book-tools";
+
 type ToolFieldRule = { id: string; label: string; required?: boolean; minLength?: number; maxLength?: number };
 type ServerPrompt = { system: string; outputGuide: string; creditCost: number; requiredInputs: ToolFieldRule[] };
 
 export const serverAiPromptBatchTools: Record<string, ServerPrompt> = {
+  ...serverBookTools,
   "video-prompt-generator": {
     creditCost: 1,
     requiredInputs: [
