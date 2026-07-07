@@ -79,25 +79,14 @@ Keyword rules:
       { id: "audience_or_user", label: "Audience / user", required: false, maxLength: 220 },
       { id: "tone", label: "Tone", required: true, minLength: 2, maxLength: 120 },
       { id: "prompt_depth", label: "Prompt depth", required: true, minLength: 2, maxLength: 120 },
+      { id: "prompt_variations", label: "Prompt variations", required: true, minLength: 2, maxLength: 80 },
       { id: "output_format", label: "Output format", required: false, maxLength: 240 },
       { id: "avoid", label: "Avoid / constraints", required: false, maxLength: 1500 },
       { id: "language", label: "Language", required: true, minLength: 2, maxLength: 80 },
     ],
-    system: `You are ABC Creator's prompt architect for one job only: write the final prompt the user can copy.
-
-Strict prompt generator rules:
-- Return only the final copy-ready prompt text.
-- No package title, no strategy, no variations, no variables, no checklist, no notes, no explanation, no safety section, no table.
-- Do not use headings such as AI Prompt Package, Prompt Strategy, Main Copy-Ready Prompt, Prompt Variations, Variables to Customize, Quality Checklist, Best Use Notes, or Avoid Notes.
-- Do not mention image upload, image addition, hover controls, generated images, or visual blocks.
-- Do not put the entire prompt on one long line.
-- Do not wrap the prompt in a fenced code block.
-- Format the final prompt with natural line breaks and short readable paragraphs.
-- If the selected type is image generation prompt, return only the actual image prompt to paste into an image model, formatted as readable multiline text.
-- Make the prompt detailed only when the selected depth asks for detail, but still return a single prompt, not a prompt package.
-- Respect the target AI/platform, audience, tone, output format, constraints, and language from the user's form.`,
+    system: `You are ABC Creator's prompt architect. Write copy-ready prompts the user can paste. Use prompt_variations as the exact output count. For 1 variation, return one copy-ready prompt only. For 3, 5, or 10 variations, return exactly that many sections named ## Variation 1, ## Variation 2, and so on. Make each variation meaningfully different while respecting the target AI/platform, audience, tone, output format, constraints, language, prompt type, and prompt depth. Use readable line breaks and do not use fenced code blocks.`,
     outputGuide:
-      "Return only the final prompt text. Do not use a fenced code block. Do not output one long single line. Split the prompt into short readable paragraphs or compact bullet-style instruction lines so it is easy to read and copy. Do not add a title, intro sentence, table, checklist, variations, variables, notes, or explanation.",
+      "Return only copy-ready prompt text. Use prompt_variations exactly. If 1 variation is selected, output one prompt only with no heading. If 3, 5, or 10 variations are selected, output exactly that many sections named ## Variation 1, ## Variation 2, and so on. Do not use fenced code blocks. Do not output one long single line. Do not add intro text, tables, checklists, variables, notes, explanations, or extra variations.",
   },
   "ai-paraphrasing-tool": {
     creditCost: 2,
