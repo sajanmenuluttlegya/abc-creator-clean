@@ -14,6 +14,7 @@ const keywordCountOptions = ["25 keywords", "50 keywords", "100 keywords"];
 const intentOptions = ["Mixed intent", "Informational", "Commercial investigation", "Transactional", "Local SEO", "Question keywords", "Comparison keywords"];
 const promptTypeOptions = ["Marketing prompt", "Blog/content prompt", "Image generation prompt", "Business strategy prompt", "SEO prompt", "Social media prompt", "Custom task prompt"];
 const promptDepthOptions = ["Short usable prompt", "Detailed professional prompt", "Advanced prompt with constraints", "Prompt pack with variations"];
+const promptVariationOptions = ["1 variation", "3 variations", "5 variations", "10 variations"];
 const paraphraseModeOptions = ["Standard paraphrase", "Simpler rewrite", "More polished", "More concise", "More detailed", "Different tone", "Multiple variations"];
 const paragraphTypeOptions = ["Introduction paragraph", "Body paragraph", "Conclusion paragraph", "Sales paragraph", "SEO paragraph", "Academic paragraph", "Social caption paragraph", "Custom paragraph"];
 const paragraphCountOptions = ["1 paragraph", "3 paragraphs", "5 paragraphs", "10 paragraphs"];
@@ -93,6 +94,7 @@ export const generalTools: PublicGeneralTool[] = [
       { id: "audience_or_user", label: "Audience / End User", type: "text", placeholder: "Optional audience context", required: false },
       { id: "tone", label: "Tone", type: "select", required: true, options: toneOptions },
       { id: "prompt_depth", label: "Prompt Depth", type: "select", required: true, options: promptDepthOptions },
+      { id: "prompt_variations", label: "Prompt Variations", type: "select", required: true, options: promptVariationOptions },
       { id: "output_format", label: "Desired Output Format", type: "text", placeholder: "Optional: table, bullet list, article, code, image prompt", required: false },
       { id: "avoid", label: "Avoid / Constraints", type: "textarea", placeholder: "Optional constraints", required: false },
       { id: "language", label: "Language", type: "select", required: true, options: languageOptions },
