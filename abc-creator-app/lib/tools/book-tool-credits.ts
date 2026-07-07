@@ -13,6 +13,20 @@ export const BOOK_TOOL_CREDIT_COSTS: Record<string, number> = {
   "book-blurb-generator": 3,
 };
 
+export const BOOK_OUTPUT_LENGTH_CREDITS: Array<[string, number]> = [
+  ["Premium deep output", 9],
+  ["Long output", 5],
+  ["Standard output", 2],
+  ["Compact output", 1],
+];
+
+export const SCENE_LENGTH_CREDITS: Array<[string, number]> = [
+  ["Very detailed scene", 9],
+  ["Long scene", 7],
+  ["Standard scene", 5],
+  ["Short scene", 5],
+];
+
 export const CHAPTER_LENGTH_CREDITS: Array<[string, number]> = [
   ["Epic chapter", 37],
   ["Premium chapter", 28],
