@@ -26,9 +26,15 @@ Blog visual planning:
 - Use charts, graphs, bars, matrices, or tables for comparisons, rankings, factor weighting, options, and decision criteria.
 - Use timelines or roadmaps for phases, chronology, implementation paths, publishing calendars, rollouts, and milestones.
 - Use architecture, ERD, system, component, or block diagrams for product, data, infrastructure, software, and operating-model structure.
-- Use image blocks as relevant textless illustrations only; never use images for label-heavy graphs, charts, dashboards, flowcharts, or maps.
+- Use map-style visuals only for geographic, route, spatial, local journey, site, or floor-layout content.
+- Use image blocks as relevant textless illustrations only; never use images for label-heavy graphs, charts, dashboards, flowcharts, workflows, maps, or structured data visuals.
+- Keep image blocks enabled when the user selected image output. Do not remove image blocks simply because diagrams are also present.
+- Hero image only means one relevant hero image when it supports the article. Hero + section images means one relevant hero plus useful section images, usually one or two and never more than the article genuinely needs.
+- Every image prompt must match the nearest section topic, angle, audience, and reader job. Avoid generic filler images.
 - Keep meaningful prose between visual blocks.
 - Avoid title-style explainer lines above abc-diagram blocks, including phrases like "A simplified workflow showing" or "This chart illustrates".
+- Do not put long captions or article-title sentences inside diagram cards; keep diagram labels short and put explanations in prose.
+- For radial, concentric, orbit, or hub-and-spoke layouts, keep labels near their nodes and use arrows only for directional flow or ring-level callouts.
 - 2 paragraphs or very short: 0-1 total visuals.
 - Short: 1-2 total visuals.
 - Medium: 2-3 total visuals.
