@@ -4,6 +4,7 @@ import { CAMPAIGN_TOOL_CREDIT_COSTS } from "./campaign-tool-credits";
 import { BLOG_BATCH_TOOL_CREDIT_COSTS } from "./blog-batch-tool-credits";
 import { SEO_BATCH_TOOL_CREDIT_COSTS } from "./seo-batch-tool-credits";
 import { WRITING_BATCH_TOOL_CREDIT_COSTS } from "./writing-batch-tool-credits";
+import { BOOK_TOOL_CREDIT_COSTS, CHAPTER_LENGTH_CREDITS, REWRITE_INTENSITY_ADDS } from "./book-tool-credits";
 
 export type ToolInputs = Record<string, string>;
 export type CreditEstimate = { credits: number; isDynamic: boolean; label: string };
@@ -15,9 +16,7 @@ export function scaleCreditAmount(credits: number) {
   return exactScale[safeCredits] ?? safeCredits + 20;
 }
 
-function creditText(credits: number) {
-  return `${credits} credit${credits === 1 ? "" : "s"}`;
-}
+function creditText(credits: number) { return `${credits} credit${credits === 1 ? "" : "s"}`; }
 
 export const IMAGE_CREDITS_PER_IMAGE: number = scaleCreditAmount(1);
 export const IMAGE_EDIT_CREDITS: number = 4;
@@ -37,9 +36,10 @@ const EXACT_TOOL_CREDIT_OVERRIDES: Record<string, number> = {
 };
 
 const WRITING_BATCH_TOOL_SLUGS = Object.keys(WRITING_BATCH_TOOL_CREDIT_COSTS);
+const BOOK_TOOL_SLUGS = Object.keys(BOOK_TOOL_CREDIT_COSTS);
 const BASE_TOOL_CREDITS: Record<string, number> = {
   "blog-topic-ideas": 1, "blog-outline": 3, "blog-content": 7, "pro-image-brief-for-blog": 1, "blog-seo-pack": 5,
-  ...BLOG_TOOL_CREDIT_COSTS, ...BLOG_BATCH_TOOL_CREDIT_COSTS, ...SEO_BATCH_TOOL_CREDIT_COSTS, ...PLATFORM_TOOL_CREDIT_COSTS, ...CAMPAIGN_TOOL_CREDIT_COSTS, ...WRITING_BATCH_TOOL_CREDIT_COSTS, ...EXACT_TOOL_CREDIT_OVERRIDES,
+  ...BLOG_TOOL_CREDIT_COSTS, ...BLOG_BATCH_TOOL_CREDIT_COSTS, ...SEO_BATCH_TOOL_CREDIT_COSTS, ...PLATFORM_TOOL_CREDIT_COSTS, ...CAMPAIGN_TOOL_CREDIT_COSTS, ...WRITING_BATCH_TOOL_CREDIT_COSTS, ...BOOK_TOOL_CREDIT_COSTS, ...EXACT_TOOL_CREDIT_OVERRIDES,
   "image-to-instagram-caption": 3, "instagram-page-name-bio-generator": 1, "social-media-bio-generator": 1, "business-name-generator": 1, "long-tail-keyword-generator": 2, "ai-prompt-generator": 1, "ai-paraphrasing-tool": 2, "ai-paragraph-generator": 2, "ai-report-writing": 3, "product-description": 3,
 };
 
@@ -68,10 +68,11 @@ function calculateVariationToolCredits(value: string | undefined) { return match
 function calculatePromptVariationCredits(value: string | undefined) { return matchCredit(value, PROMPT_VARIATION_CREDITS, 1); }
 function isPromptVariationTool(toolSlug: string) { const words = toolSlug.replace(/-/g, " "); return /\bprompt\b/.test(words) || toolSlug === "universal-prompt-enhancer"; }
 function calculateWritingLengthCredits(inputs: ToolInputs, fallback = 1) { return matchCredit(inputs.output_length, WRITING_OUTPUT_LENGTH_CREDITS, fallback); }
+function calculateBookRewriteCredits(inputs: ToolInputs) { return matchCredit(inputs.original_chapter_length, CHAPTER_LENGTH_CREDITS, 9) + matchCredit(inputs.rewrite_mode, REWRITE_INTENSITY_ADDS, 5); }
 function calculateFullBlogPresetCredits(toolSlug: string, inputs: ToolInputs) { let credits = matchCredit(inputs.word_count, PRESET_BLOG_WORD_COUNT_CREDITS, 8); if (toolSlug === "advanced-blog-post") { if (includes(inputs.expertise_level, "Expert")) credits += 2; if (includes(inputs.expertise_level, "Advanced")) credits += 1; if (includes(inputs.examples_needed, "Many") || includes(inputs.examples_needed, "Detailed")) credits += 1; } return credits; }
 function calculateWritingToolCredits(toolSlug: string, inputs: ToolInputs) { if (toolSlug === "quotes-generator") return matchCredit(inputs.quote_count, QUOTE_COUNT_CREDITS, 1); if (toolSlug === "presentation-slides-text-generator") return matchCredit(inputs.slide_count, SLIDE_COUNT_CREDITS, 1); if (toolSlug === "paragraph-generator" || toolSlug === "ai-paragraph-generator") return matchCredit(inputs.paragraph_count, PARAGRAPH_COUNT_CREDITS, 1); if (toolSlug === "kids-video-script-generator" || toolSlug === "whiteboard-animation-script") return Math.max(calculateWritingLengthCredits(inputs, 1), matchCredit(inputs.script_length, SCRIPT_LENGTH_CREDITS, 1)); return calculateWritingLengthCredits(inputs, BASE_TOOL_CREDITS[toolSlug] ?? 1); }
-function isLengthCreditField(field: string) { const normalized = field.toLowerCase(); return normalized === "length" || normalized.endsWith("_length") || normalized.includes("word_count") || normalized === "words_per_section" || normalized.endsWith("_depth") || normalized.includes("duration") || normalized === "edit_level" || normalized === "humanize_level"; }
-function calculateLengthSelectionCredits(inputs: ToolInputs = {}) { let credits = 0; for (const [field, value] of Object.entries(inputs)) { if (!isLengthCreditField(field) || typeof value !== "string") continue; const normalized = value.toLowerCase(); if (/\d+\s*minutes?/.test(normalized)) credits = Math.max(credits, 9); else if (/\d+\s*seconds?/.test(normalized) && !/(15|30)\s*seconds?/.test(normalized)) credits = Math.max(credits, 5); else if (/premium|executive|editorial|very\s+long|detailed|detail|large|long|extended|expanded|expand/.test(normalized)) credits = Math.max(credits, 9); else if (/professional|stronger|natural|medium|standard|balanced|mixed|moderate/.test(normalized)) credits = Math.max(credits, 5); else if (/quick|simple|short|small|brief|concise|light|compact/.test(normalized)) credits = Math.max(credits, 2); } return credits; }
+function isLengthCreditField(field: string) { const normalized = field.toLowerCase(); return normalized === "length" || normalized.endsWith("_length") || normalized.includes("word_count") || normalized === "words_per_section" || normalized.endsWith("_depth") || normalized.includes("duration") || normalized === "edit_level" || normalized === "humanize_level" || normalized === "chapter_length" || normalized === "original_chapter_length" || normalized === "rewrite_mode"; }
+function calculateLengthSelectionCredits(inputs: ToolInputs = {}) { let credits = 0; for (const [field, value] of Object.entries(inputs)) { if (!isLengthCreditField(field) || typeof value !== "string") continue; const normalized = value.toLowerCase(); if (/\d+\s*minutes?/.test(normalized)) credits = Math.max(credits, 9); else if (/\d+\s*seconds?/.test(normalized) && !/(15|30)\s*seconds?/.test(normalized)) credits = Math.max(credits, 5); else if (/epic\s+chapter/.test(normalized)) credits = Math.max(credits, 37); else if (/premium\s+chapter/.test(normalized)) credits = Math.max(credits, 28); else if (/long\s+chapter/.test(normalized)) credits = Math.max(credits, 19); else if (/standard\s+chapter/.test(normalized)) credits = Math.max(credits, 11); else if (/short\s+chapter/.test(normalized)) credits = Math.max(credits, 9); else if (/premium|executive|editorial|very\s+long|detailed|detail|large|long|extended|expanded|expand/.test(normalized)) credits = Math.max(credits, 9); else if (/professional|stronger|natural|medium|standard|balanced|mixed|moderate/.test(normalized)) credits = Math.max(credits, 5); else if (/quick|simple|short|small|brief|concise|light|compact/.test(normalized)) credits = Math.max(credits, 2); } return credits; }
 
 export function supportsImageGeneration(toolSlug: string) { return IMAGE_GENERATION_TOOL_SLUGS.includes(toolSlug as (typeof IMAGE_GENERATION_TOOL_SLUGS)[number]); }
 export function calculateImageGenerationCredits(imageCount: number) { const safeCount = Number.isFinite(imageCount) ? Math.min(Math.max(Math.floor(imageCount), 1), 7) : 1; return safeCount * IMAGE_CREDITS_PER_IMAGE; }
@@ -89,6 +90,9 @@ function calculateRawToolCreditCost(toolSlug: string, inputs: ToolInputs = {}) {
     case "quick-1-click-blog-post": return matchCredit(inputs.article_length, QUICK_BLOG_LENGTH_CREDITS, 6);
     case "ai-report-writing": return matchCredit(inputs.report_length, REPORT_LENGTH_CREDITS, 1);
     case "ai-paragraph-generator": return calculateWritingToolCredits(toolSlug, inputs);
+    case "chapter-writer": return matchCredit(inputs.chapter_length, CHAPTER_LENGTH_CREDITS, 9);
+    case "chapter-rewriter-humanizer": return calculateBookRewriteCredits(inputs);
+    case "scene-generator": return 5;
     case "blog-to-social-posts": return calculateVariationToolCredits(inputs.post_count);
     case "blog-to-email": return calculateVariationToolCredits(inputs.email_count);
     case "blog-to-reels-script": return calculateVariationToolCredits(inputs.script_count);
@@ -99,11 +103,14 @@ function calculateRawToolCreditCost(toolSlug: string, inputs: ToolInputs = {}) {
 
 export function calculateToolCreditCost(toolSlug: string, inputs: ToolInputs = {}) {
   if (isPromptVariationTool(toolSlug)) return calculatePromptVariationCredits(inputs.prompt_variations);
+  if (toolSlug === "chapter-writer") return matchCredit(inputs.chapter_length, CHAPTER_LENGTH_CREDITS, 9);
+  if (toolSlug === "chapter-rewriter-humanizer") return calculateBookRewriteCredits(inputs);
+  if (BOOK_TOOL_SLUGS.includes(toolSlug)) return calculateRawToolCreditCost(toolSlug, inputs);
   const lengthCredits = calculateLengthSelectionCredits(inputs);
   const exactCredits = EXACT_TOOL_CREDIT_OVERRIDES[toolSlug];
   if (typeof exactCredits === "number") return Math.max(exactCredits, lengthCredits);
   return Math.max(scaleCreditAmount(calculateRawToolCreditCost(toolSlug, inputs)), lengthCredits);
 }
-const DYNAMIC_TOOLS = ["blog-topic-ideas", "blog-outline", "blog-content", "human-style-blog-post", "seo-optimized-blog-post", "advanced-blog-post", "rewrite-article-with-keywords", "quick-1-click-blog-post", "pro-image-brief-for-blog", "ai-report-writing", "ai-paragraph-generator", "blog-to-social-posts", "blog-to-email", "blog-to-reels-script", "ai-prompt-generator", "video-prompt-generator", "thumbnail-prompt-generator", "universal-prompt-enhancer", ...WRITING_BATCH_TOOL_SLUGS];
+const DYNAMIC_TOOLS = ["blog-topic-ideas", "blog-outline", "blog-content", "human-style-blog-post", "seo-optimized-blog-post", "advanced-blog-post", "rewrite-article-with-keywords", "quick-1-click-blog-post", "pro-image-brief-for-blog", "ai-report-writing", "ai-paragraph-generator", "blog-to-social-posts", "blog-to-email", "blog-to-reels-script", "ai-prompt-generator", "video-prompt-generator", "thumbnail-prompt-generator", "universal-prompt-enhancer", "chapter-writer", "chapter-rewriter-humanizer", ...BOOK_TOOL_SLUGS, ...WRITING_BATCH_TOOL_SLUGS];
 export function getToolCreditEstimate(toolSlug: string, inputs: ToolInputs = {}): CreditEstimate { const credits = calculateToolCreditCost(toolSlug, inputs); return { credits, isDynamic: DYNAMIC_TOOLS.includes(toolSlug) || isPromptVariationTool(toolSlug) || calculateLengthSelectionCredits(inputs) > 0, label: creditText(credits) }; }
-export function getToolCreditLabel(toolSlug: string) { if (isPromptVariationTool(toolSlug)) return `From ${creditText(1)}`; const exactCredits = EXACT_TOOL_CREDIT_OVERRIDES[toolSlug]; if (typeof exactCredits === "number") return creditText(exactCredits); if (toolSlug === "blog-topic-ideas") return `From ${creditText(scaleCreditAmount(1))}`; if (toolSlug === "blog-outline") return `From ${creditText(scaleCreditAmount(3))}`; if (toolSlug === "blog-content") return `From ${creditText(scaleCreditAmount(7))}`; if (["human-style-blog-post", "seo-optimized-blog-post", "advanced-blog-post"].includes(toolSlug)) return `From ${creditText(scaleCreditAmount(6))}`; if (toolSlug === "quick-1-click-blog-post") return `From ${creditText(scaleCreditAmount(4))}`; if (["rewrite-article-with-keywords", "pro-image-brief-for-blog", "ai-report-writing", "ai-paragraph-generator", "blog-to-social-posts", "blog-to-email", "blog-to-reels-script"].includes(toolSlug)) return `From ${creditText(scaleCreditAmount(1))}`; if (WRITING_BATCH_TOOL_SLUGS.includes(toolSlug)) return `From ${creditText(scaleCreditAmount(1))}`; return creditText(scaleCreditAmount(BASE_TOOL_CREDITS[toolSlug] ?? 1)); }
+export function getToolCreditLabel(toolSlug: string) { if (isPromptVariationTool(toolSlug)) return `From ${creditText(1)}`; if (toolSlug === "chapter-writer") return `From ${creditText(9)}`; if (toolSlug === "chapter-rewriter-humanizer") return `From ${creditText(14)}`; if (BOOK_TOOL_SLUGS.includes(toolSlug)) return creditText(BOOK_TOOL_CREDIT_COSTS[toolSlug] ?? 1); const exactCredits = EXACT_TOOL_CREDIT_OVERRIDES[toolSlug]; if (typeof exactCredits === "number") return creditText(exactCredits); if (toolSlug === "blog-topic-ideas") return `From ${creditText(scaleCreditAmount(1))}`; if (toolSlug === "blog-outline") return `From ${creditText(scaleCreditAmount(3))}`; if (toolSlug === "blog-content") return `From ${creditText(scaleCreditAmount(7))}`; if (["human-style-blog-post", "seo-optimized-blog-post", "advanced-blog-post"].includes(toolSlug)) return `From ${creditText(scaleCreditAmount(6))}`; if (toolSlug === "quick-1-click-blog-post") return `From ${creditText(scaleCreditAmount(4))}`; if (["rewrite-article-with-keywords", "pro-image-brief-for-blog", "ai-report-writing", "ai-paragraph-generator", "blog-to-social-posts", "blog-to-email", "blog-to-reels-script"].includes(toolSlug)) return `From ${creditText(scaleCreditAmount(1))}`; if (WRITING_BATCH_TOOL_SLUGS.includes(toolSlug)) return `From ${creditText(scaleCreditAmount(1))}`; return creditText(scaleCreditAmount(BASE_TOOL_CREDITS[toolSlug] ?? 1)); }
