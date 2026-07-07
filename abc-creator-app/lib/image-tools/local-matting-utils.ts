@@ -2,6 +2,8 @@ import sharp from "sharp";
 
 type Rgb = { r: number; g: number; b: number };
 type LocalVisionModule = { [key: string]: (input: Blob, config?: Record<string, unknown>) => Promise<Blob> };
+type LocalMattingEngine = "imgly-local-ml" | "sharp-local-alpha-matte";
+type SubjectResult = { buffer: Buffer; engine: LocalMattingEngine };
 
 function dataUrl(buffer: Buffer) {
   return `data:image/png;base64,${buffer.toString("base64")}`;
@@ -77,13 +79,14 @@ function applyHeuristicAlpha(data: Buffer, width: number, height: number) {
   return data;
 }
 
-async function sharpFallbackSubject(input: Buffer) {
+async function sharpFallbackSubject(input: Buffer): Promise<SubjectResult> {
   const { data, info } = await normalizeRaw(input);
   const matte = applyHeuristicAlpha(Buffer.from(data), info.width, info.height);
-  return sharp(matte, { raw: { width: info.width, height: info.height, channels: 4 } })
+  const buffer = await sharp(matte, { raw: { width: info.width, height: info.height, channels: 4 } })
     .median(1)
     .png({ compressionLevel: 9, adaptiveFiltering: true })
     .toBuffer();
+  return { buffer, engine: "sharp-local-alpha-matte" };
 }
 
 function localPackageName() {
@@ -94,7 +97,7 @@ function localRunKey() {
   return String.fromCharCode(114, 101, 109, 111, 118, 101, 66, 97, 99, 107, 103, 114, 111, 117, 110, 100);
 }
 
-async function mlSubject(input: Buffer) {
+async function mlSubject(input: Buffer): Promise<SubjectResult> {
   const normalized = await normalizePng(input);
   const vision = (await import(localPackageName())) as LocalVisionModule;
   const run = vision[localRunKey()];
@@ -105,13 +108,14 @@ async function mlSubject(input: Buffer) {
   });
 
   const output = Buffer.from(await outputBlob.arrayBuffer());
-  return sharp(output)
+  const buffer = await sharp(output)
     .rotate()
     .png({ compressionLevel: 9, adaptiveFiltering: true })
     .toBuffer();
+  return { buffer, engine: "imgly-local-ml" };
 }
 
-async function subjectPng(input: Buffer) {
+async function subjectPng(input: Buffer): Promise<SubjectResult> {
   try {
     return await mlSubject(input);
   } catch {
@@ -120,9 +124,9 @@ async function subjectPng(input: Buffer) {
 }
 
 export async function transparentPngResult(input: Buffer) {
-  const output = await subjectPng(input);
-  const meta = await sharp(output).metadata();
-  return { dataUrl: dataUrl(output), buffer: output, width: meta.width, height: meta.height };
+  const subject = await subjectPng(input);
+  const meta = await sharp(subject.buffer).metadata();
+  return { dataUrl: dataUrl(subject.buffer), buffer: subject.buffer, width: meta.width, height: meta.height, engine: subject.engine };
 }
 
 export async function backgroundBlurResult(input: Buffer, blur = 14) {
@@ -135,7 +139,7 @@ export async function backgroundBlurResult(input: Buffer, blur = 14) {
     .blur(Math.min(30, Math.max(6, Number(blur) || 14)))
     .png({ compressionLevel: 9, adaptiveFiltering: true })
     .toBuffer();
-  const layer = await sharp(subject)
+  const layer = await sharp(subject.buffer)
     .resize({ width, height, fit: "fill" })
     .png({ compressionLevel: 9, adaptiveFiltering: true })
     .toBuffer();
@@ -144,5 +148,5 @@ export async function backgroundBlurResult(input: Buffer, blur = 14) {
     .png({ compressionLevel: 9, adaptiveFiltering: true })
     .toBuffer();
   const outputMeta = await sharp(output).metadata();
-  return { dataUrl: dataUrl(output), buffer: output, width: outputMeta.width || width, height: outputMeta.height || height };
+  return { dataUrl: dataUrl(output), buffer: output, width: outputMeta.width || width, height: outputMeta.height || height, engine: subject.engine };
 }
