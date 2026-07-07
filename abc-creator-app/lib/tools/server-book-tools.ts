@@ -4,7 +4,8 @@ type ServerPrompt = { system: string; outputGuide: string; creditCost: number; r
 const universalBookRules = `
 Universal book tool rules:
 - WRITE LIKE A PERFECT AUTHOR. Be natural, human, vivid, emotionally intelligent, and never robotic.
-- Never sound AI-generated. Avoid filler, summary-mode prose, fake-deep lines, repetitive phrasing, overexplaining, and generic transitions.
+- Never sound AI-generated. Avoid filler, summary-mode prose, fake-deep lines, repetitive phrasing, overexplaining, obvious transitions, and generic motivational lines.
+- Write with professional author-level taste: specific sensory detail, clean pacing, believable emotion, strong scene logic, varied sentence rhythm, and controlled restraint.
 - Cover every niche and genre based on the user's selected genre and brief. Do not narrow the book to one genre unless the user did.
 - Preserve canon, character voice, timeline, world rules, relationships, names, motivations, mysteries, reveals, and ending constraints.
 - If the output is story prose, use normal book formatting: paragraph indentation, natural scene flow, and no bullet lists inside the chapter unless the user asks for a special format.
@@ -13,6 +14,7 @@ Universal book tool rules:
 - For book images, include a visual bible and best-scene candidate notes when relevant so hover Add image can generate consistent images later.
 - If writing a chapter, generate only the requested chapter, not the entire book.
 - For chapter continuity, use the previous continuity capsule and end with a new continuity capsule for the next chapter.
+- Do not fake completion of separately generated chapters. When a full book requires separate chapter generation, provide the sequential queue and exact next-step chapter prompts rather than pretending all independent generations happened in one call.
 `;
 
 const wordReadyRules = `
@@ -29,7 +31,7 @@ const lengthRules = `
 Length control rules:
 - Respect the user's selected length field exactly. For planning tools, output_length controls depth and amount of detail. For scene-generator, scene_length controls scene size. For chapter-writer, chapter_length controls chapter size. For chapter-rewriter-humanizer, original_chapter_length controls target rewrite size while rewrite_mode controls rewrite intensity.
 - Compact output = concise but complete. Standard output = balanced. Long output = more sections, richer detail, and stronger examples. Premium deep output = the most complete planning output, with full canon, continuity, visual, and production detail.
-- Do not charge language in the text; just produce the correct amount of content for the selected length.
+- Do not mention credits in the generated text; just produce the correct amount of content for the selected length.
 - Never ignore the selected length, and never produce a tiny answer for a long or premium selection.
 `;
 
@@ -157,5 +159,49 @@ Return: # Continuity Check. Scale thoroughness by output_length. Include ## Crit
     outputGuide: `${titlePageGuide}
 
 Return: # Book Blurb Package. Scale variation count and depth by output_length. Include ## Primary Blurb; ## Short Blurb; ## Back-Cover Copy; ## Amazon/KDP Description; ## Taglines; ## Hook Lines; ## Spoiler-Safe Notes; ## Best Version. Premium deep should include more variations and positioning notes.`
+  },
+  "full-book-generator": {
+    creditCost: 9,
+    requiredInputs: [...commonRequired, outputLengthRequired, { id: "book_bible", label: "Book bible / master brief", required: true, minLength: 40, maxLength: 30000 }, { id: "chapter_count", label: "Chapter count", required: true, minLength: 2, maxLength: 80 }, { id: "default_chapter_length", label: "Default chapter length", required: true, minLength: 2, maxLength: 140 }, { id: "generation_mode", label: "Generation mode", required: true, minLength: 2, maxLength: 160 }, { id: "canon_preserve", label: "Canon / must preserve", required: false, maxLength: 12000 }],
+    system: `You are ABC Creator's premium full-book production architect.${bookSystem}
+
+Important: the user's final product should be generated chapter-by-chapter for quality and consistency. Do not pretend that separate paid chapter generations were completed inside this single response. Create a professional sequential book package and, only when requested by the generation_mode, include an opening chapter package or compact manuscript draft clearly labeled as a draft.`,
+    outputGuide: `${titlePageGuide}
+
+Return: # Sequential Full Book Package. Scale detail by output_length and generation_mode. Include ## Production Promise; ## Canon Bible Snapshot; ## Chapter Queue; ## Per-Chapter Credit/Length Plan; ## Sequential Generation Instructions; ## Chapter 1 Launch Prompt; ## Continuity Capsule Template; ## Visual Bible for Chapter Images; ## Professional Author Quality Rules; ## Export Plan. If generation_mode asks for opening chapter package, include a polished Chapter 1 draft matching default_chapter_length as closely as possible. If generation_mode asks for compact manuscript draft, include a clearly labeled compact draft and still recommend separate chapter generation for final quality.`
+  },
+  "book-cover-prompt-generator": {
+    creditCost: 2,
+    requiredInputs: [...commonRequired, outputLengthRequired, { id: "book_summary", label: "Book summary / visual bible", required: true, minLength: 20, maxLength: 16000 }, { id: "cover_style", label: "Cover style", required: true, minLength: 2, maxLength: 160 }, { id: "cover_format", label: "Cover format", required: true, minLength: 2, maxLength: 160 }, { id: "must_include", label: "Must include", required: false, maxLength: 5000 }, { id: "avoid", label: "Avoid", required: false, maxLength: 5000 }],
+    system: `You are ABC Creator's premium book cover art director.${bookSystem}`,
+    outputGuide: `${titlePageGuide}
+
+Return: # Book Cover Prompt Package. Scale variation count by output_length. Include ## Cover Strategy; ## Visual Identity; ## Front Cover Prompt; ## Back Cover Prompt if relevant; ## Spine Prompt if relevant; ## Image Model Prompt Variations; ## Negative Prompt; ## Typography Direction; ## Series Consistency Rules; ## Export/Composition Notes. Prompts must avoid unreadable tiny text and should keep title/author typography as a design note rather than relying on generated image text.`
+  },
+  "book-front-matter-generator": {
+    creditCost: 2,
+    requiredInputs: [...commonRequired, outputLengthRequired, { id: "book_details", label: "Book details", required: true, minLength: 20, maxLength: 16000 }, { id: "book_type", label: "Book type", required: true, minLength: 2, maxLength: 120 }, { id: "legal_tone", label: "Legal / disclaimer tone", required: true, minLength: 2, maxLength: 160 }],
+    system: `You are ABC Creator's professional publishing front-matter assistant.${bookSystem}
+
+Do not provide legal advice or claim legal completeness. Create polished placeholder-ready front matter that the user can review with a professional when necessary.`,
+    outputGuide: `${titlePageGuide}
+
+Return: # Front Matter Package. Include ## Half Title Page; ## Title Page; ## Copyright Page Draft; ## Dedication; ## Epigraph Placeholder if useful; ## Disclaimer Draft; ## Table of Contents Structure; ## Author Note if useful; ## Word Export Order. Scale detail by output_length and book_type.`
+  },
+  "book-style-guide-generator": {
+    creditCost: 3,
+    requiredInputs: [...commonRequired, outputLengthRequired, { id: "sample_or_brief", label: "Writing sample / style brief", required: true, minLength: 20, maxLength: 20000 }, { id: "style_focus", label: "Style focus", required: true, minLength: 2, maxLength: 160 }, { id: "canon_preserve", label: "Canon / must preserve", required: false, maxLength: 10000 }],
+    system: `You are ABC Creator's professional author style director.${bookSystem}`,
+    outputGuide: `${titlePageGuide}
+
+Return: # Book Style Guide. Scale detail by output_length. Include ## Narrative Voice; ## POV Rules; ## Sentence Rhythm; ## Dialogue Rules; ## Description Rules; ## Pacing Rules; ## Emotional Register; ## Genre Conventions; ## Forbidden AI-ish Patterns; ## Chapter Formatting Rules; ## Continuity Style Notes; ## Rewrite Checklist. Make it practical enough that every chapter can use it.`
+  },
+  "book-export-builder": {
+    creditCost: 3,
+    requiredInputs: [...commonRequired, outputLengthRequired, { id: "manuscript_or_outline", label: "Manuscript / outline / book package", required: true, minLength: 40, maxLength: 40000 }, { id: "export_format", label: "Export format", required: true, minLength: 2, maxLength: 160 }, { id: "front_matter", label: "Front matter", required: false, maxLength: 10000 }, { id: "back_matter", label: "Back matter", required: false, maxLength: 10000 }],
+    system: `You are ABC Creator's manuscript formatting and export architect.${bookSystem}`,
+    outputGuide: `${titlePageGuide}
+
+Return: # Book Export Builder. Scale depth by output_length. Include ## Final Book Order; ## Title Page; ## Front Matter; ## Chapter Formatting; ## Back Matter; ## DOCX Styling Map; ## KDP / Ebook Notes; ## Image Placement Notes; ## Pre-Export Checklist; ## Copy-Paste Ready Export Skeleton. Do not invent ISBNs or legal claims.`
   },
 };
