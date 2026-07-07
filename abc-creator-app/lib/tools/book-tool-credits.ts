@@ -11,6 +11,11 @@ export const BOOK_TOOL_CREDIT_COSTS: Record<string, number> = {
   "chapter-rewriter-humanizer": 14,
   "continuity-checker": 5,
   "book-blurb-generator": 3,
+  "full-book-generator": 9,
+  "book-cover-prompt-generator": 2,
+  "book-front-matter-generator": 2,
+  "book-style-guide-generator": 3,
+  "book-export-builder": 3,
 };
 
 export const BOOK_OUTPUT_LENGTH_CREDITS: Array<[string, number]> = [
