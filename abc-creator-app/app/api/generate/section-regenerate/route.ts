@@ -10,6 +10,26 @@ const TEXT_REGENERATION_CREDITS = 2;
 
 const ledgerToolSlug = "text-regeneration";
 
+const BOOK_REGENERATION_TOOLS = new Set([
+  "book-idea-generator",
+  "book-title-generator",
+  "book-bible-generator",
+  "character-builder",
+  "worldbuilding-builder",
+  "book-outline-generator",
+  "chapter-outline-generator",
+  "scene-generator",
+  "chapter-writer",
+  "chapter-rewriter-humanizer",
+  "continuity-checker",
+  "book-blurb-generator",
+  "full-book-generator",
+  "book-cover-prompt-generator",
+  "book-front-matter-generator",
+  "book-style-guide-generator",
+  "book-export-builder",
+]);
+
 type Body = {
   toolSlug?: string;
   sectionText?: string;
@@ -43,6 +63,22 @@ function rpcErrorMessage(error: unknown) {
       .join(" ") || String(error);
   }
   return String(error);
+}
+
+function regenerationSystemPrompt(toolSlug: string) {
+  if (!BOOK_REGENERATION_TOOLS.has(toolSlug)) {
+    return "Rewrite one selected Markdown section. Return only the replacement Markdown section. Keep the same main heading level when possible. Do not add unrelated extra sections.";
+  }
+
+  return [
+    "Rewrite one selected book-tool Markdown section. Return only the replacement Markdown section. Keep the same main heading level when possible. Do not add unrelated extra sections.",
+    "Book quality rules:",
+    "- WRITE LIKE A PERFECT AUTHOR. Be natural, specific, emotionally intelligent, and never robotic.",
+    "- Preserve canon, character voice, timeline, names, world rules, relationships, POV, ending direction, and continuity.",
+    "- Keep MS Word / DOCX-ready formatting: clean headings, polished manuscript or professional planning structure, and indented story paragraphs when the section is prose.",
+    "- Do not reduce the section into a summary. Do not add filler, repetitive AI-ish wording, or fake-deep lines.",
+    "- Follow the user's regenerate instruction, but never break canon or formatting.",
+  ].join("\n");
 }
 
 export async function POST(req: NextRequest) {
@@ -104,12 +140,12 @@ export async function POST(req: NextRequest) {
 
     const result = await routeToAI({
       requestLabel: `section-regenerate:${toolSlug}`,
-      temperature: 0.55,
-      maxTokens: 2400,
+      temperature: BOOK_REGENERATION_TOOLS.has(toolSlug) ? 0.68 : 0.55,
+      maxTokens: BOOK_REGENERATION_TOOLS.has(toolSlug) ? 3200 : 2400,
       messages: [
         {
           role: "system",
-          content: "Rewrite one selected Markdown section. Return only the replacement Markdown section. Keep the same main heading level when possible. Do not add unrelated extra sections.",
+          content: regenerationSystemPrompt(toolSlug),
         },
         {
           role: "user",
