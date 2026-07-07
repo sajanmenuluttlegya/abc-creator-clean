@@ -1,0 +1,29 @@
+export const BOOK_TOOL_CREDIT_COSTS: Record<string, number> = {
+  "book-idea-generator": 2,
+  "book-title-generator": 1,
+  "book-bible-generator": 5,
+  "character-builder": 5,
+  "worldbuilding-builder": 5,
+  "book-outline-generator": 5,
+  "chapter-outline-generator": 5,
+  "scene-generator": 5,
+  "chapter-writer": 9,
+  "chapter-rewriter-humanizer": 14,
+  "continuity-checker": 5,
+  "book-blurb-generator": 3,
+};
+
+export const CHAPTER_LENGTH_CREDITS: Array<[string, number]> = [
+  ["Epic chapter", 37],
+  ["Premium chapter", 28],
+  ["Long chapter", 19],
+  ["Standard chapter", 11],
+  ["Short chapter", 9],
+];
+
+export const REWRITE_INTENSITY_ADDS: Array<[string, number]> = [
+  ["Canon-safe polish", 22],
+  ["Deep humanization", 11],
+  ["Standard rewrite", 9],
+  ["Light polish", 5],
+];
