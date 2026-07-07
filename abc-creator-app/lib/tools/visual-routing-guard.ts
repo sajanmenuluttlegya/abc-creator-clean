@@ -22,9 +22,17 @@ Visual routing:
 - Blog/article generators must preserve the visual system. Do not remove graphs, flowcharts, diagrams, visual illustrations, image prompts, tables, or abc-diagram blocks when they help the article.
 - Select visuals by the exact data/content type. Use chart_preference and visual_mode only as tie-breakers after the section's data type is clear.
 - Use abc-diagram blocks for workflows, charts, graphs, dashboards, sankeys, taxonomies, pipelines, axes, legends, callouts, stage names, and visuals requiring readable labels.
+- Keep image blocks enabled when the user selected images. Do not remove images just because coded diagrams are present.
 - Generated images are for clean, relevant, textless illustrations: hero art, editorial scenes, abstract metaphors, photoreal supporting visuals, or atmospheric section art.
+- If Images is Hero image only, include one relevant hero image when it supports the article.
+- If Images is Hero + section images, include a rational number of relevant images: usually one hero plus one or two section images, max four total for long pillar articles.
+- Every image must match the nearest section topic and reader job. Do not use generic robot, adventure, skyscraper, fantasy, stock-office, or abstract tech visuals unless that scene actually belongs in the section.
 - Never place two image blocks together. Never place an image block directly beside another image block or directly beside an abc-diagram block. Put meaningful prose between visual blocks.
 - Image prompts should request clean art without typography, signs, interface text, chart labels, headings, annotations, captions, or readable text.
+- Use image blocks for mood, metaphor, hero support, and editorial illustration only. Use abc-diagram blocks for label-heavy visuals, charts, maps, dashboards, graphs, flowcharts, workflows, and structured explanations.
+- Put exact wording, labels, stage names, numbers, and captions in normal prose, tables, or abc-diagram blocks, not inside generated image prompts.
+- Do not render long title or caption sentences inside diagram cards. Diagram cards should show the visual structure itself; captions belong in prose near the visual.
+- In concentric, radial, hub-and-spoke, or orbit diagrams, node labels should sit directly near their point. Use arrows only for ring-level callouts or directional flow.
 - Use ${WORKFLOW_REVIEW_WORDING} as the review step before the final action step.
 - Do not include a feedback step in workflow diagrams.
 - Workflow sequence: Data Ingestion -> Cleaning & Alignment -> Feature Engineering -> Model Inference -> Risk Scoring -> ${WORKFLOW_REVIEW_WORDING} -> Action.
@@ -44,13 +52,15 @@ Exact visual selection by data type:
 - Abstract idea, emotional hook, brand atmosphere, storytelling scene, hero support, metaphor, or section mood without label-heavy data -> image block / visual illustration, not abc-diagram.
 
 Placement rules:
-- Place the visual close to the paragraph or section it clarifies.
-- Do not dump visuals at the end. Do not force a visual into every section.
+- Place each visual close to the paragraph or section it clarifies. Do not dump visuals at the end.
+- Do not force a visual into every section. Add visuals only when they clarify, compare, sequence, map, or strengthen the nearby content.
 - Keep at least one meaningful prose paragraph between any two visuals.
+- A visual should answer a reader job: compare options, understand a sequence, see a structure, trace a relationship, follow a flow, understand location, or feel the section's mood.
+- For very short outputs use 0-1 visuals. For standard and long article generators, use useful visuals according to article length, depth, visual_mode, and section need.
 
 Data-backed visual rules:
 - Do not invent raw internet data, chart numbers, source-backed insights, market share, rankings, prices, or timelines.
-- If the user supplies raw data, source links, notes, citations, or copied research in the inputs, analyze that supplied data and turn the insights into coded diagrams/tables/charts where useful.
+- If the user supplies raw data, notes, citations, copied research, or source material in the inputs, analyze that supplied material and turn useful insights into coded diagrams, tables, or charts.
 - If source data is not supplied, use qualitative diagrams only and avoid numeric data-backed chart claims.
 - Any chart that uses numbers must make clear whether the values are user-supplied, placeholders, or qualitative examples.
 `;
