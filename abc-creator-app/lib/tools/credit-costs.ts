@@ -20,7 +20,7 @@ function creditText(credits: number) { return `${credits} credit${credits === 1 
 
 export const IMAGE_CREDITS_PER_IMAGE: number = scaleCreditAmount(1);
 export const IMAGE_EDIT_CREDITS: number = 4;
-export const IMAGE_GENERATION_TOOL_SLUGS = ["blog-content", "pro-image-brief-for-blog", "human-style-blog-post", "seo-optimized-blog-post", "advanced-blog-post", "quick-1-click-blog-post", "comparison-blog-writer", "youtube-video-to-blog-post", "book-idea-generator", "book-title-generator", "book-bible-generator", "character-builder", "worldbuilding-builder", "book-outline-generator", "chapter-outline-generator", "scene-generator", "chapter-writer", "chapter-rewriter-humanizer", "continuity-checker", "book-blurb-generator"] as const;
+export const IMAGE_GENERATION_TOOL_SLUGS = ["blog-content", "pro-image-brief-for-blog", "human-style-blog-post", "seo-optimized-blog-post", "advanced-blog-post", "quick-1-click-blog-post", "comparison-blog-writer", "youtube-video-to-blog-post", ...Object.keys(BOOK_TOOL_CREDIT_COSTS)] as const;
 
 const EXACT_TOOL_CREDIT_OVERRIDES: Record<string, number> = {
   "poem-generator": 2, "slogan-generator": 2, "tagline-generator": 2, "name-generator": 2, "headline-generator": 2, "universal-prompt-enhancer": 2, "video-prompt-generator": 3,
