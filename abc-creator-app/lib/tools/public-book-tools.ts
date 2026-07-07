@@ -13,6 +13,8 @@ const rewriteModeOptions = ["Light polish (+5 credits)", "Standard rewrite (+9 c
 const chapterEndingOptions = ["Natural continuation", "Soft hook", "Strong cliffhanger", "Emotional closure", "Mystery reveal", "Action beat", "Quiet literary ending"];
 const imageStyleOptions = ["Auto from book bible", "Cinematic realistic", "Fantasy concept art", "Children's book illustration", "Anime-inspired", "Graphic novel", "Watercolor", "Oil-painting look", "Dark atmospheric", "Clean premium editorial"];
 const sceneLengthOptions = ["Short scene (5 credits)", "Standard scene (5 credits)", "Long scene (7 credits)", "Very detailed scene (9 credits)"];
+const fullBookModeOptions = ["Sequential chapter queue plan", "Generate opening chapter package", "Generate full compact manuscript draft", "Premium production blueprint"];
+const exportFormatOptions = ["KDP paperback", "KDP ebook", "Print manuscript DOCX", "Beta reader PDF", "Editorial manuscript", "Custom in brief"];
 
 const outputLengthInput: BookInput = { id: "output_length", label: "Output Length", type: "select", required: true, options: bookOutputLengthOptions };
 
@@ -186,5 +188,71 @@ export const bookTools: BookTool[] = [
     outputType: "text",
     aliases: ["book-description-generator", "amazon-book-blurb", "kdp-book-description"],
     inputs: [...commonBookInputs, outputLengthInput, { id: "book_summary", label: "Book Summary", type: "textarea", placeholder: "Paste the premise, main conflict, characters, hook, genre, ending status, and reader promise.", required: true }, { id: "blurb_style", label: "Blurb Style", type: "select", required: true, options: ["Amazon/KDP", "Back cover", "Short hook", "Dramatic", "Romance", "Thriller", "Fantasy epic", "Non-fiction authority", "Children's"] }, { id: "avoid_spoilers", label: "Avoid Spoilers", type: "select", required: true, options: ["Yes", "No"] }],
+  },
+  {
+    id: "full-book-generator",
+    slug: "full-book-generator",
+    name: "Full Book Generator",
+    description: "Build a premium sequential book project, chapter queue, and manuscript-ready generation plan.",
+    icon: "book",
+    detailEmoji: "📖",
+    category: "Book Tools",
+    displayCreditCost: 9,
+    outputType: "text",
+    aliases: ["complete-book-generator", "sequential-book-generator", "novel-generator"],
+    nextActions: [{ label: "Write each chapter", href: "/tools/chapter-writer", description: "Generate chapters one by one with continuity capsules and separate credits." }],
+    inputs: [...commonBookInputs, outputLengthInput, { id: "book_bible", label: "Book Bible / Master Brief", type: "textarea", placeholder: "Paste premise, outline, character bible, world bible, visual bible, style rules, ending, and canon constraints.", required: true }, { id: "chapter_count", label: "Chapter Count", type: "select", required: true, options: ["5 chapters", "10 chapters", "15 chapters", "20 chapters", "30 chapters", "40 chapters", "Custom in brief"] }, { id: "default_chapter_length", label: "Default Chapter Length", type: "select", required: true, options: chapterLengthOptions }, { id: "generation_mode", label: "Generation Mode", type: "select", required: true, options: fullBookModeOptions }, { id: "canon_preserve", label: "Canon / Must Preserve", type: "textarea", placeholder: "Fixed names, facts, ending, timeline, character arcs, relationships, lore, and no-change rules.", required: false }],
+  },
+  {
+    id: "book-cover-prompt-generator",
+    slug: "book-cover-prompt-generator",
+    name: "Book Cover Prompt Generator",
+    description: "Create premium front-cover, back-cover, spine, and image-model prompts with consistency rules.",
+    icon: "image-brief",
+    detailEmoji: "🎨",
+    category: "Book Tools",
+    displayCreditCost: 2,
+    outputType: "text",
+    aliases: ["cover-prompt-generator", "book-cover-generator-prompt", "kdp-cover-prompt"],
+    inputs: [...commonBookInputs, outputLengthInput, { id: "book_summary", label: "Book Summary / Visual Bible", type: "textarea", placeholder: "Paste the story summary, visual bible, characters, symbols, world, cover mood, and must-avoid notes.", required: true }, { id: "cover_style", label: "Cover Style", type: "select", required: true, options: imageStyleOptions }, { id: "cover_format", label: "Cover Format", type: "select", required: true, options: ["Front cover only", "Front + back + spine", "Ebook cover", "Paperback wraparound", "Series cover system"] }, { id: "must_include", label: "Must Include", type: "textarea", placeholder: "Optional: symbols, characters, colors, objects, mood, typography notes.", required: false }, { id: "avoid", label: "Avoid", type: "textarea", placeholder: "Optional: visual clichés, wrong character details, spoilers, text problems, style issues.", required: false }],
+  },
+  {
+    id: "book-front-matter-generator",
+    slug: "book-front-matter-generator",
+    name: "Book Front Matter Generator",
+    description: "Create Word-ready front matter, copyright page, dedication, disclaimer, and contents structure.",
+    icon: "book",
+    detailEmoji: "📄",
+    category: "Book Tools",
+    displayCreditCost: 2,
+    outputType: "text",
+    aliases: ["front-matter-generator", "copyright-page-generator", "book-copyright-generator"],
+    inputs: [...commonBookInputs, outputLengthInput, { id: "book_details", label: "Book Details", type: "textarea", placeholder: "Paste subtitle, publisher/imprint, edition, ISBN if any, disclaimer needs, dedication notes, acknowledgments notes, website, and rights notes.", required: true }, { id: "book_type", label: "Book Type", type: "select", required: true, options: ["Fiction", "Non-fiction", "Children's book", "Poetry", "Memoir", "Workbook", "Series book", "Custom"] }, { id: "legal_tone", label: "Legal / Disclaimer Tone", type: "select", required: true, options: ["Simple standard", "Professional publishing", "Educational disclaimer", "Fiction disclaimer", "Health/finance caution", "Custom in brief"] }],
+  },
+  {
+    id: "book-style-guide-generator",
+    slug: "book-style-guide-generator",
+    name: "Book Style Guide Generator",
+    description: "Create a professional author style guide for prose, dialogue, pacing, formatting, and continuity.",
+    icon: "writing-pad",
+    detailEmoji: "🖋️",
+    category: "Book Tools",
+    displayCreditCost: 3,
+    outputType: "text",
+    aliases: ["author-style-guide", "book-writing-style-guide", "manuscript-style-guide"],
+    inputs: [...commonBookInputs, outputLengthInput, { id: "sample_or_brief", label: "Writing Sample / Style Brief", type: "textarea", placeholder: "Paste sample prose or describe the target voice, pacing, mood, POV, dialogue style, and books/genres to emulate without copying.", required: true }, { id: "style_focus", label: "Style Focus", type: "select", required: true, options: ["Full style guide", "Dialogue and voice", "Prose rhythm", "Chapter pacing", "Line editing rules", "Genre style rules", "Kids book style"] }, { id: "canon_preserve", label: "Canon / Must Preserve", type: "textarea", placeholder: "Optional: names, terms, phrases, narrator rules, formatting rules, forbidden style choices.", required: false }],
+  },
+  {
+    id: "book-export-builder",
+    slug: "book-export-builder",
+    name: "Book Export Builder",
+    description: "Prepare Word-ready manuscript/export structure for paperback, ebook, beta reader, or editorial use.",
+    icon: "report",
+    detailEmoji: "📦",
+    category: "Book Tools",
+    displayCreditCost: 3,
+    outputType: "text",
+    aliases: ["book-formatting-builder", "manuscript-export-builder", "kdp-export-builder"],
+    inputs: [...commonBookInputs, outputLengthInput, { id: "manuscript_or_outline", label: "Manuscript / Outline / Book Package", type: "textarea", placeholder: "Paste manuscript, chapter list, outline, book bible, or export notes.", required: true }, { id: "export_format", label: "Export Format", type: "select", required: true, options: exportFormatOptions }, { id: "front_matter", label: "Front Matter Notes", type: "textarea", placeholder: "Optional: dedication, copyright, ISBN, contents, disclaimer, acknowledgments.", required: false }, { id: "back_matter", label: "Back Matter Notes", type: "textarea", placeholder: "Optional: author bio, series preview, newsletter CTA, acknowledgments, resources.", required: false }],
   },
 ];
