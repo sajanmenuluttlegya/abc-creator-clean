@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type ChangeEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ChangeEvent, type ReactNode, type PointerEvent as ReactPointerEvent } from "react";
 import { createPortal } from "react-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -12,7 +12,7 @@ import { downloadHtmlOutput } from "@/lib/download/exportHtml";
 import { DiagramRenderer, parseDiagramSpec, type DiagramSpec } from "./diagrams/DiagramRendererClean";
 import { InlineImageBlock, splitOutputIntoImageSegments } from "./InlineImageBlocks";
 
-const IMAGE_OUTPUT_TOOLS = new Set([
+const BLOG_IMAGE_OUTPUT_TOOLS = [
   "blog-content",
   "pro-image-brief-for-blog",
   "human-style-blog-post",
@@ -21,11 +21,37 @@ const IMAGE_OUTPUT_TOOLS = new Set([
   "quick-1-click-blog-post",
   "comparison-blog-writer",
   "youtube-video-to-blog-post",
-]);
+] as const;
+
+const BOOK_IMAGE_OUTPUT_TOOLS = [
+  "book-idea-generator",
+  "book-title-generator",
+  "book-bible-generator",
+  "character-builder",
+  "worldbuilding-builder",
+  "book-outline-generator",
+  "chapter-outline-generator",
+  "scene-generator",
+  "chapter-writer",
+  "chapter-rewriter-humanizer",
+  "continuity-checker",
+  "book-blurb-generator",
+  "full-book-generator",
+  "book-cover-prompt-generator",
+  "book-front-matter-generator",
+  "book-style-guide-generator",
+  "book-export-builder",
+] as const;
+
+const IMAGE_OUTPUT_TOOLS = new Set<string>([...BLOG_IMAGE_OUTPUT_TOOLS, ...BOOK_IMAGE_OUTPUT_TOOLS]);
+const BOOK_IMAGE_OUTPUT_TOOL_SET = new Set<string>(BOOK_IMAGE_OUTPUT_TOOLS);
+const BLOG_IMAGE_OUTPUT_TOOL_SET = new Set<string>(BLOG_IMAGE_OUTPUT_TOOLS);
 
 type OutputPanelDownloadFormat = OutputDownloadFormat | "html";
-type SideImageRatio = "1:1" | "4:3" | "3:4";
+type SideImageRatio = "1:1" | "16:9" | "9:16" | "4:5" | "3:4" | "4:3" | "3:2" | "2:3";
 type SideImagePlacement = "left" | "right" | "top" | "bottom";
+type SideImageModel = "M1" | "M2" | "M3" | "M4" | "M5" | "M6";
+type SideImageResolution = "360p" | "480p" | "720p" | "1080p";
 type MenuOption<T extends string> = { label: string; value: T };
 
 type MarkdownDiagramSegment =
@@ -42,6 +68,8 @@ type SideImageState = {
   ratio: SideImageRatio;
   placement: SideImagePlacement;
   widthPercent: number;
+  model: SideImageModel;
+  resolution: SideImageResolution;
   filename?: string;
 };
 
@@ -56,6 +84,20 @@ interface OutputPanelProps {
 
 const actionButtonClass = "rounded-full border border-white/15 bg-white/[0.055] px-4 py-2 text-xs font-bold text-white/90 shadow-lg shadow-black/20 backdrop-blur-xl transition hover:border-white/30 hover:bg-white/[0.11] disabled:cursor-not-allowed disabled:opacity-50";
 const dangerButtonClass = "inline-flex h-9 w-9 items-center justify-center rounded-full border border-red-300/30 bg-red-500/15 text-sm text-red-100 shadow-lg shadow-red-950/20 transition hover:bg-red-500/25";
+
+const ratioOptions: MenuOption<SideImageRatio>[] = [
+  { label: "1:1", value: "1:1" },
+  { label: "16:9", value: "16:9" },
+  { label: "9:16", value: "9:16" },
+  { label: "4:5", value: "4:5" },
+  { label: "3:4", value: "3:4" },
+  { label: "4:3", value: "4:3" },
+  { label: "3:2", value: "3:2" },
+  { label: "2:3", value: "2:3" },
+];
+
+const modelOptions: MenuOption<SideImageModel>[] = ["M1", "M2", "M3", "M4", "M5", "M6"].map((value) => ({ label: value, value: value as SideImageModel }));
+const resolutionOptions: MenuOption<SideImageResolution>[] = ["360p", "480p", "720p", "1080p"].map((value) => ({ label: value, value: value as SideImageResolution }));
 
 const markdownComponents: Components = {
   h1: ({ children }) => <h1 className="mb-5 mt-2 text-3xl font-bold text-white">{children}</h1>,
@@ -218,7 +260,7 @@ function renderMarkdownWithDiagrams(markdown: string, prefix: string) {
 }
 
 function shouldAutoGenerateBlogImages(toolSlug: string, inputs: Record<string, string>, isLoading: boolean) {
-  if (isLoading || !IMAGE_OUTPUT_TOOLS.has(toolSlug)) return false;
+  if (isLoading || !BLOG_IMAGE_OUTPUT_TOOL_SET.has(toolSlug)) return false;
   if (toolSlug === "blog-content") {
     const imageMode = (inputs.image_brief_mode || "").toLowerCase();
     return Boolean(imageMode) && !imageMode.includes("no images");
@@ -229,7 +271,7 @@ function shouldAutoGenerateBlogImages(toolSlug: string, inputs: Record<string, s
 function collectGeneratedPdfImages(root: HTMLElement | null, frame: string) {
   if (!root) return [];
   return Array.from(root.querySelectorAll<HTMLImageElement>("img[data-generated-blog-image]"))
-    .map((image) => ({ dataUrl: image.src || "", alt: image.alt || "Generated blog image", frame }))
+    .map((image) => ({ dataUrl: image.src || "", alt: image.alt || "Generated image", frame }))
     .filter((image) => image.dataUrl.startsWith("data:image/"));
 }
 
@@ -239,18 +281,21 @@ function compactText(value: string, maxLength: number) {
 }
 
 function defaultRegenerateInstruction(sectionText: string) {
-  return `Rewrite this section to be more premium and professional while preserving the same meaning and Markdown structure.\n\n${sectionText}`;
+  return `Rewrite this section to be more premium and professional while preserving the same meaning and Markdown heading. If this is book prose, write like a professional author, preserve canon, keep natural paragraphing, and never sound AI-generated.\n\n${sectionText}`;
 }
 
-function defaultSideImagePrompt(sectionText: string, inputs: Record<string, string>) {
+function defaultSideImagePrompt(sectionText: string, inputs: Record<string, string>, toolSlug: string) {
   const heading = sectionText.split("\n").find((line) => /^#{1,4}\s+/.test(line.trim())) || "this section";
-  const context = compactText(sectionText, 520);
-  const brand = compactText(inputs.brand_or_context || inputs.brand_name || inputs.name_or_brand || inputs.productName || "", 140);
+  const context = compactText(sectionText, 620);
+  const brand = compactText(inputs.brand_or_context || inputs.brand_name || inputs.name_or_brand || inputs.productName || inputs.book_title || "", 140);
+  const bookVisual = BOOK_IMAGE_OUTPUT_TOOL_SET.has(toolSlug);
   return [
-    `Create a premium textless image for the section: ${compactText(heading, 90)}.`,
-    brand ? `Brand/context: ${brand}.` : "",
+    bookVisual ? `Create a premium textless book illustration for the strongest visual scene in: ${compactText(heading, 90)}.` : `Create a premium textless image for the section: ${compactText(heading, 90)}.`,
+    brand ? `Book/brand/context: ${brand}.` : "",
     `Section context: ${context}`,
-    "Use a clean professional composition. Avoid readable text, watermarks, fake logos, and UI screenshots unless the section explicitly requires them.",
+    bookVisual
+      ? "Preserve character/world consistency from the book bible. Make it cinematic, professional, and publishable. Avoid readable text, typography, watermarks, fake logos, and inconsistent character design."
+      : "Use a clean professional composition. Avoid readable text, watermarks, fake logos, and UI screenshots unless the section explicitly requires them.",
   ].filter(Boolean).join("\n");
 }
 
@@ -296,6 +341,8 @@ export function OutputPanel({ isLoading, output, recommendedNextActions = [], do
   const [imagePrompt, setImagePrompt] = useState("");
   const [imageRatio, setImageRatio] = useState<SideImageRatio>("1:1");
   const [imagePlacement, setImagePlacement] = useState<SideImagePlacement>("bottom");
+  const [imageModel, setImageModel] = useState<SideImageModel>("M5");
+  const [imageResolution, setImageResolution] = useState<SideImageResolution>("720p");
   const [generatingImageBlockId, setGeneratingImageBlockId] = useState<string | null>(null);
   const [uploadingImageBlockId, setUploadingImageBlockId] = useState<string | null>(null);
   const exportContentRef = useRef<HTMLDivElement | null>(null);
@@ -312,6 +359,7 @@ export function OutputPanel({ isLoading, output, recommendedNextActions = [], do
   const showNextActions = hasVisibleOutput && !isLoading && !isErrorOutput && recommendedNextActions.length > 0;
   const autoGenerateBlogImages = shouldAutoGenerateBlogImages(toolSlug, inputs, isLoading);
   const canGenerateSectionImage = IMAGE_OUTPUT_TOOLS.has(toolSlug);
+  const isBookImageTool = BOOK_IMAGE_OUTPUT_TOOL_SET.has(toolSlug);
 
   useEffect(() => {
     setDeletedBlockIds(new Set());
@@ -326,6 +374,8 @@ export function OutputPanel({ isLoading, output, recommendedNextActions = [], do
     setImagePrompt("");
     setImageRatio("1:1");
     setImagePlacement("bottom");
+    setImageModel("M5");
+    setImageResolution("720p");
     setGeneratingImageBlockId(null);
     setUploadingImageBlockId(null);
   }, [displayOutput]);
@@ -457,9 +507,11 @@ export function OutputPanel({ isLoading, output, recommendedNextActions = [], do
     const existing = sideImages[block.id];
     setActiveRegenerateBlockId(null);
     setActiveImageBlockId((current) => (current === block.id ? null : block.id));
-    setImagePrompt(mode === "edit" && existing ? `Improve this image while keeping it consistent with the section.\n\n${existing.prompt}` : defaultSideImagePrompt(block.content, inputs));
+    setImagePrompt(mode === "edit" && existing ? `Improve this image while keeping it consistent with the section.\n\n${existing.prompt}` : defaultSideImagePrompt(block.content, inputs, toolSlug));
     setImageRatio(existing?.ratio || "1:1");
     setImagePlacement(existing?.placement || "bottom");
+    setImageModel(existing?.model || "M5");
+    setImageResolution(existing?.resolution || "720p");
     setSectionActionMessage("");
   };
 
@@ -474,7 +526,7 @@ export function OutputPanel({ isLoading, output, recommendedNextActions = [], do
     setGeneratingImageBlockId(block.id);
     setSectionActionMessage("");
     try {
-      const response = await fetch("/api/generate/image", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ operation, toolSlug, prompt, sourceText: block.content, aspectRatio: imageRatio, imageCount: 1, inputs: { ...inputs, output_image_placement: imagePlacement }, sourceImageDataUrl: existing?.dataUrl || "" }) });
+      const response = await fetch("/api/generate/image", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ operation, toolSlug, prompt, sourceText: block.content, aspectRatio: imageRatio, imageModel, resolution: imageResolution, imageCount: 1, inputs: { ...inputs, output_image_placement: imagePlacement, output_image_model: imageModel, output_image_resolution: imageResolution, output_image_ratio: imageRatio }, sourceImageDataUrl: existing?.dataUrl || "" }) });
       const data = (await response.json()) as OutputImageResponse;
       if (!response.ok || !data.ok) {
         if (response.status === 402 || data.code === "INSUFFICIENT_CREDITS") setSectionActionMessage(`Not enough credits. This image needs ${data.requiredCredits ?? 1} credit. You currently have ${data.currentCredits ?? 0}.`);
@@ -487,7 +539,7 @@ export function OutputPanel({ isLoading, output, recommendedNextActions = [], do
         return;
       }
       rememberSideImageUndo(block.id);
-      setSideImages((current) => ({ ...current, [block.id]: { dataUrl: image.dataUrl, prompt, ratio: imageRatio, placement: imagePlacement, widthPercent: imagePlacement === "left" || imagePlacement === "right" ? 42 : 100, filename: image.filename } }));
+      setSideImages((current) => ({ ...current, [block.id]: { dataUrl: image.dataUrl, prompt, ratio: imageRatio, placement: imagePlacement, widthPercent: imagePlacement === "left" || imagePlacement === "right" ? 42 : 100, model: imageModel, resolution: imageResolution, filename: image.filename } }));
       setActiveImageBlockId(null);
       setImagePrompt("");
       setSectionActionMessage(operation === "edit" ? "Image edited." : "Image added to this section.");
@@ -498,7 +550,7 @@ export function OutputPanel({ isLoading, output, recommendedNextActions = [], do
     }
   };
 
-  const startSideImageResize = (event: React.PointerEvent<HTMLButtonElement>, blockId: string) => {
+  const startSideImageResize = (event: ReactPointerEvent<HTMLButtonElement>, blockId: string) => {
     const image = sideImages[blockId];
     if (!image) return;
     event.preventDefault();
@@ -548,7 +600,7 @@ export function OutputPanel({ isLoading, output, recommendedNextActions = [], do
       }
       rememberSideImageUndo(blockId);
       const current = sideImages[blockId];
-      setSideImages((items) => ({ ...items, [blockId]: { dataUrl, prompt: current?.prompt || "Uploaded image", ratio: current?.ratio || "1:1", placement: current?.placement || "bottom", widthPercent: current?.widthPercent || 100, filename: uploadedFilename(file) } }));
+      setSideImages((items) => ({ ...items, [blockId]: { dataUrl, prompt: current?.prompt || "Uploaded image", ratio: current?.ratio || "1:1", placement: current?.placement || "bottom", widthPercent: current?.widthPercent || 100, model: current?.model || imageModel, resolution: current?.resolution || imageResolution, filename: uploadedFilename(file) } }));
       setSectionActionMessage("Image uploaded.");
     };
     reader.onerror = () => setSectionActionMessage("Could not read the uploaded image file.");
@@ -636,8 +688,8 @@ export function OutputPanel({ isLoading, output, recommendedNextActions = [], do
                       <label className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-200">Regenerate this section</label>
                       <textarea value={regenerateInstruction} onChange={(event) => setRegenerateInstruction(event.currentTarget.value)} className="mt-3 h-28 w-full resize-none rounded-2xl border border-cyan-300/20 bg-black/40 px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500" />
                       <div className="mt-3 flex flex-wrap gap-2">
-                        <button type="button" onClick={() => setRegenerateInstruction("Make this section shorter, sharper, and more premium while preserving the meaning and Markdown heading.")} className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-200">Shorter</button>
-                        <button type="button" onClick={() => setRegenerateInstruction("Make this section longer, more detailed, and more premium while preserving the meaning and Markdown heading.")} className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-200">Longer</button>
+                        <button type="button" onClick={() => setRegenerateInstruction("Make this section shorter, sharper, and more premium while preserving the meaning and Markdown heading. For book prose, preserve canon and natural author voice.")} className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-200">Shorter</button>
+                        <button type="button" onClick={() => setRegenerateInstruction("Make this section longer, richer, more author-level, and more premium while preserving the meaning, canon, and Markdown heading.")} className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-200">Longer</button>
                         <button type="button" onClick={() => void regenerateOutputBlock(block)} disabled={regeneratingBlockId === block.id} className="rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 px-4 py-1.5 text-xs font-semibold text-white disabled:opacity-60">{regeneratingBlockId === block.id ? "Regenerating..." : "Apply regenerate"}</button>
                         <button type="button" onClick={() => setActiveRegenerateBlockId(null)} disabled={regeneratingBlockId === block.id} className="rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-semibold text-slate-200">Cancel</button>
                       </div>
@@ -648,7 +700,9 @@ export function OutputPanel({ isLoading, output, recommendedNextActions = [], do
                       <label className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-200">Image for this section</label>
                       <textarea value={imagePrompt} onChange={(event) => setImagePrompt(event.currentTarget.value)} className="mt-3 h-28 w-full resize-none rounded-2xl border border-emerald-300/20 bg-black/40 px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
                       <div className="mt-3 flex flex-wrap items-center gap-2">
-                        <PremiumMenu<SideImageRatio> label="Ratio" valueLabel={imageRatio} options={[{ label: "1:1", value: "1:1" }, { label: "4:3", value: "4:3" }, { label: "3:4", value: "3:4" }]} onSelect={setImageRatio} align="left" />
+                        <PremiumMenu<SideImageRatio> label="Ratio" valueLabel={imageRatio} options={ratioOptions} onSelect={setImageRatio} align="left" />
+                        {isBookImageTool ? <PremiumMenu<SideImageModel> label="Model" valueLabel={imageModel} options={modelOptions} onSelect={setImageModel} align="left" /> : null}
+                        {isBookImageTool ? <PremiumMenu<SideImageResolution> label="Resolution" valueLabel={imageResolution} options={resolutionOptions} onSelect={setImageResolution} align="left" /> : null}
                         <PremiumMenu<SideImagePlacement> label="Placement" valueLabel={imagePlacement === "top" ? "Image above text" : imagePlacement === "bottom" ? "Image below text" : imagePlacement === "left" ? "Image left" : "Image right"} options={[{ label: "Image above text", value: "top" }, { label: "Image below text", value: "bottom" }, { label: "Image left", value: "left" }, { label: "Image right", value: "right" }]} onSelect={setImagePlacement} align="left" />
                         <button type="button" onClick={() => void generateSideImage(block)} disabled={generatingImageBlockId === block.id} className="abc-premium-generate-button rounded-full px-4 py-2 text-xs font-semibold text-white disabled:opacity-60">{generatingImageBlockId === block.id ? "Generating..." : sideImages[block.id] ? "Apply edit" : "Generate image"}</button>
                         <button type="button" onClick={() => setActiveImageBlockId(null)} disabled={generatingImageBlockId === block.id} className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-slate-200">Cancel</button>
