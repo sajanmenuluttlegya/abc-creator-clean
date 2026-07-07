@@ -7,10 +7,14 @@ const audienceOptions = ["Adults", "Young adults", "Middle grade", "Children", "
 const authorVoiceOptions = ["Natural bestselling author", "Cinematic literary", "Commercial page-turner", "Emotional first-person", "Clean third-person", "Dark atmospheric", "Funny and warm", "Epic fantasy", "Romance-forward", "Thriller-tight", "Children's storyteller", "Custom from brief"];
 const bookSizeOptions = ["5 x 8", "5.25 x 8", "5.5 x 8.5", "6 x 9", "7 x 10", "8 x 10", "8.5 x 11", "Custom in brief"];
 const fontOptions = ["Classic Serif", "Modern Serif", "Elegant Fantasy", "Clean Sans", "Children's Book", "Mystery / Thriller", "Romance", "Sci-Fi", "Custom in brief"];
+const bookOutputLengthOptions = ["Compact output (1 credit)", "Standard output (2 credits)", "Long output (5 credits)", "Premium deep output (9 credits)"];
 const chapterLengthOptions = ["Short chapter (1,000-1,500 words)", "Standard chapter (1,500-2,500 words)", "Long chapter (2,500-4,000 words)", "Premium chapter (4,000-6,000 words)", "Epic chapter (6,000-8,000 words)"];
 const rewriteModeOptions = ["Light polish (+5 credits)", "Standard rewrite (+9 credits)", "Deep humanization (+11 credits)", "Canon-safe polish (+22 credits)"];
 const chapterEndingOptions = ["Natural continuation", "Soft hook", "Strong cliffhanger", "Emotional closure", "Mystery reveal", "Action beat", "Quiet literary ending"];
 const imageStyleOptions = ["Auto from book bible", "Cinematic realistic", "Fantasy concept art", "Children's book illustration", "Anime-inspired", "Graphic novel", "Watercolor", "Oil-painting look", "Dark atmospheric", "Clean premium editorial"];
+const sceneLengthOptions = ["Short scene (5 credits)", "Standard scene (5 credits)", "Long scene (7 credits)", "Very detailed scene (9 credits)"];
+
+const outputLengthInput: BookInput = { id: "output_length", label: "Output Length", type: "select", required: true, options: bookOutputLengthOptions };
 
 const commonBookInputs: BookInput[] = [
   { id: "book_title", label: "Book Title", type: "text", placeholder: "Title shown on the centered title page", required: true },
@@ -36,12 +40,7 @@ export const bookTools: BookTool[] = [
     outputType: "text",
     aliases: ["book-ideas", "novel-idea-generator", "story-idea-generator"],
     nextActions: [{ label: "Build a book outline", href: "/tools/book-outline-generator", description: "Turn the best idea into a full structure." }],
-    inputs: [
-      ...commonBookInputs,
-      { id: "core_idea", label: "Core Idea / Theme", type: "textarea", placeholder: "Describe the seed idea, theme, conflict, message, niche, or market angle.", required: true },
-      { id: "must_include", label: "Must Include", type: "textarea", placeholder: "Optional: tropes, setting, characters, market notes, reader promise, series idea.", required: false },
-      { id: "avoid", label: "Avoid", type: "textarea", placeholder: "Optional: clichés, topics, tropes, tones, or plot directions to avoid.", required: false },
-    ],
+    inputs: [...commonBookInputs, outputLengthInput, { id: "core_idea", label: "Core Idea / Theme", type: "textarea", placeholder: "Describe the seed idea, theme, conflict, message, niche, or market angle.", required: true }, { id: "must_include", label: "Must Include", type: "textarea", placeholder: "Optional: tropes, setting, characters, market notes, reader promise, series idea.", required: false }, { id: "avoid", label: "Avoid", type: "textarea", placeholder: "Optional: clichés, topics, tropes, tones, or plot directions to avoid.", required: false }],
   },
   {
     id: "book-title-generator",
@@ -54,11 +53,7 @@ export const bookTools: BookTool[] = [
     displayCreditCost: 1,
     outputType: "text",
     aliases: ["novel-title-generator", "book-name-generator"],
-    inputs: [
-      ...commonBookInputs,
-      { id: "book_brief", label: "Book Brief", type: "textarea", placeholder: "Describe the plot, topic, themes, audience, world, tone, and market angle.", required: true },
-      { id: "title_style", label: "Title Style", type: "select", required: true, options: ["Commercial", "Literary", "Fantasy", "Thriller", "Romance", "Children's", "Non-fiction authority", "Short and punchy", "Poetic", "Mixed"] },
-    ],
+    inputs: [...commonBookInputs, outputLengthInput, { id: "book_brief", label: "Book Brief", type: "textarea", placeholder: "Describe the plot, topic, themes, audience, world, tone, and market angle.", required: true }, { id: "title_style", label: "Title Style", type: "select", required: true, options: ["Commercial", "Literary", "Fantasy", "Thriller", "Romance", "Children's", "Non-fiction authority", "Short and punchy", "Poetic", "Mixed"] }],
   },
   {
     id: "book-bible-generator",
@@ -72,13 +67,7 @@ export const bookTools: BookTool[] = [
     outputType: "text",
     aliases: ["series-bible-generator", "novel-bible-generator", "story-bible-generator"],
     nextActions: [{ label: "Create chapter outline", href: "/tools/chapter-outline-generator", description: "Use the bible to plan the chapter sequence." }],
-    inputs: [
-      ...commonBookInputs,
-      { id: "story_brief", label: "Story / Book Brief", type: "textarea", placeholder: "Paste everything known: premise, characters, world, tone, arcs, themes, lore, ending, rules, and constraints.", required: true },
-      { id: "series_scope", label: "Series Scope", type: "select", required: true, options: ["Standalone", "Duology", "Trilogy", "Long series", "Anthology", "Custom in brief"] },
-      { id: "visual_style", label: "Visual Style for Book Images", type: "select", required: true, options: imageStyleOptions },
-      { id: "canon_preserve", label: "Canon / Must Preserve", type: "textarea", placeholder: "Names, lore, timeline, relationships, powers, places, ending rules, style rules.", required: false },
-    ],
+    inputs: [...commonBookInputs, outputLengthInput, { id: "story_brief", label: "Story / Book Brief", type: "textarea", placeholder: "Paste everything known: premise, characters, world, tone, arcs, themes, lore, ending, rules, and constraints.", required: true }, { id: "series_scope", label: "Series Scope", type: "select", required: true, options: ["Standalone", "Duology", "Trilogy", "Long series", "Anthology", "Custom in brief"] }, { id: "visual_style", label: "Visual Style for Book Images", type: "select", required: true, options: imageStyleOptions }, { id: "canon_preserve", label: "Canon / Must Preserve", type: "textarea", placeholder: "Names, lore, timeline, relationships, powers, places, ending rules, style rules.", required: false }],
   },
   {
     id: "character-builder",
@@ -91,12 +80,7 @@ export const bookTools: BookTool[] = [
     displayCreditCost: 5,
     outputType: "text",
     aliases: ["novel-character-builder", "character-profile-generator"],
-    inputs: [
-      ...commonBookInputs,
-      { id: "character_brief", label: "Character Brief", type: "textarea", placeholder: "Name, role, age, backstory, goal, wound, powers, conflict, relationships, or vague idea.", required: true },
-      { id: "character_role", label: "Character Role", type: "select", required: true, options: ["Protagonist", "Co-protagonist", "Villain", "Love interest", "Mentor", "Sidekick", "Rival", "Supporting cast", "Ensemble cast"] },
-      { id: "canon_preserve", label: "Canon / Must Preserve", type: "textarea", placeholder: "Fixed traits, history, relationships, names, visual details, voice rules.", required: false },
-    ],
+    inputs: [...commonBookInputs, outputLengthInput, { id: "character_brief", label: "Character Brief", type: "textarea", placeholder: "Name, role, age, backstory, goal, wound, powers, conflict, relationships, or vague idea.", required: true }, { id: "character_role", label: "Character Role", type: "select", required: true, options: ["Protagonist", "Co-protagonist", "Villain", "Love interest", "Mentor", "Sidekick", "Rival", "Supporting cast", "Ensemble cast"] }, { id: "canon_preserve", label: "Canon / Must Preserve", type: "textarea", placeholder: "Fixed traits, history, relationships, names, visual details, voice rules.", required: false }],
   },
   {
     id: "worldbuilding-builder",
@@ -109,13 +93,7 @@ export const bookTools: BookTool[] = [
     displayCreditCost: 5,
     outputType: "text",
     aliases: ["worldbuilding-generator", "fantasy-world-builder", "story-world-builder"],
-    inputs: [
-      ...commonBookInputs,
-      { id: "world_brief", label: "World Brief", type: "textarea", placeholder: "Describe the setting, era, geography, culture, magic/tech, factions, politics, religions, rules, and tone.", required: true },
-      { id: "world_type", label: "World Type", type: "select", required: true, options: ["Fantasy world", "Sci-fi world", "Modern real-world", "Historical", "Alternate history", "Dystopian", "Children's world", "Non-fiction framework", "Custom"] },
-      { id: "visual_style", label: "Visual Style for Book Images", type: "select", required: true, options: imageStyleOptions },
-      { id: "canon_preserve", label: "Canon / Must Preserve", type: "textarea", placeholder: "Rules that cannot be broken.", required: false },
-    ],
+    inputs: [...commonBookInputs, outputLengthInput, { id: "world_brief", label: "World Brief", type: "textarea", placeholder: "Describe the setting, era, geography, culture, magic/tech, factions, politics, religions, rules, and tone.", required: true }, { id: "world_type", label: "World Type", type: "select", required: true, options: ["Fantasy world", "Sci-fi world", "Modern real-world", "Historical", "Alternate history", "Dystopian", "Children's world", "Non-fiction framework", "Custom"] }, { id: "visual_style", label: "Visual Style for Book Images", type: "select", required: true, options: imageStyleOptions }, { id: "canon_preserve", label: "Canon / Must Preserve", type: "textarea", placeholder: "Rules that cannot be broken.", required: false }],
   },
   {
     id: "book-outline-generator",
@@ -129,13 +107,7 @@ export const bookTools: BookTool[] = [
     outputType: "text",
     aliases: ["novel-outline-generator", "book-structure-generator"],
     nextActions: [{ label: "Write a chapter", href: "/tools/chapter-writer", description: "Generate each chapter separately for better quality and continuity." }],
-    inputs: [
-      ...commonBookInputs,
-      { id: "book_brief", label: "Book Brief / Bible", type: "textarea", placeholder: "Paste premise, book bible, characters, world, themes, ending, and constraints.", required: true },
-      { id: "chapter_count", label: "Chapter Count", type: "select", required: true, options: ["5 chapters", "10 chapters", "15 chapters", "20 chapters", "30 chapters", "40 chapters", "Custom in brief"] },
-      { id: "structure_style", label: "Structure Style", type: "select", required: true, options: ["Three-act", "Four-part", "Hero's journey", "Save-the-cat inspired", "Mystery reveal structure", "Romance beats", "Non-fiction framework", "Custom"] },
-      { id: "canon_preserve", label: "Canon / Must Preserve", type: "textarea", placeholder: "Fixed story rules and continuity constraints.", required: false },
-    ],
+    inputs: [...commonBookInputs, outputLengthInput, { id: "book_brief", label: "Book Brief / Bible", type: "textarea", placeholder: "Paste premise, book bible, characters, world, themes, ending, and constraints.", required: true }, { id: "chapter_count", label: "Chapter Count", type: "select", required: true, options: ["5 chapters", "10 chapters", "15 chapters", "20 chapters", "30 chapters", "40 chapters", "Custom in brief"] }, { id: "structure_style", label: "Structure Style", type: "select", required: true, options: ["Three-act", "Four-part", "Hero's journey", "Save-the-cat inspired", "Mystery reveal structure", "Romance beats", "Non-fiction framework", "Custom"] }, { id: "canon_preserve", label: "Canon / Must Preserve", type: "textarea", placeholder: "Fixed story rules and continuity constraints.", required: false }],
   },
   {
     id: "chapter-outline-generator",
@@ -148,13 +120,7 @@ export const bookTools: BookTool[] = [
     displayCreditCost: 5,
     outputType: "text",
     aliases: ["chapter-plan-generator", "chapter-by-chapter-outline"],
-    inputs: [
-      ...commonBookInputs,
-      { id: "book_outline_or_bible", label: "Book Outline / Bible", type: "textarea", placeholder: "Paste the book outline, story bible, character/world bible, or current plan.", required: true },
-      { id: "chapter_range", label: "Chapter Range", type: "text", placeholder: "e.g., Chapter 1-10, Chapter 7 only, all chapters", required: true },
-      { id: "chapter_length_target", label: "Default Chapter Length", type: "select", required: true, options: chapterLengthOptions },
-      { id: "canon_preserve", label: "Canon / Must Preserve", type: "textarea", placeholder: "Continuity, character, timeline, style, and ending rules.", required: false },
-    ],
+    inputs: [...commonBookInputs, outputLengthInput, { id: "book_outline_or_bible", label: "Book Outline / Bible", type: "textarea", placeholder: "Paste the book outline, story bible, character/world bible, or current plan.", required: true }, { id: "chapter_range", label: "Chapter Range", type: "text", placeholder: "e.g., Chapter 1-10, Chapter 7 only, all chapters", required: true }, { id: "chapter_length_target", label: "Default Chapter Length", type: "select", required: true, options: chapterLengthOptions }, { id: "canon_preserve", label: "Canon / Must Preserve", type: "textarea", placeholder: "Continuity, character, timeline, style, and ending rules.", required: false }],
   },
   {
     id: "scene-generator",
@@ -167,13 +133,7 @@ export const bookTools: BookTool[] = [
     displayCreditCost: 5,
     outputType: "text",
     aliases: ["book-scene-generator", "novel-scene-writer"],
-    inputs: [
-      ...commonBookInputs,
-      { id: "scene_brief", label: "Scene Brief", type: "textarea", placeholder: "What happens in the scene? Include POV, conflict, setting, emotion, must-include beats.", required: true },
-      { id: "continuity_context", label: "Continuity Context", type: "textarea", placeholder: "Previous scene/chapter ending, character state, world rules, relationship status.", required: true },
-      { id: "scene_length", label: "Scene Length", type: "select", required: true, options: ["Short scene", "Standard scene", "Long scene", "Very detailed scene"] },
-      { id: "canon_preserve", label: "Canon / Must Preserve", type: "textarea", placeholder: "Details that cannot change.", required: false },
-    ],
+    inputs: [...commonBookInputs, { id: "scene_brief", label: "Scene Brief", type: "textarea", placeholder: "What happens in the scene? Include POV, conflict, setting, emotion, must-include beats.", required: true }, { id: "continuity_context", label: "Continuity Context", type: "textarea", placeholder: "Previous scene/chapter ending, character state, world rules, relationship status.", required: true }, { id: "scene_length", label: "Scene Length", type: "select", required: true, options: sceneLengthOptions }, { id: "canon_preserve", label: "Canon / Must Preserve", type: "textarea", placeholder: "Details that cannot change.", required: false }],
   },
   {
     id: "chapter-writer",
@@ -186,18 +146,7 @@ export const bookTools: BookTool[] = [
     displayCreditCost: 9,
     outputType: "text",
     aliases: ["chapter-generator", "novel-chapter-writer", "book-chapter-generator"],
-    inputs: [
-      ...commonBookInputs,
-      { id: "chapter_number", label: "Chapter Number", type: "text", placeholder: "e.g., Chapter 1", required: true },
-      { id: "chapter_title", label: "Chapter Title", type: "text", placeholder: "Optional title or working title", required: false },
-      { id: "chapter_outline", label: "This Chapter Outline", type: "textarea", placeholder: "Paste only this chapter's outline, beats, purpose, conflict, and ending goal.", required: true },
-      { id: "book_bible", label: "Book Bible / Character + World Bible", type: "textarea", placeholder: "Paste the canon bible, character bible, world bible, and visual bible.", required: true },
-      { id: "previous_continuity", label: "Previous Chapter Continuity Capsule", type: "textarea", placeholder: "Paste previous chapter ending, unresolved threads, character states, timeline, secrets, injuries, promises, location.", required: false },
-      { id: "chapter_length", label: "Chapter Length", type: "select", required: true, options: chapterLengthOptions },
-      { id: "ending_type", label: "Ending Type", type: "select", required: true, options: chapterEndingOptions },
-      { id: "must_include", label: "Must Include", type: "textarea", placeholder: "Optional exact beats, lines, reveals, objects, scenes, emotions, lore.", required: false },
-      { id: "avoid", label: "Avoid", type: "textarea", placeholder: "Optional: clichés, repeated phrases, forbidden reveals, AI-ish style, continuity risks.", required: false },
-    ],
+    inputs: [...commonBookInputs, { id: "chapter_number", label: "Chapter Number", type: "text", placeholder: "e.g., Chapter 1", required: true }, { id: "chapter_title", label: "Chapter Title", type: "text", placeholder: "Optional title or working title", required: false }, { id: "chapter_outline", label: "This Chapter Outline", type: "textarea", placeholder: "Paste only this chapter's outline, beats, purpose, conflict, and ending goal.", required: true }, { id: "book_bible", label: "Book Bible / Character + World Bible", type: "textarea", placeholder: "Paste the canon bible, character bible, world bible, and visual bible.", required: true }, { id: "previous_continuity", label: "Previous Chapter Continuity Capsule", type: "textarea", placeholder: "Paste previous chapter ending, unresolved threads, character states, timeline, secrets, injuries, promises, location.", required: false }, { id: "chapter_length", label: "Chapter Length", type: "select", required: true, options: chapterLengthOptions }, { id: "ending_type", label: "Ending Type", type: "select", required: true, options: chapterEndingOptions }, { id: "must_include", label: "Must Include", type: "textarea", placeholder: "Optional exact beats, lines, reveals, objects, scenes, emotions, lore.", required: false }, { id: "avoid", label: "Avoid", type: "textarea", placeholder: "Optional: clichés, repeated phrases, forbidden reveals, AI-ish style, continuity risks.", required: false }],
   },
   {
     id: "chapter-rewriter-humanizer",
@@ -210,15 +159,7 @@ export const bookTools: BookTool[] = [
     displayCreditCost: 14,
     outputType: "text",
     aliases: ["chapter-humanizer", "novel-chapter-rewriter", "book-humanizer"],
-    inputs: [
-      ...commonBookInputs,
-      { id: "chapter_text", label: "Chapter Text", type: "textarea", placeholder: "Paste the chapter to rewrite/humanize.", required: true },
-      { id: "book_bible", label: "Book Bible / Canon", type: "textarea", placeholder: "Paste canon, character, world, timeline, style, and continuity details.", required: true },
-      { id: "original_chapter_length", label: "Original Chapter Length Selected", type: "select", required: true, options: chapterLengthOptions },
-      { id: "rewrite_mode", label: "Rewrite Mode", type: "select", required: true, options: rewriteModeOptions },
-      { id: "must_preserve", label: "Must Preserve", type: "textarea", placeholder: "Exact names, canon, lines, plot beats, POV, ending, style rules.", required: true },
-      { id: "avoid", label: "Avoid", type: "textarea", placeholder: "Optional: AI-ish phrasing, spoilers, overexplaining, repeated words, forbidden changes.", required: false },
-    ],
+    inputs: [...commonBookInputs, { id: "chapter_text", label: "Chapter Text", type: "textarea", placeholder: "Paste the chapter to rewrite/humanize.", required: true }, { id: "book_bible", label: "Book Bible / Canon", type: "textarea", placeholder: "Paste canon, character, world, timeline, style, and continuity details.", required: true }, { id: "original_chapter_length", label: "Original Chapter Length Selected", type: "select", required: true, options: chapterLengthOptions }, { id: "rewrite_mode", label: "Rewrite Mode", type: "select", required: true, options: rewriteModeOptions }, { id: "must_preserve", label: "Must Preserve", type: "textarea", placeholder: "Exact names, canon, lines, plot beats, POV, ending, style rules.", required: true }, { id: "avoid", label: "Avoid", type: "textarea", placeholder: "Optional: AI-ish phrasing, spoilers, overexplaining, repeated words, forbidden changes.", required: false }],
   },
   {
     id: "continuity-checker",
@@ -231,12 +172,7 @@ export const bookTools: BookTool[] = [
     displayCreditCost: 5,
     outputType: "text",
     aliases: ["book-continuity-checker", "novel-continuity-checker"],
-    inputs: [
-      ...commonBookInputs,
-      { id: "book_or_chapter_text", label: "Book / Chapter Text", type: "textarea", placeholder: "Paste the chapter, multiple chapters, outline, or manuscript section to check.", required: true },
-      { id: "book_bible", label: "Book Bible / Canon", type: "textarea", placeholder: "Paste known canon, timeline, character/world rules, and planned ending.", required: true },
-      { id: "check_focus", label: "Check Focus", type: "select", required: true, options: ["Full continuity check", "Timeline only", "Character consistency", "Worldbuilding/lore", "Plot holes", "Style/repetition", "All issues + fixes"] },
-    ],
+    inputs: [...commonBookInputs, outputLengthInput, { id: "book_or_chapter_text", label: "Book / Chapter Text", type: "textarea", placeholder: "Paste the chapter, multiple chapters, outline, or manuscript section to check.", required: true }, { id: "book_bible", label: "Book Bible / Canon", type: "textarea", placeholder: "Paste known canon, timeline, character/world rules, and planned ending.", required: true }, { id: "check_focus", label: "Check Focus", type: "select", required: true, options: ["Full continuity check", "Timeline only", "Character consistency", "Worldbuilding/lore", "Plot holes", "Style/repetition", "All issues + fixes"] }],
   },
   {
     id: "book-blurb-generator",
@@ -249,11 +185,6 @@ export const bookTools: BookTool[] = [
     displayCreditCost: 3,
     outputType: "text",
     aliases: ["book-description-generator", "amazon-book-blurb", "kdp-book-description"],
-    inputs: [
-      ...commonBookInputs,
-      { id: "book_summary", label: "Book Summary", type: "textarea", placeholder: "Paste the premise, main conflict, characters, hook, genre, ending status, and reader promise.", required: true },
-      { id: "blurb_style", label: "Blurb Style", type: "select", required: true, options: ["Amazon/KDP", "Back cover", "Short hook", "Dramatic", "Romance", "Thriller", "Fantasy epic", "Non-fiction authority", "Children's"] },
-      { id: "avoid_spoilers", label: "Avoid Spoilers", type: "select", required: true, options: ["Yes", "No"] },
-    ],
+    inputs: [...commonBookInputs, outputLengthInput, { id: "book_summary", label: "Book Summary", type: "textarea", placeholder: "Paste the premise, main conflict, characters, hook, genre, ending status, and reader promise.", required: true }, { id: "blurb_style", label: "Blurb Style", type: "select", required: true, options: ["Amazon/KDP", "Back cover", "Short hook", "Dramatic", "Romance", "Thriller", "Fantasy epic", "Non-fiction authority", "Children's"] }, { id: "avoid_spoilers", label: "Avoid Spoilers", type: "select", required: true, options: ["Yes", "No"] }],
   },
 ];
