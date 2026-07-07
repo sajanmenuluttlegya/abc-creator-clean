@@ -1,4 +1,5 @@
 import { blogTools } from "./public-blog-tools";
+import { aiPromptBatchTools } from "./public-ai-prompt-batch-tools";
 import { socialTools } from "./public-social-tools";
 import { imageTools } from "./public-image-tools";
 
@@ -177,6 +178,7 @@ const rawPublicTools: Tool[] = [
     ],
   },
   ...blogTools,
+  ...aiPromptBatchTools,
   ...socialTools,
   ...imageTools,
   {
