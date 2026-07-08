@@ -6,7 +6,6 @@ import {
   getImageDimensions,
   getTextToImageCredits,
   IMAGE_ASPECT_RATIOS,
-  IMAGE_MODEL_KEYS,
   IMAGE_RESOLUTIONS,
   IMAGE_STYLE_OPTIONS,
   type ImageAspectRatio,
@@ -16,6 +15,8 @@ import {
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+const COMBINE_MODEL: ImageModelKey = "M1";
 
 type CreditReservation = {
   ok?: boolean;
@@ -58,8 +59,9 @@ function cleanText(value: unknown, limit: number) {
   return text.length > limit ? text.slice(0, limit) : text;
 }
 
-function parseModel(value: unknown): ImageModelKey {
-  return IMAGE_MODEL_KEYS.includes(value as ImageModelKey) ? value as ImageModelKey : "M5";
+function parseModel(value: unknown): ImageModelKey | null {
+  const requested = typeof value === "string" && value.trim() ? value.trim() : COMBINE_MODEL;
+  return requested === COMBINE_MODEL ? COMBINE_MODEL : null;
 }
 
 function parseResolution(value: unknown): ImageResolution {
@@ -171,10 +173,10 @@ async function createCombinedImage(input: {
 
   const footerSvg = `
     <svg width="${width}" height="${footerHeight}" xmlns="http://www.w3.org/2000/svg">
-      <rect width="100%" height="100%" fill="#09090f"/>
-      <rect x="${padding}" y="1" width="${Math.max(1, width - padding * 2)}" height="1" fill="rgba(255,255,255,0.18)"/>
+      <rect width="100%" height="100%" fill="#080714"/>
+      <rect x="${padding}" y="1" width="${Math.max(1, width - padding * 2)}" height="1" fill="rgba(34,211,238,0.28)"/>
       ${promptLines.map((line, index) => `<text x="${padding}" y="${firstPromptY + index * lineHeight}" font-family="Arial, Helvetica, sans-serif" font-size="${promptFontSize}" font-weight="700" fill="#ffffff">${escapeXml(line)}</text>`).join("")}
-      <text x="${padding}" y="${subtitleY}" font-family="Arial, Helvetica, sans-serif" font-size="${subtitleFontSize}" font-weight="700" fill="#c4b5fd">${escapeXml(subtitle)}</text>
+      <text x="${padding}" y="${subtitleY}" font-family="Arial, Helvetica, sans-serif" font-size="${subtitleFontSize}" font-weight="700" fill="#a5f3fc">${escapeXml(subtitle)}</text>
     </svg>
   `;
 
@@ -185,7 +187,7 @@ async function createCombinedImage(input: {
       width,
       height,
       channels: 4,
-      background: { r: 10, g: 10, b: 18, alpha: 1 },
+      background: { r: 8, g: 7, b: 20, alpha: 1 },
     },
   })
     .composite(composites)
@@ -241,6 +243,10 @@ export async function POST(req: NextRequest) {
     const resolution = parseResolution(formData.get("resolution"));
     const aspectRatio = parseAspectRatio(formData.get("aspectRatio"));
     const style = parseStyle(formData.get("style"));
+
+    if (!model) {
+      return Response.json({ ok: false, error: "Image Combine supports M1 only.", code: "COMBINE_MODEL_MUST_BE_M1" }, { status: 400 });
+    }
 
     if (files.length < 2 || files.length > 6) {
       return Response.json({ ok: false, error: "Upload 2 to 6 images." }, { status: 400 });
@@ -300,7 +306,7 @@ export async function POST(req: NextRequest) {
 
     const spendResponse = await supabase.rpc("spend_reserved_credits", {
       p_transaction_id: reservedTransactionId,
-      p_provider: "image:combine:sharp-composite",
+      p_provider: "image:combine:m1-sharp-composite",
       p_model: `${model}-${resolution}-${aspectRatio}`,
     });
 
