@@ -54,6 +54,17 @@ function getRegisteredTool(toolSlug: string): RegisteredServerTool | undefined {
   return serverSocialTools[toolSlug] || serverSocialCompletionBatchTools[toolSlug] || serverGeneralTools[toolSlug] || serverPlatformTools[toolSlug] || serverYouTubeCompletionBatchTools[toolSlug] || serverAdCopyBatchTools[toolSlug] || serverAiPromptBatchTools[toolSlug] || serverSummarizerUtilityBatchTools[toolSlug] || serverCampaignTools[toolSlug] || serverBlogBatchTools[toolSlug] || serverSeoBatchTools[toolSlug] || serverSeoUtilityBatchTools[toolSlug] || serverSeoCompletionBatchTools[toolSlug] || serverCreativeCopyBatchTools[toolSlug] || serverShortStoryBatchTools[toolSlug] || getEmailTool(toolSlug) || serverEmailEcommerceBatchTools[toolSlug] || serverSalesCopyBatchTools[toolSlug] || serverWritingBatchTools[toolSlug] || serverScreenwritingTools[toolSlug];
 }
 
+function validateScreenwritingCustomSceneCount(toolSlug: string, inputs: Record<string, string>): ValidationResult | null {
+  if (toolSlug !== "scene-list-crafter") return null;
+  if (!/custom/i.test(inputs.scene_count || "")) return null;
+  const rawCount = (inputs.custom_scene_count || "").trim();
+  const customCount = Number(rawCount);
+  if (!rawCount || !Number.isInteger(customCount) || customCount < 1 || customCount >= 49) {
+    return { ok: false, field: "custom_scene_count", error: "Custom scene count must be a whole number from 1 to 48." };
+  }
+  return null;
+}
+
 function validateRegisteredTool(toolSlug: string, inputs: Record<string, string>): ValidationResult {
   const tool = getRegisteredTool(toolSlug);
   if (!tool) return { ok: false, error: `Unknown tool: ${toolSlug}` };
@@ -62,6 +73,8 @@ function validateRegisteredTool(toolSlug: string, inputs: Record<string, string>
     const minLength = field.minLength ?? 1;
     if (field.required && cleaned.length < minLength) return { ok: false, field: field.id, error: `${field.label} is required and must be at least ${minLength} characters.` };
   }
+  const screenwritingCustomCountError = validateScreenwritingCustomSceneCount(toolSlug, inputs);
+  if (screenwritingCustomCountError) return screenwritingCustomCountError;
   for (const [field, value] of Object.entries(inputs)) {
     if (typeof value !== "string") return { ok: false, field, error: "Invalid input value." };
     const rule = tool.requiredInputs.find((item) => item.id === field);
