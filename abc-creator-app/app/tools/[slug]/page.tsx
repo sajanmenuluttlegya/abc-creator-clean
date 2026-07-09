@@ -8,6 +8,7 @@ import { ImageTextToImagePanel } from "@/components/ImageTextToImagePanel";
 import { ImageUpscalePanel } from "@/components/ImageUpscalePanel";
 import { ImageBackgroundRemoverPanel } from "@/components/ImageBackgroundRemoverPanel";
 import { ImageCombinePanel } from "@/components/ImageCombinePanel";
+import { AnimationCharacterSheetPanel } from "@/components/AnimationCharacterSheetPanel";
 import { getToolBySlug } from "@/lib/tools/public-tools";
 
 export default function DynamicToolPage() {
@@ -90,6 +91,8 @@ export default function DynamicToolPage() {
           <ImageBackgroundRemoverPanel />
         ) : tool.slug === "image-combine" ? (
           <ImageCombinePanel />
+        ) : tool.slug === "2d-animated-character-generator" || tool.slug === "3d-animated-character-generator" ? (
+          <AnimationCharacterSheetPanel toolSlug={tool.slug} />
         ) : (
           <ToolFormRenderer tool={tool} />
         )}
