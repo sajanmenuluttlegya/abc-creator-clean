@@ -1,8 +1,9 @@
 type ScreenwritingInput = { id: string; label: string; type: "text" | "textarea" | "select"; placeholder?: string; required: boolean; options?: string[] };
 type ScreenwritingTool = { id: string; slug: string; name: string; description: string; icon: string; detailEmoji: string; category: string; displayCreditCost: number; outputType: "text"; aliases?: string[]; nextActions?: Array<{ label: string; href: string; description: string }>; inputs: ScreenwritingInput[] };
 
-const category = "Screenwriting Tools";
+const category = "Film / Video Creator Tools";
 const languageOptions = ["English", "Hindi", "Hinglish", "Spanish", "French", "German", "Portuguese", "Arabic"];
+const allNicheGenreOptions = ["All genres / custom", "Fantasy", "Sci-fi", "Romance", "Thriller", "Mystery", "Horror", "Adventure", "Historical fiction", "Contemporary fiction", "Literary fiction", "Young adult", "Middle grade", "Children's book", "Non-fiction", "Self-help", "Business", "Memoir", "Spiritual", "Comedy", "Drama", "Fan-fiction style original", "Other"];
 const genreOptions = ["Action", "Adventure", "Comedy", "Drama", "Romance", "Thriller", "Horror", "Mystery", "Sci-fi", "Fantasy", "Crime", "Historical", "Family", "Animation", "Coming-of-age", "Supernatural", "Noir", "Satire", "Documentary-style", "Custom from brief"];
 const toneOptions = ["Cinematic", "Commercial", "Prestige drama", "Dark psychological", "Funny and warm", "Gritty realistic", "High-energy", "Emotional", "Suspenseful", "Inspirational", "Family-friendly", "Satirical", "Custom from brief"];
 const ratingOptions = ["All ages", "Family / PG", "Teen / PG-13", "Mature / R-style", "Streaming prestige", "Custom from brief"];
