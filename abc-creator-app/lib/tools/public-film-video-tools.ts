@@ -1,0 +1,191 @@
+type FilmVideoInput = { id: string; label: string; type: "text" | "textarea" | "select"; placeholder?: string; required: boolean; options?: string[] };
+type FilmVideoTool = { id: string; slug: string; name: string; description: string; icon: string; detailEmoji: string; category: string; displayCreditCost: number; outputType: "text"; aliases?: string[]; nextActions?: Array<{ label: string; href: string; description: string }>; inputs: FilmVideoInput[] };
+
+const category = "Film / Video Creator Tools";
+const languageOptions = ["English", "Hindi", "Hinglish", "Spanish", "French", "German", "Portuguese", "Arabic"];
+const genreOptions = ["Action", "Adventure", "Comedy", "Drama", "Romance", "Thriller", "Horror", "Mystery", "Sci-fi", "Fantasy", "Crime", "Documentary", "Lifestyle", "Educational", "Brand film", "Music video", "Animation", "Family", "Custom from brief"];
+const toneOptions = ["Cinematic", "Commercial", "Premium brand film", "Prestige drama", "Dark psychological", "Funny and warm", "Gritty realistic", "High-energy", "Emotional", "Suspenseful", "Inspirational", "Family-friendly", "Satirical", "Custom from brief"];
+const platformOptions = ["Cinema / festival", "YouTube", "Instagram Reels", "TikTok", "Shorts", "Streaming pilot", "OTT / web series", "Brand campaign", "Pitch deck", "Custom from brief"];
+const audienceOptions = ["General audience", "Kids / family", "Teen", "Adult", "Brand buyers", "Creators", "Investors / producers", "Festival programmers", "Custom from brief"];
+const depthOptions = ["Compact professional (2 credits)", "Standard creator-ready (5 credits)", "Detailed production-ready (7 credits)", "Premium director-level (9 credits)"];
+const variationOptions = ["1 variation", "3 variations", "5 variations", "10 variations"];
+const durationOptions = ["15 seconds", "30 seconds", "60 seconds", "2 minutes", "5 minutes", "10 minutes", "Short film", "Feature film", "Episode / pilot", "Custom from brief"];
+const shotCountOptions = ["8 shots", "12 shots", "16 shots", "24 shots", "32 shots", "Custom (<49)"];
+const sceneCountOptions = ["8 scenes", "12 scenes", "16 scenes", "24 scenes", "32 scenes", "Custom (<49)"];
+const aspectRatioOptions = ["16:9 landscape", "9:16 vertical", "1:1 square", "4:5 portrait", "2.39:1 cinematic", "Custom from brief"];
+const visualStyleOptions = ["Cinematic realistic", "Premium commercial", "Indie film naturalism", "High-contrast noir", "Colorful family animation", "Moody prestige drama", "Documentary realism", "Luxury editorial", "Music-video stylized", "Futuristic sci-fi", "Fantasy concept art", "Custom from brief"];
+const budgetOptions = ["No budget limit", "Micro-budget", "Low budget", "Mid budget", "Premium commercial", "Studio-scale", "Custom from brief"];
+
+const sourceInput: FilmVideoInput = { id: "source_content", label: "Film / Video Brief", type: "textarea", placeholder: "Paste the idea, script excerpt, treatment, brand brief, scene notes, product details, episode premise, or creator notes.", required: true };
+const extraNotesInput: FilmVideoInput = { id: "extra_notes", label: "Extra Notes / Must Preserve", type: "textarea", placeholder: "Optional: must-include shots, actors/characters, location limits, brand rules, avoid list, references, visual constraints, budget notes, or canon.", required: false };
+const commonTailInputs: FilmVideoInput[] = [
+  { id: "genre", label: "Genre / Format", type: "select", required: true, options: genreOptions },
+  { id: "tone", label: "Tone", type: "select", required: true, options: toneOptions },
+  { id: "platform", label: "Platform / Use", type: "select", required: true, options: platformOptions },
+  { id: "target_audience", label: "Target Audience", type: "select", required: true, options: audienceOptions },
+  { id: "language", label: "Language", type: "select", required: true, options: languageOptions },
+  extraNotesInput,
+];
+
+export const filmVideoTools: FilmVideoTool[] = [
+  {
+    id: "short-film-idea-generator",
+    slug: "short-film-idea-generator",
+    name: "Short Film Idea Generator",
+    description: "Generate festival-ready short film ideas with a tight premise, character conflict, visual hook, and ending.",
+    icon: "video",
+    detailEmoji: "🎞️",
+    category,
+    displayCreditCost: 2,
+    outputType: "text",
+    aliases: ["short-film-ideas", "short-movie-idea-generator"],
+    nextActions: [{ label: "Build a treatment", href: "/tools/film-treatment-generator", description: "Turn the strongest idea into a professional treatment." }],
+    inputs: [sourceInput, { id: "duration", label: "Target Duration", type: "select", required: true, options: durationOptions }, { id: "variation_count", label: "Idea Variations", type: "select", required: true, options: variationOptions }, ...commonTailInputs],
+  },
+  {
+    id: "video-story-generator",
+    slug: "video-story-generator",
+    name: "Video Story Generator",
+    description: "Turn a topic, brand brief, or creator concept into a strong beginning-middle-end video story.",
+    icon: "video",
+    detailEmoji: "📹",
+    category,
+    displayCreditCost: 3,
+    outputType: "text",
+    aliases: ["creator-video-story", "video-narrative-generator"],
+    nextActions: [{ label: "Plan the production", href: "/tools/video-production-plan-generator", description: "Convert the story into a practical shoot plan." }],
+    inputs: [sourceInput, { id: "duration", label: "Target Duration", type: "select", required: true, options: durationOptions }, { id: "story_depth", label: "Story Depth", type: "select", required: true, options: depthOptions }, ...commonTailInputs],
+  },
+  {
+    id: "film-treatment-generator",
+    slug: "film-treatment-generator",
+    name: "Film Treatment Generator",
+    description: "Create a premium film/video treatment with concept, world, characters, sequence flow, and director-ready detail.",
+    icon: "video",
+    detailEmoji: "📄",
+    category,
+    displayCreditCost: 5,
+    outputType: "text",
+    aliases: ["video-treatment-generator", "movie-treatment-generator"],
+    nextActions: [{ label: "Create shot list", href: "/tools/shot-list-generator", description: "Turn the treatment into a professional shot list." }],
+    inputs: [sourceInput, { id: "duration", label: "Target Length", type: "select", required: true, options: durationOptions }, { id: "treatment_depth", label: "Treatment Depth", type: "select", required: true, options: depthOptions }, ...commonTailInputs],
+  },
+  {
+    id: "shot-list-generator",
+    slug: "shot-list-generator",
+    name: "Shot List Generator",
+    description: "Create a production-ready shot list with framing, movement, lens feel, action, audio notes, and coverage logic.",
+    icon: "video",
+    detailEmoji: "🎥",
+    category,
+    displayCreditCost: 5,
+    outputType: "text",
+    aliases: ["film-shot-list", "video-shot-list-generator"],
+    nextActions: [{ label: "Build visual direction", href: "/tools/visual-direction-generator", description: "Define the look, lighting, color, and camera language." }],
+    inputs: [sourceInput, { id: "shot_count", label: "Shot Count", type: "select", required: true, options: shotCountOptions }, { id: "custom_shot_count", label: "Custom Shot Count (<49)", type: "text", placeholder: "Enter 1–48 only when Custom is selected", required: false }, { id: "location_context", label: "Location / Set Context", type: "textarea", placeholder: "Optional: locations, props, blocking, production constraints, available gear.", required: false }, ...commonTailInputs],
+  },
+  {
+    id: "visual-direction-generator",
+    slug: "visual-direction-generator",
+    name: "Visual Direction Generator",
+    description: "Create a premium director-of-photography style visual direction guide for a film, ad, or creator video.",
+    icon: "video",
+    detailEmoji: "🎨",
+    category,
+    displayCreditCost: 4,
+    outputType: "text",
+    aliases: ["film-visual-direction", "video-lookbook-generator"],
+    inputs: [sourceInput, { id: "visual_style", label: "Visual Style", type: "select", required: true, options: visualStyleOptions }, { id: "aspect_ratio", label: "Aspect Ratio", type: "select", required: true, options: aspectRatioOptions }, { id: "budget_level", label: "Budget Level", type: "select", required: true, options: budgetOptions }, { id: "direction_depth", label: "Direction Depth", type: "select", required: true, options: depthOptions }, ...commonTailInputs],
+  },
+  {
+    id: "cinematic-scene-prompt-generator",
+    slug: "cinematic-scene-prompt-generator",
+    name: "Cinematic Scene Prompt Generator",
+    description: "Generate premium cinematic image/video prompts for a scene with camera, lighting, composition, action, and negative prompts.",
+    icon: "prompt",
+    detailEmoji: "🎬",
+    category,
+    displayCreditCost: 1,
+    outputType: "text",
+    aliases: ["film-scene-prompt-generator", "cinematic-image-prompt-generator", "video-scene-prompt-generator"],
+    inputs: [sourceInput, { id: "prompt_variations", label: "Prompt Variations", type: "select", required: true, options: variationOptions }, { id: "visual_style", label: "Visual Style", type: "select", required: true, options: visualStyleOptions }, { id: "aspect_ratio", label: "Aspect Ratio", type: "select", required: true, options: aspectRatioOptions }, { id: "camera_language", label: "Camera Language", type: "select", required: true, options: ["Auto cinematic", "Wide establishing", "Close-up emotional", "Handheld realism", "Slow dolly / tracking", "Drone / aerial", "Macro detail", "Music-video stylized", "Custom from brief"] }, ...commonTailInputs],
+  },
+  {
+    id: "directors-vision-builder",
+    slug: "directors-vision-builder",
+    name: "Director’s Vision Builder",
+    description: "Build a director’s vision statement with themes, visual rules, performance style, rhythm, and creative intent.",
+    icon: "video",
+    detailEmoji: "🎭",
+    category,
+    displayCreditCost: 4,
+    outputType: "text",
+    aliases: ["director-vision-generator", "directors-statement-generator"],
+    inputs: [sourceInput, { id: "vision_depth", label: "Vision Depth", type: "select", required: true, options: depthOptions }, { id: "visual_style", label: "Visual Style", type: "select", required: true, options: visualStyleOptions }, ...commonTailInputs],
+  },
+  {
+    id: "trailer-script-generator",
+    slug: "trailer-script-generator",
+    name: "Trailer Script Generator",
+    description: "Write a premium trailer script with beat timing, title cards, dialogue pulls, sound cues, and final hook.",
+    icon: "video",
+    detailEmoji: "🍿",
+    category,
+    displayCreditCost: 5,
+    outputType: "text",
+    aliases: ["movie-trailer-script", "promo-trailer-script-generator"],
+    inputs: [sourceInput, { id: "trailer_length", label: "Trailer Length", type: "select", required: true, options: ["15 seconds", "30 seconds", "60 seconds", "90 seconds", "2 minutes", "Custom from brief"] }, { id: "trailer_style", label: "Trailer Style", type: "select", required: true, options: ["Theatrical", "Streaming teaser", "Festival trailer", "Social-first trailer", "Horror suspense", "Comedy punchy", "Premium brand promo", "Custom from brief"] }, ...commonTailInputs],
+  },
+  {
+    id: "film-pitch-deck-text-generator",
+    slug: "film-pitch-deck-text-generator",
+    name: "Film Pitch Deck Text Generator",
+    description: "Create professional pitch deck copy for a film, series, short, or premium video concept.",
+    icon: "presentation",
+    detailEmoji: "📊",
+    category,
+    displayCreditCost: 7,
+    outputType: "text",
+    aliases: ["film-deck-copy-generator", "video-pitch-deck-generator"],
+    inputs: [sourceInput, { id: "deck_length", label: "Deck Length", type: "select", required: true, options: ["6 slides", "8 slides", "10 slides", "12 slides", "15 slides", "Custom from brief"] }, { id: "pitch_goal", label: "Pitch Goal", type: "select", required: true, options: ["Producer pitch", "Investor pitch", "Festival grant", "Brand client", "Streaming platform", "Crowdfunding", "Team recruitment", "Custom from brief"] }, { id: "deck_depth", label: "Deck Detail", type: "select", required: true, options: depthOptions }, ...commonTailInputs],
+  },
+  {
+    id: "scene-moodboard-prompt-generator",
+    slug: "scene-moodboard-prompt-generator",
+    name: "Scene Moodboard Prompt Generator",
+    description: "Generate premium moodboard prompts for locations, lighting, props, wardrobe, color, texture, and atmosphere.",
+    icon: "prompt",
+    detailEmoji: "🖼️",
+    category,
+    displayCreditCost: 1,
+    outputType: "text",
+    aliases: ["film-moodboard-prompt-generator", "visual-moodboard-prompt-generator"],
+    inputs: [sourceInput, { id: "prompt_variations", label: "Prompt Variations", type: "select", required: true, options: variationOptions }, { id: "moodboard_type", label: "Moodboard Type", type: "select", required: true, options: ["Full scene look", "Location moodboard", "Character wardrobe", "Lighting palette", "Props and textures", "Color grade", "World-building visuals", "Custom from brief"] }, { id: "visual_style", label: "Visual Style", type: "select", required: true, options: visualStyleOptions }, { id: "aspect_ratio", label: "Aspect Ratio", type: "select", required: true, options: aspectRatioOptions }, ...commonTailInputs],
+  },
+  {
+    id: "video-production-plan-generator",
+    slug: "video-production-plan-generator",
+    name: "Video Production Plan Generator",
+    description: "Build a practical shoot plan with scenes, crew needs, schedule logic, locations, gear, risks, and post-production notes.",
+    icon: "video",
+    detailEmoji: "🗓️",
+    category,
+    displayCreditCost: 5,
+    outputType: "text",
+    aliases: ["film-production-plan", "shoot-plan-generator"],
+    inputs: [sourceInput, { id: "production_scope", label: "Production Scope", type: "select", required: true, options: ["One-person creator shoot", "Small crew", "Brand shoot", "Short film", "Music video", "Pilot / episode", "Studio-scale", "Custom from brief"] }, { id: "budget_level", label: "Budget Level", type: "select", required: true, options: budgetOptions }, { id: "plan_depth", label: "Plan Depth", type: "select", required: true, options: depthOptions }, ...commonTailInputs],
+  },
+  {
+    id: "episode-concept-generator",
+    slug: "episode-concept-generator",
+    name: "Episode Concept Generator",
+    description: "Generate premium episode concepts for a series, web show, docu-series, or creator format.",
+    icon: "video",
+    detailEmoji: "📺",
+    category,
+    displayCreditCost: 3,
+    outputType: "text",
+    aliases: ["series-episode-ideas", "episode-idea-generator"],
+    inputs: [sourceInput, { id: "episode_count", label: "Episode Count", type: "select", required: true, options: sceneCountOptions }, { id: "custom_episode_count", label: "Custom Episode Count (<49)", type: "text", placeholder: "Enter 1–48 only when Custom is selected", required: false }, { id: "variation_count", label: "Concept Variations", type: "select", required: true, options: variationOptions }, { id: "series_format", label: "Series Format", type: "select", required: true, options: ["Scripted fiction", "Docu-series", "Reality / unscripted", "Educational series", "Creator episodic format", "Brand content series", "Kids / family series", "Custom from brief"] }, ...commonTailInputs],
+  },
+];
