@@ -1,0 +1,185 @@
+type AnimationInput = { id: string; label: string; type: "text" | "textarea" | "select"; placeholder?: string; required: boolean; options?: string[] };
+type AnimationTool = { id: string; slug: string; name: string; description: string; icon: string; detailEmoji: string; category: string; displayCreditCost: number; outputType?: "text"; aliases?: string[]; nextActions?: Array<{ label: string; href: string; description: string }>; inputs: AnimationInput[] };
+
+const category = "2D / 3D Animation Creator Tools";
+const languageOptions = ["English", "Hindi", "Hinglish", "Spanish", "French", "German", "Portuguese", "Arabic"];
+const audienceOptions = ["Kids 3-5", "Kids 6-8", "Kids 9-12", "Teens", "Family audience", "Young adults", "General audience", "Brand audience", "Custom from brief"];
+const animationFormatOptions = ["Short film", "Series episode", "YouTube video", "Instagram Reel", "TikTok / Shorts", "Kids cartoon", "Brand animation", "Explainer animation", "Game cinematic", "Custom from brief"];
+const toneOptions = ["Whimsical", "Funny and warm", "Adventure comedy", "Emotional", "High-energy", "Cozy", "Epic fantasy", "Sci-fi action", "Educational", "Premium studio-style", "Dark fairy-tale", "Custom from brief"];
+const twoDStyleOptions = ["Classic 2D cartoon", "Anime-inspired", "Children’s book 2D", "Flat vector animation", "Cutout animation", "Comic-book animation", "Painterly 2D", "Clean TV cartoon", "Kawaii style", "Custom from brief"];
+const threeDStyleOptions = ["Stylized 3D animation", "Premium toy-like 3D", "Pixar-like family friendly", "Claymation-inspired 3D", "Cute chibi 3D", "Game cinematic 3D", "Low-poly 3D", "Detailed fantasy 3D", "Custom from brief"];
+const variationOptions = ["1 variation", "3 variations", "5 variations", "10 variations"];
+const sceneCountOptions = ["8 scenes", "12 scenes", "16 scenes", "24 scenes", "32 scenes", "Custom (<49)"];
+const episodeCountOptions = ["8 episodes", "12 episodes", "16 episodes", "24 episodes", "32 episodes", "Custom (<49)"];
+const depthOptions = ["Compact professional (2 credits)", "Standard animation-ready (5 credits)", "Detailed production-ready (7 credits)", "Premium studio bible (9 credits)"];
+const durationOptions = ["15 seconds", "30 seconds", "60 seconds", "2 minutes", "5 minutes", "10 minutes", "Short film", "Episode / pilot", "Custom from brief"];
+const aspectRatioOptions = ["16:9 landscape", "9:16 vertical", "1:1 square", "4:5 portrait", "3:4 character sheet", "Custom from brief"];
+
+const sourceInput: AnimationInput = { id: "source_content", label: "Animation Brief", type: "textarea", placeholder: "Paste the story idea, character notes, world, episode premise, brand brief, target audience, or existing outline.", required: true };
+const extraNotesInput: AnimationInput = { id: "extra_notes", label: "Extra Notes / Must Preserve", type: "textarea", placeholder: "Optional: character canon, visual references, must-include details, avoid list, moral/theme, budget limits, platform rules, or style constraints.", required: false };
+const commonTailInputs: AnimationInput[] = [
+  { id: "animation_format", label: "Animation Format", type: "select", required: true, options: animationFormatOptions },
+  { id: "tone", label: "Tone", type: "select", required: true, options: toneOptions },
+  { id: "target_audience", label: "Target Audience", type: "select", required: true, options: audienceOptions },
+  { id: "language", label: "Language", type: "select", required: true, options: languageOptions },
+  extraNotesInput,
+];
+
+export const animationTools: AnimationTool[] = [
+  {
+    id: "2d-animation-story-generator",
+    slug: "2d-animation-story-generator",
+    name: "2D Animation Story Generator",
+    description: "Create premium 2D animation stories with strong characters, visual gags, emotion, and animation-friendly beats.",
+    icon: "animation",
+    detailEmoji: "🎨",
+    category,
+    displayCreditCost: 3,
+    outputType: "text",
+    aliases: ["2d-animated-story-generator", "2d-cartoon-story-generator"],
+    nextActions: [{ label: "Create scene list", href: "/tools/2d-animation-scene-list-generator", description: "Turn the story into animation-ready scenes." }],
+    inputs: [sourceInput, { id: "visual_style", label: "2D Visual Style", type: "select", required: true, options: twoDStyleOptions }, { id: "story_depth", label: "Story Depth", type: "select", required: true, options: depthOptions }, { id: "variation_count", label: "Story Variations", type: "select", required: true, options: variationOptions }, ...commonTailInputs],
+  },
+  {
+    id: "2d-animated-character-generator",
+    slug: "2d-animated-character-generator",
+    name: "2D Animated Character Generator",
+    description: "Generate a consistent 4-view 2D animated character turnaround sheet on a white background in fixed 3:4 ratio.",
+    icon: "animation-character",
+    detailEmoji: "🧒",
+    category,
+    displayCreditCost: 8,
+    aliases: ["2d-animation-character-generator", "2d-character-sheet-generator", "2d-cartoon-character-generator"],
+    inputs: [],
+  },
+  {
+    id: "2d-animation-image-prompt-generator",
+    slug: "2d-animation-image-prompt-generator",
+    name: "2D Animation Image Prompt Generator",
+    description: "Generate premium 2D animation image prompts for characters, scenes, backgrounds, props, and keyframes.",
+    icon: "prompt",
+    detailEmoji: "🖌️",
+    category,
+    displayCreditCost: 1,
+    outputType: "text",
+    aliases: ["2d-cartoon-image-prompt-generator", "2d-animation-prompt-generator"],
+    inputs: [sourceInput, { id: "prompt_variations", label: "Prompt Variations", type: "select", required: true, options: variationOptions }, { id: "prompt_type", label: "Prompt Type", type: "select", required: true, options: ["Character prompt", "Scene prompt", "Background prompt", "Prop prompt", "Keyframe prompt", "Poster prompt", "Style exploration prompt", "Custom from brief"] }, { id: "visual_style", label: "2D Visual Style", type: "select", required: true, options: twoDStyleOptions }, { id: "aspect_ratio", label: "Aspect Ratio", type: "select", required: true, options: aspectRatioOptions }, ...commonTailInputs],
+  },
+  {
+    id: "2d-animation-scene-list-generator",
+    slug: "2d-animation-scene-list-generator",
+    name: "2D Animation Scene List Generator",
+    description: "Create animation-ready 2D scene lists with action, staging, visual gags, emotion, and continuity.",
+    icon: "animation",
+    detailEmoji: "🎬",
+    category,
+    displayCreditCost: 5,
+    outputType: "text",
+    aliases: ["2d-cartoon-scene-list", "2d-animation-outline-generator"],
+    inputs: [sourceInput, { id: "scene_count", label: "Scene Count", type: "select", required: true, options: sceneCountOptions }, { id: "custom_scene_count", label: "Custom Scene Count (<49)", type: "text", placeholder: "Enter 1–48 only when Custom is selected", required: false }, { id: "visual_style", label: "2D Visual Style", type: "select", required: true, options: twoDStyleOptions }, ...commonTailInputs],
+  },
+  {
+    id: "2d-animation-episode-idea-generator",
+    slug: "2d-animation-episode-idea-generator",
+    name: "2D Animation Episode Idea Generator",
+    description: "Generate premium 2D animation episode ideas with hooks, conflicts, comedy, themes, and repeatable series logic.",
+    icon: "animation",
+    detailEmoji: "📺",
+    category,
+    displayCreditCost: 3,
+    outputType: "text",
+    aliases: ["2d-cartoon-episode-ideas", "2d-animated-episode-generator"],
+    inputs: [sourceInput, { id: "episode_count", label: "Episode Count", type: "select", required: true, options: episodeCountOptions }, { id: "custom_episode_count", label: "Custom Episode Count (<49)", type: "text", placeholder: "Enter 1–48 only when Custom is selected", required: false }, { id: "variation_count", label: "Concept Variations", type: "select", required: true, options: variationOptions }, { id: "visual_style", label: "2D Visual Style", type: "select", required: true, options: twoDStyleOptions }, ...commonTailInputs],
+  },
+  {
+    id: "3d-animated-story-generator",
+    slug: "3d-animated-story-generator",
+    name: "3D Animated Story Generator",
+    description: "Create premium 3D animated stories with clear set pieces, cinematic staging, emotion, and family-ready structure.",
+    icon: "animation",
+    detailEmoji: "🧊",
+    category,
+    displayCreditCost: 3,
+    outputType: "text",
+    aliases: ["3d-animation-story-generator", "3d-cartoon-story-generator"],
+    nextActions: [{ label: "Create 3D prompts", href: "/tools/3d-animation-image-prompt-generator", description: "Turn the story into premium 3D scene prompts." }],
+    inputs: [sourceInput, { id: "visual_style", label: "3D Visual Style", type: "select", required: true, options: threeDStyleOptions }, { id: "story_depth", label: "Story Depth", type: "select", required: true, options: depthOptions }, { id: "variation_count", label: "Story Variations", type: "select", required: true, options: variationOptions }, ...commonTailInputs],
+  },
+  {
+    id: "3d-animated-character-generator",
+    slug: "3d-animated-character-generator",
+    name: "3D Animated Character Generator",
+    description: "Generate a consistent 4-view 3D animated character turnaround sheet on a white background in fixed 3:4 ratio.",
+    icon: "animation-character",
+    detailEmoji: "🧍",
+    category,
+    displayCreditCost: 8,
+    aliases: ["3d-animation-character-generator", "3d-character-sheet-generator", "3d-cartoon-character-generator"],
+    inputs: [],
+  },
+  {
+    id: "3d-animation-image-prompt-generator",
+    slug: "3d-animation-image-prompt-generator",
+    name: "3D Animation Image Prompt Generator",
+    description: "Generate premium 3D animation image prompts for characters, environments, props, keyframes, and hero shots.",
+    icon: "prompt",
+    detailEmoji: "🧩",
+    category,
+    displayCreditCost: 1,
+    outputType: "text",
+    aliases: ["3d-image-prompt-generator", "3d-animation-prompt-generator"],
+    inputs: [sourceInput, { id: "prompt_variations", label: "Prompt Variations", type: "select", required: true, options: variationOptions }, { id: "prompt_type", label: "Prompt Type", type: "select", required: true, options: ["Character prompt", "Scene prompt", "Environment prompt", "Prop prompt", "Keyframe prompt", "Poster prompt", "Style exploration prompt", "Custom from brief"] }, { id: "visual_style", label: "3D Visual Style", type: "select", required: true, options: threeDStyleOptions }, { id: "aspect_ratio", label: "Aspect Ratio", type: "select", required: true, options: aspectRatioOptions }, ...commonTailInputs],
+  },
+  {
+    id: "3d-animation-scene-prompt-generator",
+    slug: "3d-animation-scene-prompt-generator",
+    name: "3D Animation Scene Prompt Generator",
+    description: "Generate premium 3D scene prompts with camera, staging, lighting, material, character continuity, and negative prompts.",
+    icon: "prompt",
+    detailEmoji: "🎥",
+    category,
+    displayCreditCost: 1,
+    outputType: "text",
+    aliases: ["3d-scene-prompt-generator", "3d-animated-scene-prompt-generator"],
+    inputs: [sourceInput, { id: "prompt_variations", label: "Prompt Variations", type: "select", required: true, options: variationOptions }, { id: "visual_style", label: "3D Visual Style", type: "select", required: true, options: threeDStyleOptions }, { id: "camera_language", label: "Camera Language", type: "select", required: true, options: ["Auto cinematic", "Wide establishing", "Close-up emotional", "Low-angle heroic", "Tracking shot", "Over-the-shoulder", "Dynamic action shot", "Custom from brief"] }, { id: "aspect_ratio", label: "Aspect Ratio", type: "select", required: true, options: aspectRatioOptions }, ...commonTailInputs],
+  },
+  {
+    id: "3d-kids-story-ideas-generator",
+    slug: "3d-kids-story-ideas-generator",
+    name: "3D Kids Story Ideas Generator",
+    description: "Generate charming 3D kids story ideas with lovable characters, gentle lessons, visual set pieces, and franchise potential.",
+    icon: "animation",
+    detailEmoji: "🧸",
+    category,
+    displayCreditCost: 2,
+    outputType: "text",
+    aliases: ["3d-kids-animation-story-ideas", "3d-animated-kids-story-generator"],
+    inputs: [sourceInput, { id: "variation_count", label: "Story Idea Variations", type: "select", required: true, options: variationOptions }, { id: "age_group", label: "Kids Age Group", type: "select", required: true, options: ["Ages 3-5", "Ages 6-8", "Ages 9-12", "Family co-viewing", "Custom from brief"] }, { id: "visual_style", label: "3D Visual Style", type: "select", required: true, options: threeDStyleOptions }, ...commonTailInputs],
+  },
+  {
+    id: "animated-short-script-generator",
+    slug: "animated-short-script-generator",
+    name: "Animated Short Script Generator",
+    description: "Write a polished animated short script with visual action, dialogue, gags, staging, and animation-friendly timing.",
+    icon: "animation",
+    detailEmoji: "✍️",
+    category,
+    displayCreditCost: 5,
+    outputType: "text",
+    aliases: ["animation-short-script", "animated-film-script-generator"],
+    inputs: [sourceInput, { id: "duration", label: "Target Duration", type: "select", required: true, options: durationOptions }, { id: "script_depth", label: "Script Depth", type: "select", required: true, options: depthOptions }, { id: "animation_style", label: "Animation Style", type: "select", required: true, options: [...twoDStyleOptions, ...threeDStyleOptions] }, ...commonTailInputs],
+  },
+  {
+    id: "animation-style-bible-generator",
+    slug: "animation-style-bible-generator",
+    name: "Animation Style Bible Generator",
+    description: "Create a premium animation style bible with character rules, world design, color, staging, camera, and continuity standards.",
+    icon: "animation",
+    detailEmoji: "📘",
+    category,
+    displayCreditCost: 7,
+    outputType: "text",
+    aliases: ["animation-bible-generator", "cartoon-style-bible-generator"],
+    inputs: [sourceInput, { id: "bible_depth", label: "Bible Depth", type: "select", required: true, options: depthOptions }, { id: "animation_style", label: "Animation Style", type: "select", required: true, options: [...twoDStyleOptions, ...threeDStyleOptions] }, ...commonTailInputs],
+  },
+];
