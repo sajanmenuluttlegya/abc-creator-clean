@@ -4,6 +4,7 @@ import { bookTools } from "./public-book-tools";
 import { kidsBookTools } from "./public-kids-book-tools";
 import { screenwritingTools } from "./public-screenwriting-tools";
 import { filmVideoTools } from "./public-film-video-tools";
+import { animationTools } from "./public-animation-tools";
 import { aiPromptBatchTools } from "./public-ai-prompt-batch-tools";
 import { socialVariationOverrideTools } from "./public-social-variation-overrides";
 import { socialTools } from "./public-social-tools";
@@ -189,6 +190,7 @@ const rawPublicTools: Tool[] = [
   ...kidsBookTools,
   ...screenwritingTools,
   ...filmVideoTools,
+  ...animationTools,
   ...aiPromptBatchTools,
   ...socialVariationOverrideTools,
   ...socialTools,
