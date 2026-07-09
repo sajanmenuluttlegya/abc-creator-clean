@@ -20,6 +20,7 @@ import { serverEmailEcommerceBatchTools } from "./server-email-ecommerce-batch-t
 import { serverSalesCopyBatchTools } from "./server-sales-copy-batch-tools";
 import { serverWritingBatchTools } from "./server-writing-batch-tools";
 import { serverScreenwritingTools } from "./server-screenwriting-tools";
+import { serverFilmVideoTools } from "./server-film-video-tools";
 
 type ValidationResult = { ok: true } | { ok: false; field?: string; error: string };
 type ToolFieldRule = { id: string; label: string; required?: boolean; minLength?: number; maxLength?: number };
@@ -51,17 +52,27 @@ function getEmailTool(toolSlug: string) {
 }
 
 function getRegisteredTool(toolSlug: string): RegisteredServerTool | undefined {
-  return serverSocialTools[toolSlug] || serverSocialCompletionBatchTools[toolSlug] || serverGeneralTools[toolSlug] || serverPlatformTools[toolSlug] || serverYouTubeCompletionBatchTools[toolSlug] || serverAdCopyBatchTools[toolSlug] || serverAiPromptBatchTools[toolSlug] || serverSummarizerUtilityBatchTools[toolSlug] || serverCampaignTools[toolSlug] || serverBlogBatchTools[toolSlug] || serverSeoBatchTools[toolSlug] || serverSeoUtilityBatchTools[toolSlug] || serverSeoCompletionBatchTools[toolSlug] || serverCreativeCopyBatchTools[toolSlug] || serverShortStoryBatchTools[toolSlug] || getEmailTool(toolSlug) || serverEmailEcommerceBatchTools[toolSlug] || serverSalesCopyBatchTools[toolSlug] || serverWritingBatchTools[toolSlug] || serverScreenwritingTools[toolSlug];
+  return serverSocialTools[toolSlug] || serverSocialCompletionBatchTools[toolSlug] || serverGeneralTools[toolSlug] || serverPlatformTools[toolSlug] || serverYouTubeCompletionBatchTools[toolSlug] || serverAdCopyBatchTools[toolSlug] || serverAiPromptBatchTools[toolSlug] || serverSummarizerUtilityBatchTools[toolSlug] || serverCampaignTools[toolSlug] || serverBlogBatchTools[toolSlug] || serverSeoBatchTools[toolSlug] || serverSeoUtilityBatchTools[toolSlug] || serverSeoCompletionBatchTools[toolSlug] || serverCreativeCopyBatchTools[toolSlug] || serverShortStoryBatchTools[toolSlug] || getEmailTool(toolSlug) || serverEmailEcommerceBatchTools[toolSlug] || serverSalesCopyBatchTools[toolSlug] || serverWritingBatchTools[toolSlug] || serverScreenwritingTools[toolSlug] || serverFilmVideoTools[toolSlug];
+}
+
+function validateCustomUnder49(inputs: Record<string, string>, selectorField: string, customField: string, label: string): ValidationResult | null {
+  if (!/custom/i.test(inputs[selectorField] || "")) return null;
+  const rawCount = (inputs[customField] || "").trim();
+  const customCount = Number(rawCount);
+  if (!rawCount || !Number.isInteger(customCount) || customCount < 1 || customCount >= 49) {
+    return { ok: false, field: customField, error: `${label} must be a whole number from 1 to 48.` };
+  }
+  return null;
 }
 
 function validateScreenwritingCustomSceneCount(toolSlug: string, inputs: Record<string, string>): ValidationResult | null {
   if (toolSlug !== "scene-list-crafter") return null;
-  if (!/custom/i.test(inputs.scene_count || "")) return null;
-  const rawCount = (inputs.custom_scene_count || "").trim();
-  const customCount = Number(rawCount);
-  if (!rawCount || !Number.isInteger(customCount) || customCount < 1 || customCount >= 49) {
-    return { ok: false, field: "custom_scene_count", error: "Custom scene count must be a whole number from 1 to 48." };
-  }
+  return validateCustomUnder49(inputs, "scene_count", "custom_scene_count", "Custom scene count");
+}
+
+function validateFilmVideoCustomCounts(toolSlug: string, inputs: Record<string, string>): ValidationResult | null {
+  if (toolSlug === "shot-list-generator") return validateCustomUnder49(inputs, "shot_count", "custom_shot_count", "Custom shot count");
+  if (toolSlug === "episode-concept-generator") return validateCustomUnder49(inputs, "episode_count", "custom_episode_count", "Custom episode count");
   return null;
 }
 
@@ -75,6 +86,8 @@ function validateRegisteredTool(toolSlug: string, inputs: Record<string, string>
   }
   const screenwritingCustomCountError = validateScreenwritingCustomSceneCount(toolSlug, inputs);
   if (screenwritingCustomCountError) return screenwritingCustomCountError;
+  const filmVideoCustomCountError = validateFilmVideoCustomCounts(toolSlug, inputs);
+  if (filmVideoCustomCountError) return filmVideoCustomCountError;
   for (const [field, value] of Object.entries(inputs)) {
     if (typeof value !== "string") return { ok: false, field, error: "Invalid input value." };
     const rule = tool.requiredInputs.find((item) => item.id === field);
@@ -85,7 +98,7 @@ function validateRegisteredTool(toolSlug: string, inputs: Record<string, string>
 }
 
 function getRawServerPrompt(toolSlug: string) {
-  return serverSocialTools[toolSlug] || serverSocialCompletionBatchTools[toolSlug] || serverGeneralTools[toolSlug] || serverPlatformTools[toolSlug] || serverYouTubeCompletionBatchTools[toolSlug] || serverAdCopyBatchTools[toolSlug] || serverAiPromptBatchTools[toolSlug] || serverSummarizerUtilityBatchTools[toolSlug] || serverCampaignTools[toolSlug] || serverBlogBatchTools[toolSlug] || serverSeoBatchTools[toolSlug] || serverSeoUtilityBatchTools[toolSlug] || serverSeoCompletionBatchTools[toolSlug] || serverCreativeCopyBatchTools[toolSlug] || serverShortStoryBatchTools[toolSlug] || getEmailTool(toolSlug) || serverEmailEcommerceBatchTools[toolSlug] || serverSalesCopyBatchTools[toolSlug] || serverWritingBatchTools[toolSlug] || serverScreenwritingTools[toolSlug] || getBaseServerPrompt(toolSlug);
+  return serverSocialTools[toolSlug] || serverSocialCompletionBatchTools[toolSlug] || serverGeneralTools[toolSlug] || serverPlatformTools[toolSlug] || serverYouTubeCompletionBatchTools[toolSlug] || serverAdCopyBatchTools[toolSlug] || serverAiPromptBatchTools[toolSlug] || serverSummarizerUtilityBatchTools[toolSlug] || serverCampaignTools[toolSlug] || serverBlogBatchTools[toolSlug] || serverSeoBatchTools[toolSlug] || serverSeoUtilityBatchTools[toolSlug] || serverSeoCompletionBatchTools[toolSlug] || serverCreativeCopyBatchTools[toolSlug] || serverShortStoryBatchTools[toolSlug] || getEmailTool(toolSlug) || serverEmailEcommerceBatchTools[toolSlug] || serverSalesCopyBatchTools[toolSlug] || serverWritingBatchTools[toolSlug] || serverScreenwritingTools[toolSlug] || serverFilmVideoTools[toolSlug] || getBaseServerPrompt(toolSlug);
 }
 
 export function getServerPrompt(toolSlug: string) {
