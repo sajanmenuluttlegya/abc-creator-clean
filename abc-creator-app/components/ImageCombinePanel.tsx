@@ -213,8 +213,7 @@ export function ImageCombinePanel() {
 
                   <button type="button" onClick={combine} disabled={!canCombine} className="group relative mt-6 flex h-16 w-full items-center justify-center overflow-hidden rounded-[1.45rem] px-7 text-lg font-black text-white shadow-2xl shadow-violet-950/35 transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-50" style={{ backgroundImage: "linear-gradient(120deg,#4f46e5,#7c3aed,#c026d3,#0891b2,#4f46e5)", backgroundSize: "240% 240%", animation: "abcImageGradientMove 5.5s ease infinite" }} aria-label="Combine images with M1">
                     <span className="absolute inset-0 bg-cyan-200/0 transition group-hover:bg-cyan-200/10" />
-                    <span className="relative z-10">{loading ? "Generating" : `Combine with M1 — ${creditEstimate} credits`}</span>
-                    <span className="relative z-10 ml-3 grid h-9 w-9 place-items-center rounded-full bg-black/22 text-2xl ring-1 ring-cyan-100/18 transition group-hover:translate-x-1">→</span>
+                    <span className="relative z-10">{loading ? "Generating" : "Combine"}</span>
                   </button>
                 </div>
               </div>
