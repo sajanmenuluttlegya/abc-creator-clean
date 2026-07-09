@@ -11,7 +11,7 @@ const depthOptions = ["Compact professional (2 credits)", "Standard creator-read
 const variationOptions = ["1 variation", "3 variations", "5 variations", "10 variations"];
 const durationOptions = ["15 seconds", "30 seconds", "60 seconds", "2 minutes", "5 minutes", "10 minutes", "Short film", "Feature film", "Episode / pilot", "Custom from brief"];
 const shotCountOptions = ["8 shots", "12 shots", "16 shots", "24 shots", "32 shots", "Custom (<49)"];
-const sceneCountOptions = ["8 scenes", "12 scenes", "16 scenes", "24 scenes", "32 scenes", "Custom (<49)"];
+const episodeCountOptions = ["8 episodes", "12 episodes", "16 episodes", "24 episodes", "32 episodes", "Custom (<49)"];
 const aspectRatioOptions = ["16:9 landscape", "9:16 vertical", "1:1 square", "4:5 portrait", "2.39:1 cinematic", "Custom from brief"];
 const visualStyleOptions = ["Cinematic realistic", "Premium commercial", "Indie film naturalism", "High-contrast noir", "Colorful family animation", "Moody prestige drama", "Documentary realism", "Luxury editorial", "Music-video stylized", "Futuristic sci-fi", "Fantasy concept art", "Custom from brief"];
 const budgetOptions = ["No budget limit", "Micro-budget", "Low budget", "Mid budget", "Premium commercial", "Studio-scale", "Custom from brief"];
@@ -186,6 +186,6 @@ export const filmVideoTools: FilmVideoTool[] = [
     displayCreditCost: 3,
     outputType: "text",
     aliases: ["series-episode-ideas", "episode-idea-generator"],
-    inputs: [sourceInput, { id: "episode_count", label: "Episode Count", type: "select", required: true, options: sceneCountOptions }, { id: "custom_episode_count", label: "Custom Episode Count (<49)", type: "text", placeholder: "Enter 1–48 only when Custom is selected", required: false }, { id: "variation_count", label: "Concept Variations", type: "select", required: true, options: variationOptions }, { id: "series_format", label: "Series Format", type: "select", required: true, options: ["Scripted fiction", "Docu-series", "Reality / unscripted", "Educational series", "Creator episodic format", "Brand content series", "Kids / family series", "Custom from brief"] }, ...commonTailInputs],
+    inputs: [sourceInput, { id: "episode_count", label: "Episode Count", type: "select", required: true, options: episodeCountOptions }, { id: "custom_episode_count", label: "Custom Episode Count (<49)", type: "text", placeholder: "Enter 1–48 only when Custom is selected", required: false }, { id: "variation_count", label: "Concept Variations", type: "select", required: true, options: variationOptions }, { id: "series_format", label: "Series Format", type: "select", required: true, options: ["Scripted fiction", "Docu-series", "Reality / unscripted", "Educational series", "Creator episodic format", "Brand content series", "Kids / family series", "Custom from brief"] }, ...commonTailInputs],
   },
 ];
