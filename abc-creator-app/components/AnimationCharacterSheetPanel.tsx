@@ -24,7 +24,9 @@ const MODEL_OPTIONS: SelectOption[] = [
   { label: "M5 — Best value", value: "M5", hint: "recommended" },
   { label: "M6 — Fast cheap", value: "M6", hint: "extra strict layout prompt" },
 ];
+
 const RESOLUTION_OPTIONS: SelectOption[] = ["360p", "480p", "720p", "1080p"].map((value) => ({ label: value, value }));
+
 const CREDIT_MAP: Record<ImageModelKey, Record<ImageResolution, number>> = {
   M1: { "360p": 9, "480p": 11, "720p": 13, "1080p": 15 },
   M2: { "360p": 5, "480p": 7, "720p": 8, "1080p": 9 },
@@ -38,9 +40,11 @@ const POSE_OPTIONS: SelectOption[] = [
   { label: "Neutral turnaround", value: "Neutral turnaround", hint: "relaxed full-body front/back/sides" },
   { label: "T-Pose turnaround", value: "T-Pose turnaround", hint: "orthographic production pose" },
 ];
+
 const TWO_D_STYLES = ["Classic 2D cartoon", "Anime-inspired", "Children’s book 2D", "Clean TV cartoon", "Kawaii 2D", "Comic-book 2D", "Flat vector character", "Custom from brief"];
 const THREE_D_STYLES = ["Stylized 3D animation", "Premium toy-like 3D", "Pixar-like family friendly", "Cute chibi 3D", "Claymation-inspired 3D", "Game cinematic 3D", "Low-poly 3D", "Custom from brief"];
 const styleOptions = (items: string[]): SelectOption[] => items.map((value) => ({ label: value, value }));
+const VIEW_LABELS = ["Front", "Back", "Left profile", "Right profile"];
 
 function downloadDataUrl(dataUrl: string, filename: string) {
   const link = document.createElement("a");
@@ -66,10 +70,10 @@ function PremiumSelect({ id, value, options, onChange, openSelect, setOpenSelect
         className="group flex min-h-[54px] w-full items-center justify-between gap-3 rounded-2xl border border-purple-400/30 bg-zinc-950/80 px-4 py-3 text-left text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition hover:border-purple-300/60 hover:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-purple-500"
       >
         <span className="min-w-0 truncate text-base font-semibold">{selected?.label}</span>
-        <span className="grid h-8 w-8 flex-none place-items-center rounded-xl bg-purple-500/10 text-purple-200 transition group-hover:bg-purple-500/20">⌄</span>
+        <span className={`grid h-8 w-8 flex-none place-items-center rounded-xl bg-purple-500/10 text-purple-200 transition group-hover:bg-purple-500/20 ${isOpen ? "rotate-180" : ""}`}>⌄</span>
       </button>
       {isOpen ? (
-        <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-[9999] overflow-hidden rounded-2xl border border-purple-400/30 bg-zinc-950/95 p-1.5 shadow-2xl shadow-purple-950/40 backdrop-blur-xl">
+        <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-[9999] max-h-80 overflow-y-auto rounded-2xl border border-purple-400/30 bg-zinc-950/95 p-1.5 shadow-2xl shadow-purple-950/40 backdrop-blur-xl">
           {options.map((option) => {
             const active = option.value === value;
             return (
@@ -86,6 +90,20 @@ function PremiumSelect({ id, value, options, onChange, openSelect, setOpenSelect
           })}
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function EmptyViewCard({ label, index }: { label: string; index: number }) {
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.025] p-4">
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-purple-300/40 to-transparent" />
+      <div className="flex min-h-44 items-center justify-center rounded-xl border border-dashed border-white/10 bg-black/20">
+        <div className="text-center">
+          <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl border border-white/10 bg-white/[0.04] text-lg font-bold text-purple-200">{index + 1}</div>
+          <p className="mt-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">{label}</p>
+        </div>
+      </div>
     </div>
   );
 }
@@ -117,17 +135,30 @@ export function AnimationCharacterSheetPanel({ toolSlug }: { toolSlug: Character
   const canGenerate = visualDescription.trim().length >= 10 && !loading;
 
   async function generate() {
-    if (!canGenerate) { setError("Describe the character clearly. Add at least 10 characters in Visual Description."); return; }
-    setLoading(true); setError(""); setNotice(""); setOpenSelect(null);
+    if (!canGenerate) {
+      setError("Describe the character clearly. Add at least 10 characters in Visual Description.");
+      return;
+    }
+    setLoading(true);
+    setError("");
+    setNotice("");
+    setOpenSelect(null);
     try {
-      const response = await fetch("/api/image/animation-character-sheet", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ toolSlug, characterName, characterType, ageGroup, genderPresentation, role, personality, visualDescription, outfit, accessories, colorPalette, style, poseMode, model, resolution }) });
+      const response = await fetch("/api/image/animation-character-sheet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ toolSlug, characterName, characterType, ageGroup, genderPresentation, role, personality, visualDescription, outfit, accessories, colorPalette, style, poseMode, model, resolution }),
+      });
       const data = await response.json().catch(() => null) as { ok?: boolean; error?: string; details?: string; creditsCharged?: number; image?: GeneratedCharacterSheet; prompt?: string } | null;
       if (!response.ok || !data?.ok || !data.image?.dataUrl) throw new Error(data?.details || data?.error || "Character sheet generation failed.");
       setImage(data.image);
       setPromptUsed(data.prompt || "");
       setNotice(`Generated 1 premium 16:9 four-view character sheet. Charged ${data.creditsCharged ?? creditEstimate} credits.`);
-    } catch (err) { setError(err instanceof Error ? err.message : "Character sheet generation failed."); }
-    finally { setLoading(false); }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Character sheet generation failed.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   const inputClass = "w-full rounded-2xl border border-purple-500/20 bg-white/5 px-4 py-3 text-white placeholder-slate-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] focus:outline-none focus:ring-2 focus:ring-purple-500";
@@ -177,23 +208,101 @@ export function AnimationCharacterSheetPanel({ toolSlug }: { toolSlug: Character
             </div>
           </div>
 
-          <button type="button" onClick={generate} disabled={!canGenerate} className="mt-8 flex w-full items-center justify-center rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-3 font-semibold text-white shadow-lg shadow-purple-500/20 transition hover:from-indigo-700 hover:to-purple-700 disabled:cursor-not-allowed disabled:opacity-50">{loading ? "Generating premium 16:9 sheet..." : `Generate 16:9 Four-View Sheet — ${creditEstimate} credits`}</button>
-          {error ? <p className="mt-4 rounded-xl border border-red-400/25 bg-red-500/10 p-3 text-sm text-red-200">{error}</p> : null}
-          {notice ? <p className="mt-4 rounded-xl border border-emerald-400/25 bg-emerald-500/10 p-3 text-sm text-emerald-200">{notice}</p> : null}
+          <button type="button" onClick={generate} disabled={!canGenerate} className="mt-8 flex w-full items-center justify-center rounded-full bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 px-6 py-3 font-semibold text-white shadow-lg shadow-purple-500/20 transition hover:scale-[1.01] hover:from-indigo-500 hover:via-violet-500 hover:to-purple-500 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100">
+            {loading ? "Generating premium 16:9 sheet..." : `Generate 16:9 Four-View Sheet — ${creditEstimate} credits`}
+          </button>
+          {error ? <p className="mt-4 rounded-2xl border border-red-400/25 bg-red-500/10 p-4 text-sm text-red-200">{error}</p> : null}
+          {notice ? <p className="mt-4 rounded-2xl border border-emerald-400/25 bg-emerald-500/10 p-4 text-sm text-emerald-200">{notice}</p> : null}
         </div>
       </div>
 
       <div className="space-y-6 lg:sticky lg:top-28">
-        <div className="rounded-3xl border border-purple-500/20 bg-white/5 p-6 shadow-2xl shadow-purple-950/10 backdrop-blur-sm">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div><h3 className="text-lg font-semibold text-white">Character Sheet Output</h3><p className="text-sm text-slate-400">One 16:9 sheet containing front, back, left side, and right side views.</p></div>
-            {image?.dataUrl ? <button type="button" onClick={() => downloadDataUrl(image.dataUrl, image.filename || `${toolSlug}.png`)} className="rounded-full border border-white/15 px-4 py-2 text-sm font-semibold text-white hover:bg-white/10">Download</button> : null}
+        <div className="relative overflow-hidden rounded-[30px] border border-purple-400/20 bg-[linear-gradient(180deg,rgba(18,14,30,0.96),rgba(5,5,10,0.98))] shadow-[0_30px_100px_rgba(88,28,255,0.22)]">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(139,92,246,0.18),transparent_34%),radial-gradient(circle_at_bottom_left,rgba(59,130,246,0.10),transparent_30%)]" />
+          <div className="pointer-events-none absolute inset-[1px] rounded-[29px] border border-white/[0.05]" />
+
+          <div className="relative z-10 flex flex-col gap-4 border-b border-white/10 px-6 py-6 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="mb-2 flex items-center gap-2">
+                <span className={`inline-flex items-center rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] ${image?.dataUrl ? "border-emerald-400/25 bg-emerald-500/10 text-emerald-200" : loading ? "border-violet-400/25 bg-violet-500/10 text-violet-200" : "border-white/10 bg-white/[0.04] text-slate-400"}`}>
+                  {image?.dataUrl ? "Ready" : loading ? "Rendering" : "Output panel"}
+                </span>
+                <span className="rounded-full border border-white/10 bg-black/25 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">16:9</span>
+              </div>
+              <h3 className="text-2xl font-semibold tracking-tight text-white">Premium Character Sheet</h3>
+              <p className="mt-1 text-sm leading-6 text-slate-400">Four consistent orthographic views on one clean white studio sheet.</p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => image?.dataUrl && downloadDataUrl(image.dataUrl, image.filename || `${toolSlug}.png`)}
+              disabled={!image?.dataUrl}
+              className="inline-flex min-w-40 items-center justify-center rounded-full border border-white/15 bg-white/[0.05] px-5 py-3 text-sm font-semibold text-white shadow-lg transition hover:border-purple-300/50 hover:bg-purple-500/15 disabled:cursor-not-allowed disabled:opacity-35"
+            >
+              Download PNG
+            </button>
           </div>
-          <div className="flex min-h-[520px] items-center justify-center rounded-2xl border border-white/10 bg-black/40 p-4">
-            {image?.dataUrl ? <img src={image.dataUrl} alt="Generated animation character turnaround sheet" className="max-h-[760px] max-w-full rounded-xl object-contain shadow-2xl" /> : <div className="text-center text-slate-400"><div className="mb-3 text-5xl">🧍</div><p>Your premium 16:9 white-background turnaround sheet will appear here.</p><p className="mt-2 text-xs">Front • Back • Left side • Right side</p></div>}
+
+          <div className="relative z-10 p-5 sm:p-6">
+            <div className="overflow-hidden rounded-[24px] border border-white/10 bg-black/35 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:p-4">
+              {loading ? (
+                <div className="aspect-video rounded-[20px] border border-white/10 bg-gradient-to-br from-white/[0.04] to-purple-500/[0.05] p-4">
+                  <div className="grid h-full grid-cols-2 gap-3 sm:grid-cols-4">
+                    {VIEW_LABELS.map((label, index) => (
+                      <div key={label} className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.025] p-3">
+                        <div className="absolute inset-0 animate-pulse bg-gradient-to-b from-purple-400/[0.08] via-transparent to-transparent" />
+                        <div className="relative flex h-full items-center justify-center rounded-xl border border-dashed border-white/10">
+                          <div className="text-center">
+                            <div className="mx-auto h-14 w-8 animate-pulse rounded-full bg-white/10" />
+                            <p className="mt-4 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">{index + 1}. {label}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : image?.dataUrl ? (
+                <div className="relative overflow-hidden rounded-[20px] border border-white/10 bg-white p-2 shadow-2xl">
+                  <img src={image.dataUrl} alt="Generated 16:9 animation character turnaround sheet with front, back, left profile, and right profile views" className="aspect-video w-full rounded-[16px] object-contain" />
+                </div>
+              ) : (
+                <div className="aspect-video rounded-[20px] border border-white/10 bg-gradient-to-br from-white/[0.025] to-purple-500/[0.035] p-4">
+                  <div className="grid h-full grid-cols-2 gap-3 sm:grid-cols-4">
+                    {VIEW_LABELS.map((label, index) => <EmptyViewCard key={label} label={label} index={index} />)}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-4">
+              {VIEW_LABELS.map((label, index) => (
+                <div key={label} className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-3 text-center">
+                  <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-purple-300">View {index + 1}</div>
+                  <div className="mt-1 text-xs font-semibold text-slate-200">{label}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-400">
+              <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5">Model {model}</span>
+              <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5">{resolution}</span>
+              <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5">{poseMode}</span>
+              {image?.width && image?.height ? <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5">{image.width} × {image.height}</span> : null}
+            </div>
           </div>
         </div>
-        {promptUsed ? <details className="rounded-2xl border border-white/10 bg-white/5 p-5 text-sm text-slate-300"><summary className="cursor-pointer font-semibold text-white">Prompt used</summary><pre className="mt-4 whitespace-pre-wrap text-xs leading-relaxed text-slate-300">{promptUsed}</pre></details> : null}
+
+        {promptUsed ? (
+          <details className="group overflow-hidden rounded-3xl border border-white/10 bg-white/[0.035] shadow-xl backdrop-blur-sm">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 font-semibold text-white">
+              <span>Generation prompt</span>
+              <span className="rounded-xl bg-purple-500/10 px-3 py-1 text-xs text-purple-200 transition group-open:rotate-180">⌄</span>
+            </summary>
+            <div className="border-t border-white/10 p-5">
+              <pre className="max-h-80 overflow-auto whitespace-pre-wrap rounded-2xl border border-white/10 bg-black/30 p-4 text-xs leading-relaxed text-slate-300">{promptUsed}</pre>
+            </div>
+          </details>
+        ) : null}
       </div>
     </div>
   );
