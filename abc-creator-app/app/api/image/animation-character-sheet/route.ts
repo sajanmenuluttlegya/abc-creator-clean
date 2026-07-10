@@ -81,15 +81,21 @@ function buildCharacterSheetPrompt(body: CharacterSheetBody, is3d: boolean) {
   const accessories = cleanText(body.accessories, 800);
   const colorPalette = cleanText(body.colorPalette, 500);
   const style = cleanText(body.style, 120) || (is3d ? "stylized 3D animation" : "clean 2D animated character design");
-  const poseMode = /t\s*-?pose/i.test(cleanText(body.poseMode, 120)) ? "T-pose turnaround" : "neutral standing turnaround";
+  const tPose = /t\s*-?pose/i.test(cleanText(body.poseMode, 120));
+  const poseMode = tPose ? "strict T-pose turnaround: both arms perfectly horizontal in every view" : "neutral turnaround: relaxed symmetrical standing pose, arms slightly away from body so silhouette and costume are visible";
+  const discipline = is3d ? "premium stylized 3D animated character model sheet" : "premium clean 2D animated character model sheet";
 
-  const discipline = is3d ? "stylized 3D animated character model sheet" : "clean 2D animated character model sheet";
   return [
-    `${discipline}, fixed 3:4 portrait ratio, pure white background, no environment, no shadows beyond subtle contact shadows, no labels, no text, no watermark.`,
-    "Create ONE single character turnaround sheet containing EXACTLY FOUR full-body views of the SAME character: front view, back view, left side view, right side view.",
-    `Pose mode: ${poseMode}. Keep each view in the same pose style and same proportions.`,
-    "Absolute consistency lock: identical face shape, head size, eye style, hairstyle/fur, body proportions, outfit, footwear, accessories, colors, silhouette, and signature details across all four views.",
-    "Arrange the four views cleanly with even spacing, centered on the white canvas, full body visible from head to feet, no cropping.",
+    `${discipline}. Generate ONE SINGLE 16:9 LANDSCAPE CHARACTER TURNAROUND SHEET, pure white background, premium studio presentation, no environment, no labels, no captions, no logos, no watermark.`,
+    "The sheet must contain EXACTLY FOUR evenly spaced full-body character views arranged horizontally in four equal invisible columns. Keep generous margins, feet visible, head visible, no cropping, all four figures same scale and same vertical baseline.",
+    "The four views must be: 1) FRONT VIEW, 2) BACK VIEW, 3) LEFT SIDE PROFILE, 4) RIGHT SIDE PROFILE. Do not add extra angles, portraits, closeups, duplicate views, text, or props floating separately.",
+    `Pose mode for every view: ${poseMode}.`,
+    "VIEW 1 - FRONT FULL-BODY VIEW: character faces the viewer directly, shoulders square, both eyes visible, complete front of hairstyle/face/outfit/footwear/accessories visible, clear readable silhouette.",
+    "VIEW 2 - BACK FULL-BODY VIEW: same character facing directly away from camera, back of head/hair/fur visible, back of outfit/footwear/accessories visible, body proportions identical to front view.",
+    "VIEW 3 - LEFT SIDE FULL-BODY PROFILE: same character rotated exactly 90 degrees to their left, one eye/profile visible, nose/muzzle/profile silhouette clear, side seam of outfit and side of footwear/accessories visible.",
+    "VIEW 4 - RIGHT SIDE FULL-BODY PROFILE: same character rotated exactly 90 degrees to their right, mirrored side profile, identical proportions, same outfit and accessories, clear silhouette and complete full body.",
+    "STRICT CONSISTENCY LOCK: all four figures are the same exact character identity. Identical face structure, head size, eye style, hairstyle/fur shape, body proportions, limb thickness, outfit, footwear, accessory placement, color palette, material finish, and signature silhouette across every view.",
+    "M6-safe layout instruction: simple clean white canvas, four separated full-body figures only, straight-on orthographic turnaround, no perspective distortion, no overlapping, no dramatic action pose, no cropped body parts.",
     `Style: ${style}.`,
     characterName ? `Character name: ${characterName}.` : "",
     characterType ? `Character type/species: ${characterType}.` : "",
@@ -97,15 +103,15 @@ function buildCharacterSheetPrompt(body: CharacterSheetBody, is3d: boolean) {
     genderPresentation ? `Gender presentation: ${genderPresentation}.` : "",
     role ? `Story role: ${role}.` : "",
     personality ? `Personality expressed subtly through posture and expression: ${personality}.` : "",
-    `Visual description: ${visualDescription}.`,
-    outfit ? `Outfit/costume: ${outfit}.` : "",
-    accessories ? `Accessories: ${accessories}.` : "",
-    colorPalette ? `Color palette: ${colorPalette}.` : "",
-    is3d ? "High-quality 3D animation character design, appealing sculpted forms, clean materials, production-ready model sheet, same model in four orthographic views." : "Professional 2D animation character design, clean linework, readable shape language, flat/controlled colors, production-ready model sheet, same drawing design in four orthographic views.",
+    `Visual description to preserve in every view: ${visualDescription}.`,
+    outfit ? `Outfit/costume to preserve in every view: ${outfit}.` : "",
+    accessories ? `Accessories to preserve in every view: ${accessories}.` : "",
+    colorPalette ? `Color palette to preserve in every view: ${colorPalette}.` : "",
+    is3d ? "High-quality 3D animation character design, clean sculpted shapes, production model sheet, soft studio lighting, consistent materials, appealing family-animation proportions." : "Professional 2D animation character design, clean linework, readable shapes, production model sheet, consistent flat colors and controlled shading.",
   ].filter(Boolean).join("\n");
 }
 
-const NEGATIVE_PROMPT = "different characters, different outfits, changed hairstyle, changed colors, different face, inconsistent proportions, duplicate heads, extra views, fewer than four views, more than four views, text, labels, captions, watermark, logo, background scene, props not attached to character, cropped feet, cropped head, blurry, low quality, messy layout";
+const NEGATIVE_PROMPT = "3:4 portrait, vertical sheet, square image, different characters, different outfits, changed hairstyle, changed colors, different face, inconsistent proportions, duplicate heads, extra views, fewer than four full-body views, more than four full-body views, missing front view, missing back view, missing left profile, missing right profile, text, labels, captions, watermark, logo, background scene, props not attached to character, cropped feet, cropped head, cropped body, overlapping characters, blurry, low quality, messy layout, close-up portrait, action scene";
 
 export async function POST(req: NextRequest) {
   let reservedTransactionId: string | null = null;
@@ -132,14 +138,14 @@ export async function POST(req: NextRequest) {
 
     const requestedModel = parseModel(body.model);
     const resolution = parseResolution(body.resolution);
-    const aspectRatio = "3:4" as const;
+    const aspectRatio = "16:9" as const;
     const prompt = buildCharacterSheetPrompt(body, is3d);
     const requiredCredits = getTextToImageCredits(requestedModel, resolution, 4);
 
     const reserveResponse = await supabase.rpc("reserve_credits", {
       p_tool_slug: toolSlug,
       p_amount: requiredCredits,
-      p_idempotency_key: `${user.id}:${toolSlug}:character-sheet:${requestedModel}:${resolution}:${randomUUID()}`,
+      p_idempotency_key: `${user.id}:${toolSlug}:character-sheet-16x9:${requestedModel}:${resolution}:${randomUUID()}`,
     });
     if (reserveResponse.error) return Response.json({ ok: false, error: "Could not reserve image credits.", details: rpcErrorMessage(reserveResponse.error) }, { status: 500 });
     const reservation = reserveResponse.data as CreditReservation;
@@ -185,7 +191,7 @@ export async function POST(req: NextRequest) {
       prompt,
       image: {
         dataUrl: result.dataUrl,
-        filename: `${toolSlug}-${result.modelKey || requestedModel}-${resolution}-3x4-character-sheet.png`,
+        filename: `${toolSlug}-${result.modelKey || requestedModel}-${resolution}-16x9-four-view-character-sheet.png`,
         width: result.width,
         height: result.height,
         prompt,
