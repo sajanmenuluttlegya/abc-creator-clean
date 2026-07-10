@@ -13,7 +13,7 @@ const sceneCountOptions = ["8 scenes", "12 scenes", "16 scenes", "24 scenes", "3
 const episodeCountOptions = ["8 episodes", "12 episodes", "16 episodes", "24 episodes", "32 episodes", "Custom (<49)"];
 const depthOptions = ["Compact professional (2 credits)", "Standard animation-ready (5 credits)", "Detailed production-ready (7 credits)", "Premium studio bible (9 credits)"];
 const durationOptions = ["15 seconds", "30 seconds", "60 seconds", "2 minutes", "5 minutes", "10 minutes", "Short film", "Episode / pilot", "Custom from brief"];
-const aspectRatioOptions = ["16:9 landscape", "9:16 vertical", "1:1 square", "4:5 portrait", "3:4 character sheet", "Custom from brief"];
+const aspectRatioOptions = ["16:9 landscape", "9:16 vertical", "1:1 square", "4:5 portrait", "16:9 character sheet", "Custom from brief"];
 
 const sourceInput: AnimationInput = { id: "source_content", label: "Animation Brief", type: "textarea", placeholder: "Paste the story idea, character notes, world, episode premise, brand brief, target audience, or existing outline.", required: true };
 const extraNotesInput: AnimationInput = { id: "extra_notes", label: "Extra Notes / Must Preserve", type: "textarea", placeholder: "Optional: character canon, visual references, must-include details, avoid list, moral/theme, budget limits, platform rules, or style constraints.", required: false };
@@ -44,7 +44,7 @@ export const animationTools: AnimationTool[] = [
     id: "2d-animated-character-generator",
     slug: "2d-animated-character-generator",
     name: "2D Animated Character Generator",
-    description: "Generate a consistent 4-view 2D animated character turnaround sheet on a white background in fixed 3:4 ratio.",
+    description: "Generate a premium 16:9 white-background character sheet with four consistent full-body views: front, back, left side, and right side.",
     icon: "animation-character",
     detailEmoji: "🧒",
     category,
@@ -109,7 +109,7 @@ export const animationTools: AnimationTool[] = [
     id: "3d-animated-character-generator",
     slug: "3d-animated-character-generator",
     name: "3D Animated Character Generator",
-    description: "Generate a consistent 4-view 3D animated character turnaround sheet on a white background in fixed 3:4 ratio.",
+    description: "Generate a premium 16:9 white-background character sheet with four consistent full-body views: front, back, left side, and right side.",
     icon: "animation-character",
     detailEmoji: "🧍",
     category,
