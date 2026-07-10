@@ -9,6 +9,7 @@ import { ImageUpscalePanel } from "@/components/ImageUpscalePanel";
 import { ImageBackgroundRemoverPanel } from "@/components/ImageBackgroundRemoverPanel";
 import { ImageCombinePanel } from "@/components/ImageCombinePanel";
 import { AnimationCharacterSheetPanel } from "@/components/AnimationCharacterSheetPanel";
+import { MangaSceneGeneratorPanel } from "@/components/MangaSceneGeneratorPanel";
 import { getToolBySlug } from "@/lib/tools/public-tools";
 
 export default function DynamicToolPage() {
@@ -93,6 +94,8 @@ export default function DynamicToolPage() {
           <ImageCombinePanel />
         ) : tool.slug === "2d-animated-character-generator" || tool.slug === "3d-animated-character-generator" ? (
           <AnimationCharacterSheetPanel toolSlug={tool.slug} />
+        ) : tool.slug === "manga-scene-generator" ? (
+          <MangaSceneGeneratorPanel />
         ) : (
           <ToolFormRenderer tool={tool} />
         )}
