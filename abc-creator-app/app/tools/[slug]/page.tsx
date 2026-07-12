@@ -11,6 +11,8 @@ import { ImageCombinePanel } from "@/components/ImageCombinePanel";
 import { AnimationCharacterSheetPanel } from "@/components/AnimationCharacterSheetPanel";
 import { MangaSceneGeneratorPanel } from "@/components/MangaSceneGeneratorPanel";
 import { ProfessionalHeadshotGeneratorPanel } from "@/components/ProfessionalHeadshotGeneratorPanel";
+import { InteriorArchitectureImagePanel } from "@/components/InteriorArchitectureImagePanel";
+import { INTERIOR_ARCHITECTURE_IMAGE_TOOL_SLUGS } from "@/lib/tools/public-interior-architecture-tools";
 import { getToolBySlug } from "@/lib/tools/public-tools";
 
 export default function DynamicToolPage() {
@@ -99,6 +101,8 @@ export default function DynamicToolPage() {
           <MangaSceneGeneratorPanel />
         ) : tool.slug === "professional-headshot-generator" ? (
           <ProfessionalHeadshotGeneratorPanel />
+        ) : INTERIOR_ARCHITECTURE_IMAGE_TOOL_SLUGS.includes(tool.slug as (typeof INTERIOR_ARCHITECTURE_IMAGE_TOOL_SLUGS)[number]) ? (
+          <InteriorArchitectureImagePanel toolSlug={tool.slug} />
         ) : (
           <ToolFormRenderer tool={tool} />
         )}
