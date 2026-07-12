@@ -10,6 +10,7 @@ import { ImageBackgroundRemoverPanel } from "@/components/ImageBackgroundRemover
 import { ImageCombinePanel } from "@/components/ImageCombinePanel";
 import { AnimationCharacterSheetPanel } from "@/components/AnimationCharacterSheetPanel";
 import { MangaSceneGeneratorPanel } from "@/components/MangaSceneGeneratorPanel";
+import { ProfessionalHeadshotGeneratorPanel } from "@/components/ProfessionalHeadshotGeneratorPanel";
 import { getToolBySlug } from "@/lib/tools/public-tools";
 
 export default function DynamicToolPage() {
@@ -96,6 +97,8 @@ export default function DynamicToolPage() {
           <AnimationCharacterSheetPanel toolSlug={tool.slug} />
         ) : tool.slug === "manga-scene-generator" ? (
           <MangaSceneGeneratorPanel />
+        ) : tool.slug === "professional-headshot-generator" ? (
+          <ProfessionalHeadshotGeneratorPanel />
         ) : (
           <ToolFormRenderer tool={tool} />
         )}
