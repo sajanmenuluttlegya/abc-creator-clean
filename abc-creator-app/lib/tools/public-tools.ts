@@ -8,6 +8,7 @@ import { animationTools } from "./public-animation-tools";
 import { storyboardComicTools } from "./public-storyboard-comic-tools";
 import { productivityPlanningTools } from "./public-productivity-planning-tools";
 import { careerProfessionalTools } from "./public-career-professional-tools";
+import { interiorArchitectureTools } from "./public-interior-architecture-tools";
 import { aiPromptBatchTools } from "./public-ai-prompt-batch-tools";
 import { socialVariationOverrideTools } from "./public-social-variation-overrides";
 import { socialTools } from "./public-social-tools";
@@ -197,6 +198,7 @@ const rawPublicTools: Tool[] = [
   ...storyboardComicTools,
   ...productivityPlanningTools,
   ...careerProfessionalTools,
+  ...interiorArchitectureTools,
   ...aiPromptBatchTools,
   ...socialVariationOverrideTools,
   ...socialTools,
