@@ -14,9 +14,11 @@ import { ProfessionalHeadshotGeneratorPanel } from "@/components/ProfessionalHea
 import { InteriorArchitectureImagePanel } from "@/components/InteriorArchitectureImagePanel";
 import { FoodHospitalityImagePanel } from "@/components/FoodHospitalityImagePanel";
 import { FashionApparelImagePanel } from "@/components/FashionApparelImagePanel";
+import { MarketingCampaignImagePanel } from "@/components/MarketingCampaignImagePanel";
 import { INTERIOR_ARCHITECTURE_IMAGE_TOOL_SLUGS } from "@/lib/tools/public-interior-architecture-tools";
 import { FOOD_HOSPITALITY_IMAGE_TOOL_SLUGS } from "@/lib/tools/public-food-hospitality-tools";
 import { FASHION_APPAREL_IMAGE_TOOL_SLUGS } from "@/lib/tools/public-fashion-apparel-tools";
+import { MARKETING_CAMPAIGN_IMAGE_TOOL_SLUGS } from "@/lib/tools/public-marketing-campaign-tools";
 import { getToolBySlug } from "@/lib/tools/public-tools";
 
 export default function DynamicToolPage() {
@@ -111,6 +113,8 @@ export default function DynamicToolPage() {
           <FoodHospitalityImagePanel toolSlug={tool.slug} />
         ) : FASHION_APPAREL_IMAGE_TOOL_SLUGS.includes(tool.slug as (typeof FASHION_APPAREL_IMAGE_TOOL_SLUGS)[number]) ? (
           <FashionApparelImagePanel toolSlug={tool.slug} />
+        ) : MARKETING_CAMPAIGN_IMAGE_TOOL_SLUGS.includes(tool.slug as (typeof MARKETING_CAMPAIGN_IMAGE_TOOL_SLUGS)[number]) ? (
+          <MarketingCampaignImagePanel toolSlug={tool.slug} />
         ) : (
           <ToolFormRenderer tool={tool} />
         )}
