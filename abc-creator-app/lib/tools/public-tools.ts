@@ -12,6 +12,7 @@ import { interiorArchitectureTools } from "./public-interior-architecture-tools"
 import { foodHospitalityTools } from "./public-food-hospitality-tools";
 import { fashionApparelTools } from "./public-fashion-apparel-tools";
 import { marketingCampaignTools } from "./public-marketing-campaign-tools";
+import { researchKnowledgeTools } from "./public-research-knowledge-tools";
 import { aiPromptBatchTools } from "./public-ai-prompt-batch-tools";
 import { socialVariationOverrideTools } from "./public-social-variation-overrides";
 import { socialTools } from "./public-social-tools";
@@ -205,6 +206,7 @@ const rawPublicTools: Tool[] = [
   ...foodHospitalityTools,
   ...fashionApparelTools,
   ...marketingCampaignTools,
+  ...researchKnowledgeTools,
   ...aiPromptBatchTools,
   ...socialVariationOverrideTools,
   ...socialTools,
