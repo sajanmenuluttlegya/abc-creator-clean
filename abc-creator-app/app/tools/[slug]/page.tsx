@@ -13,8 +13,10 @@ import { MangaSceneGeneratorPanel } from "@/components/MangaSceneGeneratorPanel"
 import { ProfessionalHeadshotGeneratorPanel } from "@/components/ProfessionalHeadshotGeneratorPanel";
 import { InteriorArchitectureImagePanel } from "@/components/InteriorArchitectureImagePanel";
 import { FoodHospitalityImagePanel } from "@/components/FoodHospitalityImagePanel";
+import { FashionApparelImagePanel } from "@/components/FashionApparelImagePanel";
 import { INTERIOR_ARCHITECTURE_IMAGE_TOOL_SLUGS } from "@/lib/tools/public-interior-architecture-tools";
 import { FOOD_HOSPITALITY_IMAGE_TOOL_SLUGS } from "@/lib/tools/public-food-hospitality-tools";
+import { FASHION_APPAREL_IMAGE_TOOL_SLUGS } from "@/lib/tools/public-fashion-apparel-tools";
 import { getToolBySlug } from "@/lib/tools/public-tools";
 
 export default function DynamicToolPage() {
@@ -107,6 +109,8 @@ export default function DynamicToolPage() {
           <InteriorArchitectureImagePanel toolSlug={tool.slug} />
         ) : FOOD_HOSPITALITY_IMAGE_TOOL_SLUGS.includes(tool.slug as (typeof FOOD_HOSPITALITY_IMAGE_TOOL_SLUGS)[number]) ? (
           <FoodHospitalityImagePanel toolSlug={tool.slug} />
+        ) : FASHION_APPAREL_IMAGE_TOOL_SLUGS.includes(tool.slug as (typeof FASHION_APPAREL_IMAGE_TOOL_SLUGS)[number]) ? (
+          <FashionApparelImagePanel toolSlug={tool.slug} />
         ) : (
           <ToolFormRenderer tool={tool} />
         )}
