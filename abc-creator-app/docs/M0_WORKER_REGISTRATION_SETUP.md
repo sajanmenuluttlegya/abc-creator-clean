@@ -10,6 +10,7 @@ It intentionally does **not** change the existing text-to-image route yet. M0 re
 - `lib/image-tools/m0-worker-registry.ts`
 - `app/api/internal/m0/register/route.ts`
 - `scripts/kaggle/m0-register-worker-cell.py`
+- `scripts/kaggle/patch-m0-registration.py`
 - `.env.m0.example`
 
 ## Flow
@@ -117,21 +118,28 @@ Use the exact same token configured in Vercel.
 
 Grant the M0 test notebook access to both secrets.
 
-## 7. Add the notebook cell
+## 7. Add the notebook cell automatically
 
-Open:
+The repository includes a patcher so the cell does not need to be inserted manually.
 
-```text
-scripts/kaggle/m0-register-worker-cell.py
+From `abc-creator-app`, run this for the local 10-minute test notebook:
+
+```powershell
+python scripts/kaggle/patch-m0-registration.py `
+  "D:\ABC_M0_AUTOMATION\cinefax_test_10min\abc-m0-image-worker-test-10-min.ipynb"
 ```
 
-Copy the complete file into a new Kaggle code cell immediately after the Cloudflare tunnel cell, after this output is produced:
+The patcher:
 
-```text
-[WORKER_READY_URL] https://...trycloudflare.com
-```
+- creates a `.before-m0-registration.ipynb` backup;
+- finds the Cloudflare cell containing `[WORKER_READY_URL]`;
+- inserts the registration cell immediately after it;
+- refuses to insert a duplicate;
+- writes ASCII-safe notebook JSON for reliable Windows Kaggle CLI pushes.
 
-Test it first in `ABC_M0_Image_Worker_TEST_10_MIN`, not in the production notebook.
+Manual fallback: copy `scripts/kaggle/m0-register-worker-cell.py` into a new Kaggle code cell immediately after the Cloudflare cell.
+
+Test first in `ABC_M0_Image_Worker_TEST_10_MIN`, not in the production notebook.
 
 The test notebook should still use:
 
