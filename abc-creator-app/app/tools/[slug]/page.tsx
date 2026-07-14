@@ -21,6 +21,8 @@ import { EducationLearningVisualPanel } from "@/components/EducationLearningVisu
 import { EducationLearningTextPanel } from "@/components/EducationLearningTextPanel";
 import { DataAnalysisBIVisualPanel } from "@/components/DataAnalysisBIVisualPanel";
 import { DataAnalysisBITextPanel } from "@/components/DataAnalysisBITextPanel";
+import { FinanceAccountingVisualPanel } from "@/components/FinanceAccountingVisualPanel";
+import { FinanceAccountingTextPanel } from "@/components/FinanceAccountingTextPanel";
 import { INTERIOR_ARCHITECTURE_IMAGE_TOOL_SLUGS } from "@/lib/tools/public-interior-architecture-tools";
 import { FOOD_HOSPITALITY_IMAGE_TOOL_SLUGS } from "@/lib/tools/public-food-hospitality-tools";
 import { FASHION_APPAREL_IMAGE_TOOL_SLUGS } from "@/lib/tools/public-fashion-apparel-tools";
@@ -28,6 +30,7 @@ import { MARKETING_CAMPAIGN_IMAGE_TOOL_SLUGS } from "@/lib/tools/public-marketin
 import { RESEARCH_KNOWLEDGE_VISUAL_TOOL_SLUGS } from "@/lib/tools/research-knowledge-visual-config";
 import { EDUCATION_LEARNING_VISUAL_TOOL_SLUGS } from "@/lib/tools/public-education-learning-tools";
 import { DATA_ANALYSIS_BI_VISUAL_TOOL_SLUGS } from "@/lib/tools/public-data-analysis-bi-tools";
+import { FINANCE_ACCOUNTING_VISUAL_TOOL_SLUGS } from "@/lib/tools/public-finance-accounting-tools";
 import { getToolBySlug } from "@/lib/tools/public-tools";
 
 export default function DynamicToolPage() {
@@ -136,6 +139,10 @@ export default function DynamicToolPage() {
           <DataAnalysisBIVisualPanel tool={tool} />
         ) : tool.category === "Data Analysis / Business Intelligence Tools" ? (
           <DataAnalysisBITextPanel tool={tool} />
+        ) : FINANCE_ACCOUNTING_VISUAL_TOOL_SLUGS.includes(tool.slug as (typeof FINANCE_ACCOUNTING_VISUAL_TOOL_SLUGS)[number]) ? (
+          <FinanceAccountingVisualPanel tool={tool} />
+        ) : tool.category === "Finance / Accounting Tools" ? (
+          <FinanceAccountingTextPanel tool={tool} />
         ) : (
           <ToolFormRenderer tool={tool} />
         )}
