@@ -19,12 +19,15 @@ import { ResearchKnowledgeVisualPanel } from "@/components/ResearchKnowledgeVisu
 import { ResearchKnowledgeTextPanel } from "@/components/ResearchKnowledgeTextPanel";
 import { EducationLearningVisualPanel } from "@/components/EducationLearningVisualPanel";
 import { EducationLearningTextPanel } from "@/components/EducationLearningTextPanel";
+import { DataAnalysisBIVisualPanel } from "@/components/DataAnalysisBIVisualPanel";
+import { DataAnalysisBITextPanel } from "@/components/DataAnalysisBITextPanel";
 import { INTERIOR_ARCHITECTURE_IMAGE_TOOL_SLUGS } from "@/lib/tools/public-interior-architecture-tools";
 import { FOOD_HOSPITALITY_IMAGE_TOOL_SLUGS } from "@/lib/tools/public-food-hospitality-tools";
 import { FASHION_APPAREL_IMAGE_TOOL_SLUGS } from "@/lib/tools/public-fashion-apparel-tools";
 import { MARKETING_CAMPAIGN_IMAGE_TOOL_SLUGS } from "@/lib/tools/public-marketing-campaign-tools";
 import { RESEARCH_KNOWLEDGE_VISUAL_TOOL_SLUGS } from "@/lib/tools/research-knowledge-visual-config";
 import { EDUCATION_LEARNING_VISUAL_TOOL_SLUGS } from "@/lib/tools/public-education-learning-tools";
+import { DATA_ANALYSIS_BI_VISUAL_TOOL_SLUGS } from "@/lib/tools/public-data-analysis-bi-tools";
 import { getToolBySlug } from "@/lib/tools/public-tools";
 
 export default function DynamicToolPage() {
@@ -129,6 +132,10 @@ export default function DynamicToolPage() {
           <EducationLearningVisualPanel tool={tool} />
         ) : tool.category === "Education / Learning Tools" ? (
           <EducationLearningTextPanel tool={tool} />
+        ) : DATA_ANALYSIS_BI_VISUAL_TOOL_SLUGS.includes(tool.slug as (typeof DATA_ANALYSIS_BI_VISUAL_TOOL_SLUGS)[number]) ? (
+          <DataAnalysisBIVisualPanel tool={tool} />
+        ) : tool.category === "Data Analysis / Business Intelligence Tools" ? (
+          <DataAnalysisBITextPanel tool={tool} />
         ) : (
           <ToolFormRenderer tool={tool} />
         )}
