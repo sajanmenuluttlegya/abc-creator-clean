@@ -16,6 +16,7 @@ import { FoodHospitalityImagePanel } from "@/components/FoodHospitalityImagePane
 import { FashionApparelImagePanel } from "@/components/FashionApparelImagePanel";
 import { MarketingCampaignImagePanel } from "@/components/MarketingCampaignImagePanel";
 import { ResearchKnowledgeVisualPanel } from "@/components/ResearchKnowledgeVisualPanel";
+import { ResearchKnowledgeTextPanel } from "@/components/ResearchKnowledgeTextPanel";
 import { INTERIOR_ARCHITECTURE_IMAGE_TOOL_SLUGS } from "@/lib/tools/public-interior-architecture-tools";
 import { FOOD_HOSPITALITY_IMAGE_TOOL_SLUGS } from "@/lib/tools/public-food-hospitality-tools";
 import { FASHION_APPAREL_IMAGE_TOOL_SLUGS } from "@/lib/tools/public-fashion-apparel-tools";
@@ -119,6 +120,8 @@ export default function DynamicToolPage() {
           <MarketingCampaignImagePanel toolSlug={tool.slug} />
         ) : RESEARCH_KNOWLEDGE_VISUAL_TOOL_SLUGS.includes(tool.slug as (typeof RESEARCH_KNOWLEDGE_VISUAL_TOOL_SLUGS)[number]) ? (
           <ResearchKnowledgeVisualPanel tool={tool} />
+        ) : tool.category === "Research / Knowledge Tools" ? (
+          <ResearchKnowledgeTextPanel tool={tool} />
         ) : (
           <ToolFormRenderer tool={tool} />
         )}
