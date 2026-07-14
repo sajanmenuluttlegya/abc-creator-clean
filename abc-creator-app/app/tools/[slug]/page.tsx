@@ -15,10 +15,12 @@ import { InteriorArchitectureImagePanel } from "@/components/InteriorArchitectur
 import { FoodHospitalityImagePanel } from "@/components/FoodHospitalityImagePanel";
 import { FashionApparelImagePanel } from "@/components/FashionApparelImagePanel";
 import { MarketingCampaignImagePanel } from "@/components/MarketingCampaignImagePanel";
+import { ResearchKnowledgeVisualPanel } from "@/components/ResearchKnowledgeVisualPanel";
 import { INTERIOR_ARCHITECTURE_IMAGE_TOOL_SLUGS } from "@/lib/tools/public-interior-architecture-tools";
 import { FOOD_HOSPITALITY_IMAGE_TOOL_SLUGS } from "@/lib/tools/public-food-hospitality-tools";
 import { FASHION_APPAREL_IMAGE_TOOL_SLUGS } from "@/lib/tools/public-fashion-apparel-tools";
 import { MARKETING_CAMPAIGN_IMAGE_TOOL_SLUGS } from "@/lib/tools/public-marketing-campaign-tools";
+import { RESEARCH_KNOWLEDGE_VISUAL_TOOL_SLUGS } from "@/lib/tools/research-knowledge-visual-config";
 import { getToolBySlug } from "@/lib/tools/public-tools";
 
 export default function DynamicToolPage() {
@@ -115,6 +117,8 @@ export default function DynamicToolPage() {
           <FashionApparelImagePanel toolSlug={tool.slug} />
         ) : MARKETING_CAMPAIGN_IMAGE_TOOL_SLUGS.includes(tool.slug as (typeof MARKETING_CAMPAIGN_IMAGE_TOOL_SLUGS)[number]) ? (
           <MarketingCampaignImagePanel toolSlug={tool.slug} />
+        ) : RESEARCH_KNOWLEDGE_VISUAL_TOOL_SLUGS.includes(tool.slug as (typeof RESEARCH_KNOWLEDGE_VISUAL_TOOL_SLUGS)[number]) ? (
+          <ResearchKnowledgeVisualPanel tool={tool} />
         ) : (
           <ToolFormRenderer tool={tool} />
         )}
