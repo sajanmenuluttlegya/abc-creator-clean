@@ -16,6 +16,7 @@ import { researchKnowledgeTools } from "./public-research-knowledge-tools";
 import { educationLearningTools } from "./public-education-learning-tools";
 import { dataAnalysisBITools } from "./public-data-analysis-bi-tools";
 import { financeAccountingTools } from "./public-finance-accounting-tools";
+import { legalComplianceTools } from "./public-legal-compliance-tools";
 import { aiPromptBatchTools } from "./public-ai-prompt-batch-tools";
 import { socialVariationOverrideTools } from "./public-social-variation-overrides";
 import { socialTools } from "./public-social-tools";
@@ -213,6 +214,7 @@ const rawPublicTools: Tool[] = [
   ...educationLearningTools,
   ...dataAnalysisBITools,
   ...financeAccountingTools,
+  ...legalComplianceTools,
   ...aiPromptBatchTools,
   ...socialVariationOverrideTools,
   ...socialTools,
