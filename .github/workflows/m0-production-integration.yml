@@ -42,6 +42,7 @@ jobs:
             lib/image-tools/m0-image-client.ts \
             lib/image-tools/cloudflare-image-client.ts \
             app/api/image/text-to-image/route.ts \
+            app/api/internal/m0/diagnostics/route.ts \
             components/AnimationCharacterSheetPanel.tsx \
             components/FashionApparelImagePanel.tsx \
             components/FoodHospitalityImagePanel.tsx \
