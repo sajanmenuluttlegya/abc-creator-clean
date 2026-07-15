@@ -19,7 +19,7 @@ type AiPromptTool = {
   detailEmoji: string;
   category: string;
   displayCreditCost: number;
-  outputType: "text";
+  outputType?: "text";
   aliases?: string[];
   inputs: AiPromptInput[];
 };
