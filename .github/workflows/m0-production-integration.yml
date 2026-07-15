@@ -1,15 +1,17 @@
 name: M0 Production Integration
 
 on:
-  push:
+  pull_request:
     branches:
-      - feature/m0-production-integration
-    paths:
-      - abc-creator-app/scripts/apply-m0-production-integration.mjs
-      - .github/workflows/m0-production-integration.yml
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   integrate:
