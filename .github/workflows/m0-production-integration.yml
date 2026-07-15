@@ -1,0 +1,68 @@
+name: M0 Production Integration
+
+on:
+  push:
+    branches:
+      - feature/m0-production-integration
+    paths:
+      - abc-creator-app/scripts/apply-m0-production-integration.mjs
+      - .github/workflows/m0-production-integration.yml
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out integration branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/m0-production-integration
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: abc-creator-app/package-lock.json
+
+      - name: Apply M0 integration
+        run: node abc-creator-app/scripts/apply-m0-production-integration.mjs
+
+      - name: Install dependencies
+        working-directory: abc-creator-app
+        run: npm ci
+
+      - name: Lint
+        working-directory: abc-creator-app
+        run: npm run lint
+
+      - name: Build
+        working-directory: abc-creator-app
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: build-placeholder
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+          SUPABASE_SERVICE_ROLE_KEY: build-placeholder
+          M0_REGISTRATION_TOKEN: build-placeholder-registration-token
+          M0_WORKER_API_KEY: build-placeholder-worker-key
+          M0_ALLOWED_WORKERS: m0-cinefax
+          M0_ALLOWED_TUNNEL_SUFFIXES: .trycloudflare.com
+        run: npm run build
+
+      - name: Commit validated integration
+        run: |
+          if git diff --quiet; then
+            echo "No integration changes were produced."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add abc-creator-app
+          git commit -m "Integrate M0 production image worker"
+          git push origin HEAD:feature/m0-production-integration
