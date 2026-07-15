@@ -20,7 +20,7 @@ jobs:
     env:
       NEXT_TELEMETRY_DISABLED: "1"
       NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co"
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: "build-verification-placeholder"
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_build_verification_placeholder"
       SUPABASE_SERVICE_ROLE_KEY: "build-verification-placeholder"
     steps:
       - name: Check out repository
