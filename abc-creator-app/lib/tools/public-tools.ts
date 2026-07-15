@@ -19,6 +19,8 @@ import { financeAccountingTools } from "./public-finance-accounting-tools";
 import { legalComplianceTools } from "./public-legal-compliance-tools";
 import { customerSupportServiceTools } from "./public-customer-support-service-tools";
 import { salesCRMRevOpsTools } from "./public-sales-crm-revops-tools";
+import { hrPeopleOperationsTools } from "./public-hr-people-operations-tools";
+import { cybersecurityITOperationsTools } from "./public-cybersecurity-it-operations-tools";
 import { aiPromptBatchTools } from "./public-ai-prompt-batch-tools";
 import { socialVariationOverrideTools } from "./public-social-variation-overrides";
 import { socialTools } from "./public-social-tools";
@@ -219,6 +221,8 @@ const rawPublicTools: Tool[] = [
   ...legalComplianceTools,
   ...customerSupportServiceTools,
   ...salesCRMRevOpsTools,
+  ...hrPeopleOperationsTools,
+  ...cybersecurityITOperationsTools,
   ...aiPromptBatchTools,
   ...socialVariationOverrideTools,
   ...socialTools,
