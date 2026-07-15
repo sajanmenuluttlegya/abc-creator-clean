@@ -33,6 +33,8 @@ import { HRPeopleOperationsVisualPanel } from "@/components/HRPeopleOperationsVi
 import { HRPeopleOperationsTextPanel } from "@/components/HRPeopleOperationsTextPanel";
 import { CybersecurityITOperationsVisualPanel } from "@/components/CybersecurityITOperationsVisualPanel";
 import { CybersecurityITOperationsTextPanel } from "@/components/CybersecurityITOperationsTextPanel";
+import { PresentationPitchVisualPanel } from "@/components/PresentationPitchVisualPanel";
+import { PresentationPitchTextPanel } from "@/components/PresentationPitchTextPanel";
 import { INTERIOR_ARCHITECTURE_IMAGE_TOOL_SLUGS } from "@/lib/tools/public-interior-architecture-tools";
 import { FOOD_HOSPITALITY_IMAGE_TOOL_SLUGS } from "@/lib/tools/public-food-hospitality-tools";
 import { FASHION_APPAREL_IMAGE_TOOL_SLUGS } from "@/lib/tools/public-fashion-apparel-tools";
@@ -46,6 +48,7 @@ import { CUSTOMER_SUPPORT_SERVICE_VISUAL_TOOL_SLUGS } from "@/lib/tools/public-c
 import { SALES_CRM_REVOPS_VISUAL_TOOL_SLUGS } from "@/lib/tools/public-sales-crm-revops-tools";
 import { HR_PEOPLE_OPERATIONS_VISUAL_TOOL_SLUGS } from "@/lib/tools/public-hr-people-operations-tools";
 import { CYBERSECURITY_IT_OPERATIONS_VISUAL_TOOL_SLUGS } from "@/lib/tools/public-cybersecurity-it-operations-tools";
+import { PRESENTATION_PITCH_VISUAL_TOOL_SLUGS } from "@/lib/tools/public-presentation-pitch-tools";
 import { getToolBySlug } from "@/lib/tools/public-tools";
 
 export default function DynamicToolPage() {
@@ -178,6 +181,10 @@ export default function DynamicToolPage() {
           <CybersecurityITOperationsVisualPanel tool={tool} />
         ) : tool.category === "Cybersecurity / IT Operations Tools" ? (
           <CybersecurityITOperationsTextPanel tool={tool} />
+        ) : PRESENTATION_PITCH_VISUAL_TOOL_SLUGS.includes(tool.slug as (typeof PRESENTATION_PITCH_VISUAL_TOOL_SLUGS)[number]) ? (
+          <PresentationPitchVisualPanel tool={tool} />
+        ) : tool.category === "Presentation / Pitch Creator Tools" ? (
+          <PresentationPitchTextPanel tool={tool} />
         ) : (
           <ToolFormRenderer tool={tool} />
         )}
