@@ -23,6 +23,8 @@ import { DataAnalysisBIVisualPanel } from "@/components/DataAnalysisBIVisualPane
 import { DataAnalysisBITextPanel } from "@/components/DataAnalysisBITextPanel";
 import { FinanceAccountingVisualPanel } from "@/components/FinanceAccountingVisualPanel";
 import { FinanceAccountingTextPanel } from "@/components/FinanceAccountingTextPanel";
+import { LegalComplianceVisualPanel } from "@/components/LegalComplianceVisualPanel";
+import { LegalComplianceTextPanel } from "@/components/LegalComplianceTextPanel";
 import { INTERIOR_ARCHITECTURE_IMAGE_TOOL_SLUGS } from "@/lib/tools/public-interior-architecture-tools";
 import { FOOD_HOSPITALITY_IMAGE_TOOL_SLUGS } from "@/lib/tools/public-food-hospitality-tools";
 import { FASHION_APPAREL_IMAGE_TOOL_SLUGS } from "@/lib/tools/public-fashion-apparel-tools";
@@ -31,6 +33,7 @@ import { RESEARCH_KNOWLEDGE_VISUAL_TOOL_SLUGS } from "@/lib/tools/research-knowl
 import { EDUCATION_LEARNING_VISUAL_TOOL_SLUGS } from "@/lib/tools/public-education-learning-tools";
 import { DATA_ANALYSIS_BI_VISUAL_TOOL_SLUGS } from "@/lib/tools/public-data-analysis-bi-tools";
 import { FINANCE_ACCOUNTING_VISUAL_TOOL_SLUGS } from "@/lib/tools/public-finance-accounting-tools";
+import { LEGAL_COMPLIANCE_VISUAL_TOOL_SLUGS } from "@/lib/tools/public-legal-compliance-tools";
 import { getToolBySlug } from "@/lib/tools/public-tools";
 
 export default function DynamicToolPage() {
@@ -143,6 +146,10 @@ export default function DynamicToolPage() {
           <FinanceAccountingVisualPanel tool={tool} />
         ) : tool.category === "Finance / Accounting Tools" ? (
           <FinanceAccountingTextPanel tool={tool} />
+        ) : LEGAL_COMPLIANCE_VISUAL_TOOL_SLUGS.includes(tool.slug as (typeof LEGAL_COMPLIANCE_VISUAL_TOOL_SLUGS)[number]) ? (
+          <LegalComplianceVisualPanel tool={tool} />
+        ) : tool.category === "Legal / Compliance Tools" ? (
+          <LegalComplianceTextPanel tool={tool} />
         ) : (
           <ToolFormRenderer tool={tool} />
         )}
