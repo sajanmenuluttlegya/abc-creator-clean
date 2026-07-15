@@ -1,0 +1,6 @@
+export const SALES_CRM_REVOPS_VISUAL_PRESETS: Record<string, { eyebrow: string; title: string; description: string }> = {
+  "lead-to-revenue-funnel-map-generator": { eyebrow: "Revenue funnel architecture", title: "Map the verified lead-to-revenue journey", description: "Render supplied stages, criteria, ownership, recycling, disqualification, onboarding, and renewal links without inventing conversion or progression." },
+  "opportunity-stage-decision-map-generator": { eyebrow: "Opportunity process design", title: "Visualise stage evidence and decisions", description: "Show supported customer actions, seller actions, deliverables, approvals, transitions, regression paths, and exceptions." },
+  "account-stakeholder-influence-map-generator": { eyebrow: "Account relationship intelligence", title: "Map verified stakeholder relationships", description: "Visualise supplied people, roles, influence evidence, relationships, internal coverage, engagement gaps, and unresolved assumptions." },
+  "forecast-pipeline-waterfall-map-generator": { eyebrow: "Pipeline movement governance", title: "Reconcile supplied forecast and pipeline movement", description: "Map opening position, additions, increases, decreases, pushes, pulls, wins, losses, removals, and ending position using exact evidence only." },
+};
