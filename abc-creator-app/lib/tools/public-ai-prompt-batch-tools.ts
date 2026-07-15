@@ -1,3 +1,5 @@
+import { hrPeopleOperationsTools } from "./public-hr-people-operations-tools";
+
 type AiPromptInput = {
   id: string;
   label: string;
@@ -28,7 +30,7 @@ const styleOptions = ["Cinematic realistic", "Premium product commercial", "Clea
 const promptDepthOptions = ["Simple prompt", "Detailed prompt", "Shot-by-shot prompt", "Prompt pack with variations"];
 const promptVariationOptions = ["1 variation", "3 variations", "5 variations", "10 variations"];
 
-export const aiPromptBatchTools: AiPromptTool[] = [
+const baseAiPromptBatchTools: AiPromptTool[] = [
   {
     id: "video-prompt-generator",
     slug: "video-prompt-generator",
@@ -54,3 +56,5 @@ export const aiPromptBatchTools: AiPromptTool[] = [
     ],
   },
 ];
+
+export const aiPromptBatchTools: AiPromptTool[] = [...baseAiPromptBatchTools, ...hrPeopleOperationsTools];
