@@ -31,6 +31,8 @@ import { SalesCRMRevOpsVisualPanel } from "@/components/SalesCRMRevOpsVisualPane
 import { SalesCRMRevOpsTextPanel } from "@/components/SalesCRMRevOpsTextPanel";
 import { HRPeopleOperationsVisualPanel } from "@/components/HRPeopleOperationsVisualPanel";
 import { HRPeopleOperationsTextPanel } from "@/components/HRPeopleOperationsTextPanel";
+import { CybersecurityITOperationsVisualPanel } from "@/components/CybersecurityITOperationsVisualPanel";
+import { CybersecurityITOperationsTextPanel } from "@/components/CybersecurityITOperationsTextPanel";
 import { INTERIOR_ARCHITECTURE_IMAGE_TOOL_SLUGS } from "@/lib/tools/public-interior-architecture-tools";
 import { FOOD_HOSPITALITY_IMAGE_TOOL_SLUGS } from "@/lib/tools/public-food-hospitality-tools";
 import { FASHION_APPAREL_IMAGE_TOOL_SLUGS } from "@/lib/tools/public-fashion-apparel-tools";
@@ -43,6 +45,7 @@ import { LEGAL_COMPLIANCE_VISUAL_TOOL_SLUGS } from "@/lib/tools/public-legal-com
 import { CUSTOMER_SUPPORT_SERVICE_VISUAL_TOOL_SLUGS } from "@/lib/tools/public-customer-support-service-tools";
 import { SALES_CRM_REVOPS_VISUAL_TOOL_SLUGS } from "@/lib/tools/public-sales-crm-revops-tools";
 import { HR_PEOPLE_OPERATIONS_VISUAL_TOOL_SLUGS } from "@/lib/tools/public-hr-people-operations-tools";
+import { CYBERSECURITY_IT_OPERATIONS_VISUAL_TOOL_SLUGS } from "@/lib/tools/public-cybersecurity-it-operations-tools";
 import { getToolBySlug } from "@/lib/tools/public-tools";
 
 export default function DynamicToolPage() {
@@ -171,6 +174,10 @@ export default function DynamicToolPage() {
           <HRPeopleOperationsVisualPanel tool={tool} />
         ) : tool.category === "HR / People Operations Tools" ? (
           <HRPeopleOperationsTextPanel tool={tool} />
+        ) : CYBERSECURITY_IT_OPERATIONS_VISUAL_TOOL_SLUGS.includes(tool.slug as (typeof CYBERSECURITY_IT_OPERATIONS_VISUAL_TOOL_SLUGS)[number]) ? (
+          <CybersecurityITOperationsVisualPanel tool={tool} />
+        ) : tool.category === "Cybersecurity / IT Operations Tools" ? (
+          <CybersecurityITOperationsTextPanel tool={tool} />
         ) : (
           <ToolFormRenderer tool={tool} />
         )}
