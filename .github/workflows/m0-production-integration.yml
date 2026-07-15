@@ -86,11 +86,8 @@ jobs:
             m0-build.log
           if-no-files-found: warn
 
-      - name: Stop after validation failure
-        if: steps.patch.outcome != 'success' || steps.lint.outcome != 'success' || steps.build.outcome != 'success'
-        run: exit 1
-
       - name: Commit validated integration
+        if: steps.patch.outcome == 'success' && steps.lint.outcome == 'success' && steps.build.outcome == 'success'
         run: |
           if git diff --quiet; then
             echo "No integration changes were produced."
