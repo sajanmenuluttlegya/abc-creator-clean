@@ -29,6 +29,8 @@ import { CustomerSupportServiceVisualPanel } from "@/components/CustomerSupportS
 import { CustomerSupportServiceTextPanel } from "@/components/CustomerSupportServiceTextPanel";
 import { SalesCRMRevOpsVisualPanel } from "@/components/SalesCRMRevOpsVisualPanel";
 import { SalesCRMRevOpsTextPanel } from "@/components/SalesCRMRevOpsTextPanel";
+import { HRPeopleOperationsVisualPanel } from "@/components/HRPeopleOperationsVisualPanel";
+import { HRPeopleOperationsTextPanel } from "@/components/HRPeopleOperationsTextPanel";
 import { INTERIOR_ARCHITECTURE_IMAGE_TOOL_SLUGS } from "@/lib/tools/public-interior-architecture-tools";
 import { FOOD_HOSPITALITY_IMAGE_TOOL_SLUGS } from "@/lib/tools/public-food-hospitality-tools";
 import { FASHION_APPAREL_IMAGE_TOOL_SLUGS } from "@/lib/tools/public-fashion-apparel-tools";
@@ -40,6 +42,7 @@ import { FINANCE_ACCOUNTING_VISUAL_TOOL_SLUGS } from "@/lib/tools/public-finance
 import { LEGAL_COMPLIANCE_VISUAL_TOOL_SLUGS } from "@/lib/tools/public-legal-compliance-tools";
 import { CUSTOMER_SUPPORT_SERVICE_VISUAL_TOOL_SLUGS } from "@/lib/tools/public-customer-support-service-tools";
 import { SALES_CRM_REVOPS_VISUAL_TOOL_SLUGS } from "@/lib/tools/public-sales-crm-revops-tools";
+import { HR_PEOPLE_OPERATIONS_VISUAL_TOOL_SLUGS } from "@/lib/tools/public-hr-people-operations-tools";
 import { getToolBySlug } from "@/lib/tools/public-tools";
 
 export default function DynamicToolPage() {
@@ -164,6 +167,10 @@ export default function DynamicToolPage() {
           <SalesCRMRevOpsVisualPanel tool={tool} />
         ) : tool.category === "Sales / CRM / Revenue Operations Tools" ? (
           <SalesCRMRevOpsTextPanel tool={tool} />
+        ) : HR_PEOPLE_OPERATIONS_VISUAL_TOOL_SLUGS.includes(tool.slug as (typeof HR_PEOPLE_OPERATIONS_VISUAL_TOOL_SLUGS)[number]) ? (
+          <HRPeopleOperationsVisualPanel tool={tool} />
+        ) : tool.category === "HR / People Operations Tools" ? (
+          <HRPeopleOperationsTextPanel tool={tool} />
         ) : (
           <ToolFormRenderer tool={tool} />
         )}
