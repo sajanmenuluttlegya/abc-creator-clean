@@ -1,0 +1,10 @@
+import { presentationPitchTools,PRESENTATION_PITCH_VISUAL_TOOL_SLUGS } from "./public-presentation-pitch-tools";
+export const PRESENTATION_PITCH_TOOL_CREDIT_COSTS:Record<string,number>=Object.fromEntries(presentationPitchTools.map(t=>[t.slug,t.displayCreditCost]));
+export const PRESENTATION_PITCH_TOOL_SLUGS=Object.keys(PRESENTATION_PITCH_TOOL_CREDIT_COSTS);
+const DEPTH:Array<[string,number]>=[["Comprehensive controlled deck pack",9],["Detailed presentation pack",7],["Standard premium",5],["Quick professional",2]];
+const SLIDES:Array<[string,number]>=[["32 slides",17],["24 slides",13],["16 slides",9],["12 slides",7],["8 slides",5]];
+const NODES:Array<[string,number]>=[["40 nodes",13],["30 nodes",11],["20 nodes",9],["10 nodes",7]];
+function has(v:string|undefined,t:string){return(v||"").toLowerCase().includes(t.toLowerCase());}function match(v:string|undefined,table:Array<[string,number]>,fallback:number){return table.find(([t])=>has(v,t))?.[1]??fallback;}
+function customSlides(inputs:Record<string,string>,fallback:number){if(!has(inputs.slide_count,"custom"))return match(inputs.slide_count,SLIDES,fallback);const n=Number((inputs.custom_slide_count||"").trim());return Number.isInteger(n)&&n>=1&&n<49?Math.max(fallback,Math.min(25,3+Math.ceil(n/2))):fallback;}
+export function calculatePresentationPitchToolCreditCost(slug:string,inputs:Record<string,string>={}){const base=PRESENTATION_PITCH_TOOL_CREDIT_COSTS[slug]??1;if(!PRESENTATION_PITCH_TOOL_SLUGS.includes(slug))return 1;let credits=inputs.output_depth?Math.max(base,match(inputs.output_depth,DEPTH,base)):base;credits=Math.max(credits,customSlides(inputs,base));if(PRESENTATION_PITCH_VISUAL_TOOL_SLUGS.includes(slug as (typeof PRESENTATION_PITCH_VISUAL_TOOL_SLUGS)[number]))credits=Math.max(credits,match(inputs.node_count,NODES,base));return credits;}
+export function isPresentationPitchTool(slug:string){return PRESENTATION_PITCH_TOOL_SLUGS.includes(slug);}export function getPresentationPitchToolBaseCost(slug:string){return PRESENTATION_PITCH_TOOL_CREDIT_COSTS[slug]??1;}
