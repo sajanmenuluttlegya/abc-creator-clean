@@ -1,4 +1,5 @@
 import { hrPeopleOperationsTools } from "./public-hr-people-operations-tools";
+import { presentationPitchTools } from "./public-presentation-pitch-tools";
 
 type AiPromptInput = {
   id: string;
@@ -57,4 +58,4 @@ const baseAiPromptBatchTools: AiPromptTool[] = [
   },
 ];
 
-export const aiPromptBatchTools: AiPromptTool[] = [...baseAiPromptBatchTools, ...hrPeopleOperationsTools];
+export const aiPromptBatchTools: AiPromptTool[] = [...baseAiPromptBatchTools, ...hrPeopleOperationsTools, ...presentationPitchTools];
