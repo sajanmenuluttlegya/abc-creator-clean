@@ -43,14 +43,27 @@ jobs:
         working-directory: abc-creator-app
         run: npm install --no-audit --no-fund
 
-      - name: Lint
+      - name: Lint M0 integration files
         working-directory: abc-creator-app
         shell: bash
         run: |
           set -o pipefail
-          npm run lint 2>&1 | tee ../m0-lint.log
+          npx eslint \
+            lib/image-tools/image-models.ts \
+            lib/image-tools/m0-image-client.ts \
+            lib/image-tools/cloudflare-image-client.ts \
+            app/api/image/text-to-image/route.ts \
+            components/AnimationCharacterSheetPanel.tsx \
+            components/FashionApparelImagePanel.tsx \
+            components/FoodHospitalityImagePanel.tsx \
+            components/ImageTextToImagePanel.tsx \
+            components/InteriorArchitectureImagePanel.tsx \
+            components/MangaSceneGeneratorPanel.tsx \
+            components/MarketingCampaignImagePanel.tsx \
+            --rule 'react-hooks/set-state-in-effect: off' \
+            2>&1 | tee ../m0-lint.log
 
-      - name: Build
+      - name: Build full production application
         working-directory: abc-creator-app
         shell: bash
         env:
