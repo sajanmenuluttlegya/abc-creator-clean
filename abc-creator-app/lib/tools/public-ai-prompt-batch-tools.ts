@@ -1,6 +1,7 @@
 import type { Tool } from "./public-tools";
 import { hrPeopleOperationsTools } from "./public-hr-people-operations-tools";
 import { presentationPitchTools } from "./public-presentation-pitch-tools";
+import { posterPromotionalTools } from "./public-poster-promotional-tools";
 
 const languageOptions = ["English", "Hindi", "Hinglish", "Spanish", "French", "German", "Portuguese", "Arabic"];
 const videoTypeOptions = ["Product ad", "Cinematic scene", "YouTube intro", "Short-form social video", "Explainer video", "Documentary scene", "Animation prompt", "3D animation prompt", "Storyboard prompt"];
@@ -36,4 +37,4 @@ const baseAiPromptBatchTools: Tool[] = [
   },
 ];
 
-export const aiPromptBatchTools: Tool[] = [...baseAiPromptBatchTools, ...hrPeopleOperationsTools, ...presentationPitchTools];
+export const aiPromptBatchTools: Tool[] = [...baseAiPromptBatchTools, ...hrPeopleOperationsTools, ...presentationPitchTools, ...posterPromotionalTools];
