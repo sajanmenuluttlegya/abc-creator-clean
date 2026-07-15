@@ -18,6 +18,7 @@ import { dataAnalysisBITools } from "./public-data-analysis-bi-tools";
 import { financeAccountingTools } from "./public-finance-accounting-tools";
 import { legalComplianceTools } from "./public-legal-compliance-tools";
 import { customerSupportServiceTools } from "./public-customer-support-service-tools";
+import { salesCRMRevOpsTools } from "./public-sales-crm-revops-tools";
 import { aiPromptBatchTools } from "./public-ai-prompt-batch-tools";
 import { socialVariationOverrideTools } from "./public-social-variation-overrides";
 import { socialTools } from "./public-social-tools";
@@ -217,6 +218,7 @@ const rawPublicTools: Tool[] = [
   ...financeAccountingTools,
   ...legalComplianceTools,
   ...customerSupportServiceTools,
+  ...salesCRMRevOpsTools,
   ...aiPromptBatchTools,
   ...socialVariationOverrideTools,
   ...socialTools,
