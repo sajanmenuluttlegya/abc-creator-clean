@@ -1,28 +1,6 @@
+import type { Tool } from "./public-tools";
 import { hrPeopleOperationsTools } from "./public-hr-people-operations-tools";
 import { presentationPitchTools } from "./public-presentation-pitch-tools";
-
-type AiPromptInput = {
-  id: string;
-  label: string;
-  type: "text" | "textarea" | "select";
-  placeholder?: string;
-  required: boolean;
-  options?: string[];
-};
-
-type AiPromptTool = {
-  id: string;
-  slug: string;
-  name: string;
-  description: string;
-  icon: string;
-  detailEmoji: string;
-  category: string;
-  displayCreditCost: number;
-  outputType?: "text";
-  aliases?: string[];
-  inputs: AiPromptInput[];
-};
 
 const languageOptions = ["English", "Hindi", "Hinglish", "Spanish", "French", "German", "Portuguese", "Arabic"];
 const videoTypeOptions = ["Product ad", "Cinematic scene", "YouTube intro", "Short-form social video", "Explainer video", "Documentary scene", "Animation prompt", "3D animation prompt", "Storyboard prompt"];
@@ -31,7 +9,7 @@ const styleOptions = ["Cinematic realistic", "Premium product commercial", "Clea
 const promptDepthOptions = ["Simple prompt", "Detailed prompt", "Shot-by-shot prompt", "Prompt pack with variations"];
 const promptVariationOptions = ["1 variation", "3 variations", "5 variations", "10 variations"];
 
-const baseAiPromptBatchTools: AiPromptTool[] = [
+const baseAiPromptBatchTools: Tool[] = [
   {
     id: "video-prompt-generator",
     slug: "video-prompt-generator",
@@ -58,4 +36,4 @@ const baseAiPromptBatchTools: AiPromptTool[] = [
   },
 ];
 
-export const aiPromptBatchTools: AiPromptTool[] = [...baseAiPromptBatchTools, ...hrPeopleOperationsTools, ...presentationPitchTools];
+export const aiPromptBatchTools: Tool[] = [...baseAiPromptBatchTools, ...hrPeopleOperationsTools, ...presentationPitchTools];
