@@ -1,0 +1,7 @@
+import { posterPromotionalTools,POSTER_PROMOTIONAL_IMAGE_TOOL_SLUGS } from "./public-poster-promotional-tools";
+export const POSTER_PROMOTIONAL_TOOL_CREDIT_COSTS:Record<string,number>=Object.fromEntries(posterPromotionalTools.map(tool=>[tool.slug,tool.displayCreditCost]));
+export const POSTER_PROMOTIONAL_TOOL_SLUGS=Object.keys(POSTER_PROMOTIONAL_TOOL_CREDIT_COSTS);
+const DEPTH:Array<[string,number]>=[["Comprehensive production pack",9],["Detailed design pack",7],["Standard premium",5],["Quick professional",2]];
+function includes(value:string|undefined,token:string){return(value||"").toLowerCase().includes(token.toLowerCase());}function match(value:string|undefined,table:Array<[string,number]>,fallback:number){return table.find(([token])=>includes(value,token))?.[1]??fallback;}
+export function calculatePosterPromotionalToolCreditCost(slug:string,inputs:Record<string,string>={}){const base=POSTER_PROMOTIONAL_TOOL_CREDIT_COSTS[slug]??1;if(!POSTER_PROMOTIONAL_TOOL_SLUGS.includes(slug))return 1;if(POSTER_PROMOTIONAL_IMAGE_TOOL_SLUGS.includes(slug as (typeof POSTER_PROMOTIONAL_IMAGE_TOOL_SLUGS)[number]))return base;return inputs.output_depth?Math.max(base,match(inputs.output_depth,DEPTH,base)):base;}
+export function isPosterPromotionalTool(slug:string){return POSTER_PROMOTIONAL_TOOL_SLUGS.includes(slug);}export function getPosterPromotionalToolBaseCost(slug:string){return POSTER_PROMOTIONAL_TOOL_CREDIT_COSTS[slug]??1;}
