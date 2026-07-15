@@ -27,7 +27,14 @@ type WorkerRegistryRow = {
   expires_at: string | null;
 };
 
-const DEFAULT_ALLOWED_WORKERS = "m0-cinefax";
+const BUILT_IN_ALLOWED_WORKERS = [
+  "m0-cinefax",
+  "m0-steverichards77",
+  "m0-ashstizhard",
+  "m0-dpstards",
+  "m0-iitmania",
+  "m0-assskr",
+] as const;
 const DEFAULT_ALLOWED_TUNNEL_SUFFIXES = ".trycloudflare.com";
 const MAX_REGISTRATION_LIFETIME_MS = 6 * 60 * 60 * 1000;
 const MAX_METADATA_BYTES = 16_000;
@@ -41,9 +48,12 @@ function splitEnvironmentList(value: string | undefined, fallback: string) {
 }
 
 function getAllowedWorkers() {
-  return new Set(
-    splitEnvironmentList(process.env.M0_ALLOWED_WORKERS, DEFAULT_ALLOWED_WORKERS)
+  const configuredWorkers = splitEnvironmentList(
+    process.env.M0_ALLOWED_WORKERS,
+    ""
   );
+
+  return new Set([...BUILT_IN_ALLOWED_WORKERS, ...configuredWorkers]);
 }
 
 function validateWorkerName(workerName: string) {
