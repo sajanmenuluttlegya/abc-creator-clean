@@ -2,6 +2,8 @@ import { serverBookTools } from "./server-book-tools";
 import { serverBookVariationOverrides } from "./server-book-variation-overrides";
 import { serverKidsBookTools } from "./server-kids-book-tools";
 import { serverHRPeopleOperationsTools } from "./server-hr-people-operations-tools";
+import { serverPresentationPitchTools } from "./server-presentation-pitch-tools";
+import { serverPresentationPitchVisualTools } from "./server-presentation-pitch-visual-tools";
 
 type ToolFieldRule = { id: string; label: string; required?: boolean; minLength?: number; maxLength?: number };
 type ServerPrompt = { system: string; outputGuide: string; creditCost: number; requiredInputs: ToolFieldRule[] };
@@ -11,6 +13,8 @@ export const serverAiPromptBatchTools: Record<string, ServerPrompt> = {
   ...serverBookVariationOverrides,
   ...serverKidsBookTools,
   ...serverHRPeopleOperationsTools,
+  ...serverPresentationPitchTools,
+  ...serverPresentationPitchVisualTools,
   "video-prompt-generator": {
     creditCost: 1,
     requiredInputs: [
