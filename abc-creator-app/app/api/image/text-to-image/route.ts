@@ -278,20 +278,22 @@ export async function POST(req: NextRequest) {
         referenceImageDataUrl: hasReference ? sourceImageDataUrl : undefined,
       });
 
-      actualModelLabels.add(result.modelKey || effectiveModel);
+      const resultModel = result.modelKey || effectiveModel;
+      const resultIsM0 = resultModel === "M0";
+      actualModelLabels.add(resultModel);
       usedPromptRescue = usedPromptRescue || Boolean(result.promptRescueUsed);
       usedModelFallback = usedModelFallback || Boolean(result.fallbackModelUsed);
 
       images.push({
         index: index + 1,
         dataUrl: result.dataUrl,
-        filename: operation === "edit" ? `image-edit-${result.modelKey || effectiveModel}-${resolution}-${index + 1}.png` : `text-to-image-${result.modelKey || effectiveModel}-${resolution}-${index + 1}.png`,
-        provider: "cloudflare-workers-ai",
-        postProcess: "provider-native",
+        filename: operation === "edit" ? `image-edit-${resultModel}-${resolution}-${index + 1}.png` : `text-to-image-${resultModel}-${resolution}-${index + 1}.png`,
+        provider: resultIsM0 ? "kaggle-m0-worker" : "cloudflare-workers-ai",
+        postProcess: resultIsM0 ? "sharp-resize" : "provider-native",
         model: result.modelId,
-        modelLabel: result.modelKey || effectiveModel,
+        modelLabel: resultModel,
         requestedModel,
-        modelUsed: result.modelKey || effectiveModel,
+        modelUsed: resultModel,
         effectiveModel,
         fallbackModelUsed: result.fallbackModelUsed,
         promptRescueUsed: result.promptRescueUsed,
@@ -302,9 +304,10 @@ export async function POST(req: NextRequest) {
     }
 
     const actualModelSummary = Array.from(actualModelLabels).join(",") || effectiveModel;
+    const usedM0 = actualModelLabels.has("M0");
     const spendResponse = await supabase.rpc("spend_reserved_credits", {
       p_transaction_id: reservedTransactionId,
-      p_provider: operation === "edit" ? "image:premium-edit:cloudflare-workers-ai" : "image:premium-generation:cloudflare-workers-ai",
+      p_provider: usedM0 ? "image:premium-generation:kaggle-m0-worker" : operation === "edit" ? "image:premium-edit:cloudflare-workers-ai" : "image:premium-generation:cloudflare-workers-ai",
       p_model: operation === "edit" ? `${requestedModel}->${effectiveModel}->${actualModelSummary}` : `${effectiveModel}->${actualModelSummary}`,
     });
 
@@ -340,7 +343,7 @@ export async function POST(req: NextRequest) {
       toolPreset,
       editPlan,
       generationIntent,
-      outputPolish: "provider-native",
+      outputPolish: usedM0 ? "sharp-resize" : "provider-native",
       resolution,
       aspectRatio,
       style,

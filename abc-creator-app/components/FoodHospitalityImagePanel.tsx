@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type ReactNode } from "react";
 import { ImageComposerDropdown } from "./ImageComposerDropdown";
 
-type ImageModelKey = "M1" | "M2" | "M3" | "M4" | "M5" | "M6";
+type ImageModelKey = "M0" | "M1" | "M2" | "M3" | "M4" | "M5" | "M6";
 type ImageResolution = "360p" | "480p" | "720p" | "1080p";
 type ImageAspectRatio = "1:1" | "16:9" | "9:16" | "4:5" | "3:4" | "4:3" | "3:2" | "2:3";
 type Option = { label: string; value: string; meta?: string };
@@ -108,11 +108,12 @@ const PRESETS: Record<string, Preset> = {
 };
 
 const ALL_MODEL_OPTIONS: Option[] = [
+  { label: "M0 — Z-Image Turbo", value: "M0", meta: "Private fast worker" },
   { label: "M1", value: "M1", meta: "Maximum detail" }, { label: "M2", value: "M2", meta: "Premium fast" },
   { label: "M3", value: "M3", meta: "Lucid food styling" }, { label: "M4", value: "M4", meta: "Prompt precision" },
   { label: "M5", value: "M5", meta: "Best value" }, { label: "M6", value: "M6", meta: "Fast concept" },
 ];
-const EDIT_MODEL_OPTIONS = ALL_MODEL_OPTIONS.slice(0, 2);
+const EDIT_MODEL_OPTIONS = ALL_MODEL_OPTIONS.filter((option) => option.value === "M1" || option.value === "M2");
 const RESOLUTION_OPTIONS: Option[] = ["360p", "480p", "720p", "1080p"].map((value) => ({ label: value, value, meta: value === "1080p" ? "Highest" : value === "720p" ? "Recommended" : value === "480p" ? "Balanced" : "Preview" }));
 const ASPECT_OPTIONS: Option[] = ["1:1", "16:9", "9:16", "4:5", "3:4", "4:3", "3:2", "2:3"].map((value) => ({ label: value, value, meta: value === "16:9" ? "Hero" : value === "4:5" ? "Social / poster" : value === "3:4" ? "Cover" : value === "1:1" ? "Square" : "Format" }));
 const CUISINE_OPTIONS = optionList(["Auto from brief", "Indian", "East / Southeast Asian", "Mediterranean", "Middle Eastern", "European", "Latin American", "African", "Modern global", "Bakery / pastry", "Beverage-led", "Custom from brief"], "Cuisine");
@@ -123,6 +124,7 @@ const CAMERA_OPTIONS = optionList(["45-degree hero", "Overhead flat lay", "Eye-l
 const TEXT_SAFE_OPTIONS = optionList(["No copy space needed", "Clear copy-safe space on the left", "Clear copy-safe space on the right", "Large clean headline zone at the top", "Large clean footer zone", "Small copy-safe zone in the upper third", "Balanced margin for recipe-page copy", "Clean front label panel with no generated text", "Large clean title area in the centre"], "Layout");
 const FIDELITY_OPTIONS = optionList(["Strictly preserve the uploaded subject", "Preserve food / product identity; refine styling", "Preserve core ingredients and portion", "Creative concept based on the brief", "Use reference only for mood and palette"], "Fidelity");
 const CREDIT_MAP: Record<ImageModelKey, Record<ImageResolution, number>> = {
+  M0: { "360p": 2, "480p": 3, "720p": 4, "1080p": 5 },
   M1: { "360p": 9, "480p": 11, "720p": 13, "1080p": 15 }, M2: { "360p": 5, "480p": 7, "720p": 8, "1080p": 9 },
   M3: { "360p": 8, "480p": 10, "720p": 12, "1080p": 13 }, M4: { "360p": 7, "480p": 9, "720p": 11, "1080p": 12 },
   M5: { "360p": 2, "480p": 3, "720p": 4, "1080p": 5 }, M6: { "360p": 2, "480p": 3, "720p": 3, "1080p": 4 },
