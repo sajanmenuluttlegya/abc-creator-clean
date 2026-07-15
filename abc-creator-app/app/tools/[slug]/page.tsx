@@ -27,6 +27,8 @@ import { LegalComplianceVisualPanel } from "@/components/LegalComplianceVisualPa
 import { LegalComplianceTextPanel } from "@/components/LegalComplianceTextPanel";
 import { CustomerSupportServiceVisualPanel } from "@/components/CustomerSupportServiceVisualPanel";
 import { CustomerSupportServiceTextPanel } from "@/components/CustomerSupportServiceTextPanel";
+import { SalesCRMRevOpsVisualPanel } from "@/components/SalesCRMRevOpsVisualPanel";
+import { SalesCRMRevOpsTextPanel } from "@/components/SalesCRMRevOpsTextPanel";
 import { INTERIOR_ARCHITECTURE_IMAGE_TOOL_SLUGS } from "@/lib/tools/public-interior-architecture-tools";
 import { FOOD_HOSPITALITY_IMAGE_TOOL_SLUGS } from "@/lib/tools/public-food-hospitality-tools";
 import { FASHION_APPAREL_IMAGE_TOOL_SLUGS } from "@/lib/tools/public-fashion-apparel-tools";
@@ -37,6 +39,7 @@ import { DATA_ANALYSIS_BI_VISUAL_TOOL_SLUGS } from "@/lib/tools/public-data-anal
 import { FINANCE_ACCOUNTING_VISUAL_TOOL_SLUGS } from "@/lib/tools/public-finance-accounting-tools";
 import { LEGAL_COMPLIANCE_VISUAL_TOOL_SLUGS } from "@/lib/tools/public-legal-compliance-tools";
 import { CUSTOMER_SUPPORT_SERVICE_VISUAL_TOOL_SLUGS } from "@/lib/tools/public-customer-support-service-tools";
+import { SALES_CRM_REVOPS_VISUAL_TOOL_SLUGS } from "@/lib/tools/public-sales-crm-revops-tools";
 import { getToolBySlug } from "@/lib/tools/public-tools";
 
 export default function DynamicToolPage() {
@@ -157,6 +160,10 @@ export default function DynamicToolPage() {
           <CustomerSupportServiceVisualPanel tool={tool} />
         ) : tool.category === "Customer Support / Service Operations Tools" ? (
           <CustomerSupportServiceTextPanel tool={tool} />
+        ) : SALES_CRM_REVOPS_VISUAL_TOOL_SLUGS.includes(tool.slug as (typeof SALES_CRM_REVOPS_VISUAL_TOOL_SLUGS)[number]) ? (
+          <SalesCRMRevOpsVisualPanel tool={tool} />
+        ) : tool.category === "Sales / CRM / Revenue Operations Tools" ? (
+          <SalesCRMRevOpsTextPanel tool={tool} />
         ) : (
           <ToolFormRenderer tool={tool} />
         )}
