@@ -41,28 +41,27 @@ jobs:
           set -o pipefail
           node abc-creator-app/scripts/apply-m0-production-integration.mjs 2>&1 | tee m0-integration.log
 
-      - name: Upload integration diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: m0-integration-diagnostics
-          path: m0-integration.log
-          if-no-files-found: warn
-
-      - name: Stop after patch failure
-        if: steps.patch.outcome != 'success'
-        run: exit 1
-
       - name: Install dependencies
+        if: steps.patch.outcome == 'success'
         working-directory: abc-creator-app
         run: npm install --no-audit --no-fund
 
       - name: Lint
+        id: lint
+        if: steps.patch.outcome == 'success'
+        continue-on-error: true
         working-directory: abc-creator-app
-        run: npm run lint
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run lint 2>&1 | tee ../m0-lint.log
 
       - name: Build
+        id: build
+        if: steps.patch.outcome == 'success'
+        continue-on-error: true
         working-directory: abc-creator-app
+        shell: bash
         env:
           NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: build-placeholder
@@ -72,7 +71,24 @@ jobs:
           M0_WORKER_API_KEY: build-placeholder-worker-key
           M0_ALLOWED_WORKERS: m0-cinefax
           M0_ALLOWED_TUNNEL_SUFFIXES: .trycloudflare.com
-        run: npm run build
+        run: |
+          set -o pipefail
+          npm run build 2>&1 | tee ../m0-build.log
+
+      - name: Upload validation diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m0-validation-diagnostics
+          path: |
+            m0-integration.log
+            m0-lint.log
+            m0-build.log
+          if-no-files-found: warn
+
+      - name: Stop after validation failure
+        if: steps.patch.outcome != 'success' || steps.lint.outcome != 'success' || steps.build.outcome != 'success'
+        run: exit 1
 
       - name: Commit validated integration
         run: |
