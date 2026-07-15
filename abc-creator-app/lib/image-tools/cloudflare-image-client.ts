@@ -1,5 +1,6 @@
 import { ALL_CLOUDFLARE_KEYS_EXHAUSTED_MESSAGE, isCloudflareKeyExhausted, shouldRotateCloudflareCredential } from "./cloudflare-failover";
 import { getActiveCloudflareAICredentials, type CloudflareAICredential } from "./cloudflare-credentials";
+import { generateM0Image } from "./m0-image-client";
 import {
   getImageDimensions,
   IMAGE_MODEL_OPTIONS,
@@ -9,7 +10,7 @@ import {
   type ImageResolution,
 } from "./image-models";
 
-type GenerateImageInput = {
+export type GenerateImageInput = {
   prompt: string;
   negativePrompt?: string;
   model: ImageModelKey;
@@ -49,7 +50,7 @@ type CloudflareAttemptFailure = {
   error: string;
 };
 
-const MODEL_REQUEST_FORMAT: Record<ImageModelKey, RequestFormat> = {
+const MODEL_REQUEST_FORMAT: Record<Exclude<ImageModelKey, "M0">, RequestFormat> = {
   M1: "multipart",
   M2: "multipart",
   M3: "json-leonardo-lucid",
@@ -174,6 +175,7 @@ function extractImageCandidate(value: unknown): ImageCandidate | null {
 }
 
 function buildRequestFields(input: GenerateImageInput) {
+  if (input.model === "M0") throw new Error("M0 must be routed through the dedicated worker client.");
   const model = IMAGE_MODEL_OPTIONS[input.model];
   const format = MODEL_REQUEST_FORMAT[input.model];
   const { width, height } = getImageDimensions(input.resolution, input.aspectRatio);
@@ -360,6 +362,10 @@ function attemptInputs(input: GenerateImageInput) {
 }
 
 export async function generateCloudflareImageWithManualFailover(input: GenerateImageInput) {
+  if (input.model === "M0") {
+    return generateM0Image(input);
+  }
+
   const credentials = await getActiveCloudflareAICredentials();
   if (!credentials.length) throw new Error("No active Cloudflare AI credentials found. Add active Cloudflare AI credentials in Supabase and set is_active=true.");
 

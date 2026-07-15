@@ -1,6 +1,6 @@
 export const MAX_CLOUDFLARE_AI_CREDENTIALS = 11000;
 
-export type ImageModelKey = "M1" | "M2" | "M3" | "M4" | "M5" | "M6";
+export type ImageModelKey = "M0" | "M1" | "M2" | "M3" | "M4" | "M5" | "M6";
 export type ImageResolution = "360p" | "480p" | "720p" | "1080p";
 export type ImageAspectRatio = "1:1" | "16:9" | "9:16" | "4:5" | "3:4" | "4:3" | "3:2" | "2:3";
 export type UpscaleTarget = "1080p" | "2k" | "4k";
@@ -47,6 +47,12 @@ export const IMAGE_MODEL_OPTIONS: Record<ImageModelKey, {
   defaultSteps: number;
   creditByResolution: Record<ImageResolution, number>;
 }> = {
+  M0: {
+    label: "M0",
+    modelId: "Tongyi-MAI/Z-Image-Turbo",
+    defaultSteps: 4,
+    creditByResolution: { "360p": 2, "480p": 3, "720p": 4, "1080p": 5 },
+  },
   M1: {
     label: "M1",
     modelId: "@cf/black-forest-labs/flux-2-dev",

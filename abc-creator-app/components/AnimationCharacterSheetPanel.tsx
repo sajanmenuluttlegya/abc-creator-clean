@@ -3,7 +3,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 
 type CharacterToolSlug = "2d-animated-character-generator" | "3d-animated-character-generator";
-type ImageModelKey = "M1" | "M2" | "M3" | "M4" | "M5" | "M6";
+type ImageModelKey = "M0" | "M1" | "M2" | "M3" | "M4" | "M5" | "M6";
 type ImageResolution = "360p" | "480p" | "720p" | "1080p";
 
 type GeneratedCharacterSheet = {
@@ -17,6 +17,7 @@ type GeneratedCharacterSheet = {
 type SelectOption = { label: string; value: string; hint?: string };
 
 const MODEL_OPTIONS: SelectOption[] = [
+  { label: "M0 — Z-Image Turbo", value: "M0", hint: "Private fast worker" },
   { label: "M1 — Max detail", value: "M1", hint: "highest consistency" },
   { label: "M2 — Premium fast", value: "M2", hint: "balanced quality" },
   { label: "M3 — Lucid design", value: "M3", hint: "clean details" },
@@ -28,6 +29,7 @@ const MODEL_OPTIONS: SelectOption[] = [
 const RESOLUTION_OPTIONS: SelectOption[] = ["360p", "480p", "720p", "1080p"].map((value) => ({ label: value, value }));
 
 const CREDIT_MAP: Record<ImageModelKey, Record<ImageResolution, number>> = {
+  M0: { "360p": 2, "480p": 3, "720p": 4, "1080p": 5 },
   M1: { "360p": 9, "480p": 11, "720p": 13, "1080p": 15 },
   M2: { "360p": 5, "480p": 7, "720p": 8, "1080p": 9 },
   M3: { "360p": 8, "480p": 10, "720p": 12, "1080p": 13 },
