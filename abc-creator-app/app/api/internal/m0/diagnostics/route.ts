@@ -18,17 +18,27 @@ function safeTokenMatch(received: string, expected: string) {
   return timingSafeEqual(receivedBuffer, expectedBuffer);
 }
 
+function configuredDiagnosticSecrets() {
+  return [
+    process.env.M0_REGISTRATION_TOKEN?.trim() || "",
+    process.env.M0_WORKER_API_KEY?.trim() || "",
+  ].filter((value, index, values) => value && values.indexOf(value) === index);
+}
+
 function authorized(req: NextRequest) {
-  const expectedToken = process.env.M0_REGISTRATION_TOKEN?.trim() || "";
+  const secrets = configuredDiagnosticSecrets();
   const authorization = req.headers.get("authorization") || "";
-  const receivedToken = authorization.startsWith("Bearer ")
+  const bearerToken = authorization.startsWith("Bearer ")
     ? authorization.slice("Bearer ".length).trim()
     : "";
+  const workerKey = req.headers.get("x-worker-key")?.trim() || "";
+  const receivedCandidates = [bearerToken, workerKey].filter(Boolean);
 
-  return Boolean(
-    expectedToken &&
-      receivedToken &&
-      safeTokenMatch(receivedToken, expectedToken)
+  return (
+    secrets.length > 0 &&
+    receivedCandidates.some((received) =>
+      secrets.some((expected) => safeTokenMatch(received, expected))
+    )
   );
 }
 
@@ -51,9 +61,7 @@ export async function GET(req: NextRequest) {
 
     return json({
       ok: true,
-      registrationConfigured: Boolean(
-        process.env.M0_REGISTRATION_TOKEN?.trim()
-      ),
+      registrationConfigured: configuredDiagnosticSecrets().length > 0,
       workerKeyConfigured: Boolean(process.env.M0_WORKER_API_KEY?.trim()),
       activeWorker: worker
         ? {
