@@ -17,6 +17,26 @@ function safeTokenMatch(received: string, expected: string) {
   return timingSafeEqual(receivedBuffer, expectedBuffer);
 }
 
+function configuredRegistrationSecrets() {
+  return [
+    process.env.M0_REGISTRATION_TOKEN?.trim() || "",
+    process.env.M0_WORKER_API_KEY?.trim() || "",
+  ].filter((value, index, values) => value && values.indexOf(value) === index);
+}
+
+function registrationAuthorized(req: NextRequest, secrets: string[]) {
+  const authorization = req.headers.get("authorization") || "";
+  const bearerToken = authorization.startsWith("Bearer ")
+    ? authorization.slice("Bearer ".length).trim()
+    : "";
+  const workerKey = req.headers.get("x-worker-key")?.trim() || "";
+  const receivedCandidates = [bearerToken, workerKey].filter(Boolean);
+
+  return receivedCandidates.some((received) =>
+    secrets.some((expected) => safeTokenMatch(received, expected))
+  );
+}
+
 function noStoreJson(body: unknown, init?: ResponseInit) {
   const headers = new Headers(init?.headers);
   headers.set("Cache-Control", "no-store, max-age=0");
@@ -29,21 +49,16 @@ function noStoreJson(body: unknown, init?: ResponseInit) {
 
 export async function POST(req: NextRequest) {
   try {
-    const expectedToken = process.env.M0_REGISTRATION_TOKEN;
+    const secrets = configuredRegistrationSecrets();
 
-    if (!expectedToken) {
+    if (secrets.length === 0) {
       return noStoreJson(
         { ok: false, error: "M0 registration is not configured." },
         { status: 503 }
       );
     }
 
-    const authorization = req.headers.get("authorization") || "";
-    const receivedToken = authorization.startsWith("Bearer ")
-      ? authorization.slice("Bearer ".length).trim()
-      : "";
-
-    if (!receivedToken || !safeTokenMatch(receivedToken, expectedToken)) {
+    if (!registrationAuthorized(req, secrets)) {
       return noStoreJson(
         { ok: false, error: "Unauthorized." },
         { status: 401 }
