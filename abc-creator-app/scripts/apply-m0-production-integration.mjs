@@ -220,7 +220,7 @@ function patchComponents() {
         /(const\s+(?:ALL_)?MODEL_OPTIONS[^=]*=\s*\[\r?\n)(\s*\{[^\n]*value:\s*"M1"[^\n]*\r?\n?)/,
         (match, prefix, first) => {
           const field = first.includes("hint:") ? "hint" : "meta";
-          return `${prefix}  { label: "M0 — Z-Image Turbo", value: "M0", ${field}: "Private fast worker" },\n${first}`;
+          return `${prefix}  { label: "M0", value: "M0", ${field}: "Private fast worker" },\n${first}`;
         },
       );
     }

@@ -86,7 +86,7 @@ const PRESETS: Record<string, Preset> = {
 };
 
 const ALL_MODEL_OPTIONS: Option[] = [
-  { label: "M0 — Z-Image Turbo", value: "M0", meta: "Private fast worker" },
+  { label: "M0", value: "M0", meta: "Private fast worker" },
   { label: "M1", value: "M1", meta: "Maximum detail" }, { label: "M2", value: "M2", meta: "Premium fast" },
   { label: "M3", value: "M3", meta: "Lucid campaigns" }, { label: "M4", value: "M4", meta: "Prompt precision" },
   { label: "M5", value: "M5", meta: "Best value" }, { label: "M6", value: "M6", meta: "Fast concept" },

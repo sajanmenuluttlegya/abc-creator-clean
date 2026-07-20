@@ -17,7 +17,7 @@ type GeneratedCharacterSheet = {
 type SelectOption = { label: string; value: string; hint?: string };
 
 const MODEL_OPTIONS: SelectOption[] = [
-  { label: "M0 — Z-Image Turbo", value: "M0", hint: "Private fast worker" },
+  { label: "M0", value: "M0", hint: "Private fast worker" },
   { label: "M1 — Max detail", value: "M1", hint: "highest consistency" },
   { label: "M2 — Premium fast", value: "M2", hint: "balanced quality" },
   { label: "M3 — Lucid design", value: "M3", hint: "clean details" },

@@ -24,7 +24,7 @@ type GeneratedImage = {
 type PendingEdit = { index: number; sourceIndex: number };
 
 const MODEL_OPTIONS: Option[] = [
-  { label: "M0 — Z-Image Turbo", value: "M0", meta: "Private fast worker" },
+  { label: "M0", value: "M0", meta: "Private fast worker" },
   { label: "M1", value: "M1", meta: "Max detail" },
   { label: "M2", value: "M2", meta: "Premium fast" },
   { label: "M3", value: "M3", meta: "Lucid design" },

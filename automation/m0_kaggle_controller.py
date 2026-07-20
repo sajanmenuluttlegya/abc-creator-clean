@@ -228,6 +228,118 @@ def set_cell_source(cell: dict[str, Any], source: str) -> None:
     cell["outputs"] = []
 
 
+def quality_override_cell() -> str:
+    return '''# ============================================================
+# ABC CREATOR M0 — HIGH QUALITY OVERRIDE
+# Native maximum: 1024 px per side
+# Fixed inference steps: 8
+# ============================================================
+
+if not WORKER_ENABLED:
+    print("[QUALITY] Skipped: outside slot window.")
+else:
+    M0_NATIVE_MAX_SIDE = 1024
+    M0_FIXED_STEPS = 8
+
+    def normalize_size(value):
+        # Preserve the requested pair until the aspect-aware wrapper runs.
+        return max(384, min(int(value), 4096))
+
+    def normalize_steps(_value):
+        return M0_FIXED_STEPS
+
+    def normalize_m0_dimensions(width, height):
+        width = max(1, int(width))
+        height = max(1, int(height))
+
+        scale = min(
+            M0_NATIVE_MAX_SIDE / width,
+            M0_NATIVE_MAX_SIDE / height,
+            1.0,
+        )
+
+        def snap(value):
+            snapped = int(round(value / 64.0)) * 64
+            return max(384, min(M0_NATIVE_MAX_SIDE, snapped))
+
+        return snap(width * scale), snap(height * scale)
+
+    _generate_m0_before_quality_override = generate_m0
+
+    def generate_m0(
+        prompt,
+        width=512,
+        height=512,
+        steps=M0_FIXED_STEPS,
+        seed=None,
+        **kwargs,
+    ):
+        width, height = normalize_m0_dimensions(width, height)
+        return _generate_m0_before_quality_override(
+            prompt=prompt,
+            width=width,
+            height=height,
+            steps=M0_FIXED_STEPS,
+            seed=seed,
+            **kwargs,
+        )
+
+    print(
+        "[QUALITY] Native maximum:",
+        M0_NATIVE_MAX_SIDE,
+        "px; fixed steps:",
+        M0_FIXED_STEPS,
+    )
+'''
+
+
+def patch_m0_quality(cells: list[dict[str, Any]]) -> None:
+    model_indexes = find_cell_indexes(
+        cells,
+        lambda source: (
+            "def generate_m0(" in source
+            and "M0 loaded and ready for API." in source
+        ),
+    )
+    if len(model_indexes) != 1:
+        raise RuntimeError(
+            "Expected exactly one M0 model/generation cell; "
+            f"found {len(model_indexes)}."
+        )
+
+    upsert_cell(
+        cells,
+        match_predicate=lambda source: (
+            "ABC CREATOR M0 — HIGH QUALITY OVERRIDE" in source
+        ),
+        source=quality_override_cell(),
+        insert_index=model_indexes[0] + 1,
+        label="M0 quality override",
+    )
+
+    api_indexes = find_cell_indexes(
+        cells,
+        lambda source: (
+            '@app.post("/generate")' in source
+            and '"max_width"' in source
+            and '"max_steps"' in source
+        ),
+    )
+    if len(api_indexes) != 1:
+        raise RuntimeError(
+            "Expected exactly one M0 API cell; "
+            f"found {len(api_indexes)}."
+        )
+
+    api_cell = cells[api_indexes[0]]
+    api_source = join_cell_source(api_cell)
+    api_source = api_source.replace("steps: int = 4", "steps: int = 8")
+    api_source = api_source.replace('"max_width": 512', '"max_width": 1024')
+    api_source = api_source.replace('"max_height": 512', '"max_height": 1024')
+    api_source = api_source.replace('"max_steps": 4', '"max_steps": 8')
+    set_cell_source(api_cell, api_source)
+
+
 def replace_single_assignment(
     cells: list[dict[str, Any]],
     variable: str,
@@ -513,6 +625,7 @@ def patch_kernel_folder(
     replace_single_assignment(cells, "STOP_SESSION_AT_IST", repr(slot.stop_ist))
     replace_single_assignment(cells, "FORCE_RUN_OUTSIDE_SLOT", "False")
     replace_single_assignment(cells, "WORKER_API_KEY", repr(worker_key))
+    patch_m0_quality(cells)
 
     tunnel_indexes = find_cell_indexes(
         cells,
@@ -589,6 +702,9 @@ def patch_kernel_folder(
         f"SLOT_START_IST = {slot.warm_start_ist!r}",
         f"STOP_SESSION_AT_IST = {slot.stop_ist!r}",
         "FORCE_RUN_OUTSIDE_SLOT = False",
+        "# ABC CREATOR M0 — HIGH QUALITY OVERRIDE",
+        "M0_NATIVE_MAX_SIDE = 1024",
+        "M0_FIXED_STEPS = 8",
         "Worker URL registered successfully.",
         "x-worker-key",
         "[SELF-STOP] Exact slot end reached.",
