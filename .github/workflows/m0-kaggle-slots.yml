@@ -1,3 +1,4 @@
+# Runs entirely on GitHub and Kaggle; no Windows PC dependency.
 name: M0 Kaggle Slot Controller
 
 on:
