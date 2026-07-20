@@ -1,0 +1,242 @@
+name: M0 Quality and Label Upgrade Once
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/m0-quality-label-upgrade-once.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Apply only the approved M0 changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          controller_path = Path("automation/m0_kaggle_controller.py")
+          controller = controller_path.read_text(encoding="utf-8")
+
+          marker = "# ABC CREATOR M0 — HIGH QUALITY OVERRIDE"
+          quality_functions = r'''
+
+          def quality_override_cell() -> str:
+              return '''# ============================================================
+          # ABC CREATOR M0 — HIGH QUALITY OVERRIDE
+          # Native maximum: 1024 px per side
+          # Fixed inference steps: 8
+          # ============================================================
+
+          if not WORKER_ENABLED:
+              print("[QUALITY] Skipped: outside slot window.")
+          else:
+              M0_NATIVE_MAX_SIDE = 1024
+              M0_FIXED_STEPS = 8
+
+              def normalize_size(value):
+                  # Keep the requested pair intact until the aspect-aware wrapper runs.
+                  return max(384, min(int(value), 4096))
+
+              def normalize_steps(_value):
+                  return M0_FIXED_STEPS
+
+              def normalize_m0_dimensions(width, height):
+                  width = max(1, int(width))
+                  height = max(1, int(height))
+
+                  scale = min(
+                      M0_NATIVE_MAX_SIDE / width,
+                      M0_NATIVE_MAX_SIDE / height,
+                      1.0,
+                  )
+
+                  def snap(value):
+                      snapped = int(round(value / 64.0)) * 64
+                      return max(384, min(M0_NATIVE_MAX_SIDE, snapped))
+
+                  return snap(width * scale), snap(height * scale)
+
+              _generate_m0_before_quality_override = generate_m0
+
+              def generate_m0(
+                  prompt,
+                  width=512,
+                  height=512,
+                  steps=M0_FIXED_STEPS,
+                  seed=None,
+                  **kwargs,
+              ):
+                  width, height = normalize_m0_dimensions(width, height)
+                  return _generate_m0_before_quality_override(
+                      prompt=prompt,
+                      width=width,
+                      height=height,
+                      steps=M0_FIXED_STEPS,
+                      seed=seed,
+                      **kwargs,
+                  )
+
+              print(
+                  "[QUALITY] Native maximum:",
+                  M0_NATIVE_MAX_SIDE,
+                  "px; fixed steps:",
+                  M0_FIXED_STEPS,
+              )
+          '''
+
+
+          def patch_m0_quality(cells: list[dict[str, Any]]) -> None:
+              model_indexes = find_cell_indexes(
+                  cells,
+                  lambda source: (
+                      "def generate_m0(" in source
+                      and "M0 loaded and ready for API." in source
+                  ),
+              )
+              if len(model_indexes) != 1:
+                  raise RuntimeError(
+                      "Expected exactly one M0 model/generation cell; "
+                      f"found {len(model_indexes)}."
+                  )
+
+              upsert_cell(
+                  cells,
+                  match_predicate=lambda source: marker in source,
+                  source=quality_override_cell(),
+                  insert_index=model_indexes[0] + 1,
+                  label="M0 quality override",
+              )
+
+              api_indexes = find_cell_indexes(
+                  cells,
+                  lambda source: (
+                      '@app.post("/generate")' in source
+                      and '"max_width"' in source
+                      and '"max_steps"' in source
+                  ),
+              )
+              if len(api_indexes) != 1:
+                  raise RuntimeError(
+                      "Expected exactly one M0 API cell; "
+                      f"found {len(api_indexes)}."
+                  )
+
+              api_cell = cells[api_indexes[0]]
+              api_source = join_cell_source(api_cell)
+              api_source = api_source.replace("steps: int = 4", "steps: int = 8")
+              api_source = api_source.replace('"max_width": 512', '"max_width": 1024')
+              api_source = api_source.replace('"max_height": 512', '"max_height": 1024')
+              api_source = api_source.replace('"max_steps": 4', '"max_steps": 8')
+              set_cell_source(api_cell, api_source)
+          '''
+
+          if marker not in controller:
+              anchor = "\n\ndef replace_single_assignment("
+              if anchor not in controller:
+                  raise SystemExit("Controller insertion anchor was not found.")
+              controller = controller.replace(anchor, quality_functions + anchor, 1)
+
+          call_anchor = '    replace_single_assignment(cells, "WORKER_API_KEY", repr(worker_key))\n'
+          if "    patch_m0_quality(cells)\n" not in controller:
+              if call_anchor not in controller:
+                  raise SystemExit("Controller quality-call anchor was not found.")
+              controller = controller.replace(
+                  call_anchor,
+                  call_anchor + "    patch_m0_quality(cells)\n",
+                  1,
+              )
+
+          required_anchor = '        "FORCE_RUN_OUTSIDE_SLOT = False",\n'
+          required_lines = (
+              '        "# ABC CREATOR M0 — HIGH QUALITY OVERRIDE",\n'
+              '        "M0_NATIVE_MAX_SIDE = 1024",\n'
+              '        "M0_FIXED_STEPS = 8",\n'
+          )
+          if '        "M0_FIXED_STEPS = 8",\n' not in controller:
+              if required_anchor not in controller:
+                  raise SystemExit("Controller validation anchor was not found.")
+              controller = controller.replace(
+                  required_anchor,
+                  required_anchor + "".join(required_lines),
+                  1,
+              )
+
+          compile(controller, str(controller_path), "exec")
+          controller_path.write_text(controller, encoding="utf-8")
+
+          label_files = [
+              Path("abc-creator-app/components/AnimationCharacterSheetPanel.tsx"),
+              Path("abc-creator-app/components/FashionApparelImagePanel.tsx"),
+              Path("abc-creator-app/components/FoodHospitalityImagePanel.tsx"),
+              Path("abc-creator-app/components/ImageTextToImagePanel.tsx"),
+              Path("abc-creator-app/components/InteriorArchitectureImagePanel.tsx"),
+              Path("abc-creator-app/components/MangaSceneGeneratorPanel.tsx"),
+              Path("abc-creator-app/components/MarketingCampaignImagePanel.tsx"),
+              Path("abc-creator-app/scripts/apply-m0-production-integration.mjs"),
+          ]
+
+          replacements = 0
+          for path in label_files:
+              text = path.read_text(encoding="utf-8")
+              count = text.count("M0 — Z-Image Turbo")
+              if count:
+                  text = text.replace("M0 — Z-Image Turbo", "M0")
+                  path.write_text(text, encoding="utf-8")
+                  replacements += count
+
+          if replacements == 0:
+              print("Visible M0 labels were already clean.")
+          else:
+              print(f"Changed {replacements} visible M0 label occurrence(s).")
+
+          remaining = []
+          for path in label_files:
+              if "M0 — Z-Image Turbo" in path.read_text(encoding="utf-8"):
+                  remaining.append(str(path))
+          if remaining:
+              raise SystemExit("Old visible M0 label remains in: " + ", ".join(remaining))
+
+          updated = controller_path.read_text(encoding="utf-8")
+          for expected in (
+              "# ABC CREATOR M0 — HIGH QUALITY OVERRIDE",
+              "M0_NATIVE_MAX_SIDE = 1024",
+              "M0_FIXED_STEPS = 8",
+              "patch_m0_quality(cells)",
+          ):
+              if expected not in updated:
+                  raise SystemExit("Missing controller marker: " + expected)
+
+          print("M0 quality controller patch validated.")
+          PY
+
+      - name: Validate controller syntax
+        run: python -m py_compile automation/m0_kaggle_controller.py
+
+      - name: Remove this one-time workflow and commit the approved changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/m0-quality-label-upgrade-once.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add automation/m0_kaggle_controller.py abc-creator-app/components abc-creator-app/scripts/apply-m0-production-integration.mjs .github/workflows/m0-quality-label-upgrade-once.yml
+          if git diff --cached --quiet; then
+            echo "No changes were required."
+            exit 0
+          fi
+          git commit -m "Upgrade M0 native quality to 1024px and 8 steps"
+          git push origin HEAD:main
