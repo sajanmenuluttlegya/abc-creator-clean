@@ -31,8 +31,8 @@ jobs:
           controller_path = Path("automation/m0_kaggle_controller.py")
           controller = controller_path.read_text(encoding="utf-8")
 
-          marker = "# ABC CREATOR M0 — HIGH QUALITY OVERRIDE"
-          quality_functions = r'''
+          migration_marker = "# ABC CREATOR M0 — HIGH QUALITY OVERRIDE"
+          quality_functions = r"""
 
           def quality_override_cell() -> str:
               return '''# ============================================================
@@ -48,7 +48,7 @@ jobs:
               M0_FIXED_STEPS = 8
 
               def normalize_size(value):
-                  # Keep the requested pair intact until the aspect-aware wrapper runs.
+                  # Preserve the requested pair until the aspect-aware wrapper runs.
                   return max(384, min(int(value), 4096))
 
               def normalize_steps(_value):
@@ -115,7 +115,9 @@ jobs:
 
               upsert_cell(
                   cells,
-                  match_predicate=lambda source: marker in source,
+                  match_predicate=lambda source: (
+                      "ABC CREATOR M0 — HIGH QUALITY OVERRIDE" in source
+                  ),
                   source=quality_override_cell(),
                   insert_index=model_indexes[0] + 1,
                   label="M0 quality override",
@@ -142,9 +144,9 @@ jobs:
               api_source = api_source.replace('"max_height": 512', '"max_height": 1024')
               api_source = api_source.replace('"max_steps": 4', '"max_steps": 8')
               set_cell_source(api_cell, api_source)
-          '''
+          """
 
-          if marker not in controller:
+          if migration_marker not in controller:
               anchor = "\n\ndef replace_single_assignment("
               if anchor not in controller:
                   raise SystemExit("Controller insertion anchor was not found.")
