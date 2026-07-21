@@ -1,0 +1,4 @@
+  File "/home/runner/work/abc-creator-clean/abc-creator-clean/automation/finalize_count_driven_generators_20260721.py", line 109
+    marker = "];
+             ^
+SyntaxError: unterminated string literal (detected at line 109)
