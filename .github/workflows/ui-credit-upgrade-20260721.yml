@@ -7,6 +7,13 @@ on:
     paths:
       - ".github/workflows/ui-credit-upgrade-20260721.yml"
       - "automation/apply_ui_credit_upgrade_20260721.py"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/ui-credit-upgrade-20260721.yml"
+      - "automation/ui-credit-upgrade-trigger.txt"
+      - "automation/apply_ui_credit_upgrade_20260721.py"
   workflow_dispatch:
 
 permissions:
