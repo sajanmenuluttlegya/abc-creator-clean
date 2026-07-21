@@ -34,7 +34,7 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Correct multiline patch matcher
+      - name: Correct live-file patch matchers
         shell: bash
         run: |
           python - <<'PY'
@@ -58,6 +58,16 @@ jobs:
           script_text = script_text.replace(
               '    elif new_guide not in text:\n        raise RuntimeError("Book title output-guide block not found")',
               '    elif "Produce exactly the selected title_count" not in text:\n        raise RuntimeError("Book title output-guide block not found")',
+              1,
+          )
+          script_text = script_text.replace(
+              'index = text.find("export const publicTools = rawPublicTools.filter")',
+              'index = text.find("export const publicTools")',
+              1,
+          )
+          script_text = script_text.replace(
+              "old = 'export const publicTools = rawPublicTools.filter((tool, index, tools) => tools.findIndex((candidate) => candidate.slug === tool.slug) === index);'",
+              "old = 'export const publicTools: Tool[] = rawPublicTools.filter((tool, index, tools) => tools.findIndex((item) => item.slug === tool.slug) === index);'",
               1,
           )
           script.write_text(script_text, encoding="utf-8")
