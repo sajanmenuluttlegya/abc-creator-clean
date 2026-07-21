@@ -7,6 +7,7 @@ on:
     paths:
       - ".github/workflows/ui-credit-upgrade-20260721.yml"
       - "automation/apply_ui_credit_upgrade_20260721.py"
+      - "automation/apply_ui_credit_finalization_20260721.py"
   pull_request:
     branches:
       - main
@@ -14,6 +15,7 @@ on:
       - ".github/workflows/ui-credit-upgrade-20260721.yml"
       - "automation/ui-credit-upgrade-trigger.txt"
       - "automation/apply_ui_credit_upgrade_20260721.py"
+      - "automation/apply_ui_credit_finalization_20260721.py"
   workflow_dispatch:
 
 permissions:
@@ -89,6 +91,10 @@ jobs:
           echo "status=$status" >> "$GITHUB_OUTPUT"
           exit 0
 
+      - name: Apply final scope and planner corrections
+        if: steps.patch.outputs.status == '0'
+        run: python automation/apply_ui_credit_finalization_20260721.py
+
       - name: Commit exact patch failure diagnostic
         if: steps.patch.outputs.status != '0'
         shell: bash
@@ -146,5 +152,5 @@ jobs:
             echo "No changes were needed."
             exit 0
           fi
-          git commit -m "Upgrade newer tool UI and correct dynamic credits"
+          git commit -m "Finalize newer tool UI scope and credit accuracy"
           git push origin HEAD:main
