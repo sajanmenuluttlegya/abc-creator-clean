@@ -48,6 +48,7 @@ UI verification:
 - Manual text edits are free; AI regeneration remains credit-consuming.
 - Recommended next actions render as an unboxed continuation treatment in the shared output panel.
 - Planner/calendar/roadmap outputs retain requested sections but receive a concise planning guard.
+- Output copy preservation removes only self-promotional heading labels; legitimate Premium product/tier/content wording is preserved.
 
 Retained secondary-control formulas:
 - Custom scene/slide/node/question formulas remain where they represent real workload rather than a depth-floor bug.

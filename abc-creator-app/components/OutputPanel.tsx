@@ -205,7 +205,7 @@ function cleanOutputForDisplay(value: string) {
     }
     if (!skipping) kept.push(line);
   }
-  return kept.join("\n").replace(/^(#{1,6}\s+)(?:ultra[-\s]*)?premium\s+/gim, "$1").replace(/\n{4,}/g, "\n\n\n").trim();
+  return kept.join("\n").replace(/^(#{1,6}\s+)ultra[-\s]*premium\s+/gim, "$1").replace(/^(#{1,6}\s+)premium\s+(output|result|deliverable|canvas|studio)\b/gim, "$1$2").replace(/\n{4,}/g, "\n\n\n").trim();
 }
 
 function splitOutputIntoDeletableBlocks(markdown: string): DeletableOutputBlock[] {
