@@ -113,7 +113,7 @@ jobs:
         working-directory: abc-creator-app
         env:
           NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ci-placeholder-publishable-key
         run: |
           set +e
           npm run build > ../automation/ui-credit-build-failure.log 2>&1
