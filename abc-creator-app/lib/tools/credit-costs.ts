@@ -74,6 +74,7 @@ const REPORT_LENGTH_CREDITS: Array<[string, number]> = [["Premium report", 5], [
 const IMAGE_BRIEF_COUNT_CREDITS: Array<[string, number]> = [["7 images", 3], ["5 images", 2], ["3 images", 2], ["1 image", 1]];
 const VARIATION_COUNT_CREDITS: Array<[string, number]> = [["10 variations", 5], ["5 variations", 2], ["3 variations", 1]];
 const PROMPT_VARIATION_CREDITS: Array<[string, number]> = [["10 variations", 5], ["5 variations", 3], ["3 variations", 2], ["1 variation", 1]];
+const BOOK_TITLE_COUNT_CREDITS: Array<[string, number]> = [["10 titles", 5], ["5 titles", 3], ["3 titles", 2], ["1 title", 1]];
 const WRITING_OUTPUT_LENGTH_CREDITS: Array<[string, number]> = [["Detailed", 5], ["Long", 5], ["Medium", 2], ["Short", 1]];
 const SCRIPT_LENGTH_CREDITS: Array<[string, number]> = [["10 minutes", 5], ["5 minutes", 5], ["2 minutes", 2], ["60 seconds", 1], ["30 seconds", 1]];
 const SLIDE_COUNT_CREDITS: Array<[string, number]> = [["15 slides", 5], ["10 slides", 2], ["8 slides", 2], ["5 slides", 1]];
@@ -146,6 +147,7 @@ export function calculateToolCreditCost(toolSlug: string, inputs: ToolInputs = {
   if (isAnimationTool(toolSlug)) return calculateAnimationToolCreditCost(toolSlug, inputs);
   if (isFilmVideoTool(toolSlug)) return calculateFilmVideoToolCreditCost(toolSlug, inputs);
   if (isScreenwritingTool(toolSlug)) return calculateScreenwritingToolCreditCost(toolSlug, inputs);
+  if (toolSlug === "book-title-generator") return matchCredit(inputs.title_count, BOOK_TITLE_COUNT_CREDITS, 1);
   if (EXACT_VARIATION_TOOLS.has(toolSlug)) return calculateExactVariationCredits(inputs.variation_count);
   if (isPromptVariationTool(toolSlug)) return calculatePromptVariationCredits(inputs.prompt_variations);
   if (toolSlug === "chapter-writer") return matchCredit(inputs.chapter_length, CHAPTER_LENGTH_CREDITS, 9);

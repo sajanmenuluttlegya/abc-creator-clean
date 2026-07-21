@@ -63,7 +63,7 @@ export function calculateEducationLearningToolCreditCost(toolSlug: string, input
   const base = EDUCATION_LEARNING_TOOL_CREDIT_COSTS[toolSlug] ?? 1;
   if (!EDUCATION_LEARNING_TOOL_SLUGS.includes(toolSlug)) return 1;
 
-  let credits = inputs.output_depth ? Math.max(base, matchCredit(inputs.output_depth, DEPTH_CREDITS, base)) : base;
+  let credits = inputs.output_depth ? matchCredit(inputs.output_depth, DEPTH_CREDITS, base) : base;
   if (["learning-objectives-success-criteria-generator", "classroom-activity-engagement-designer", "scaffold-worked-example-generator"].includes(toolSlug)) {
     credits = Math.max(credits, matchCredit(inputs.version_count, VERSION_CREDITS, base));
   }

@@ -17,7 +17,7 @@ function matchCredit(value: string | undefined, table: Array<[string, number]>, 
 export function calculateSalesCRMRevOpsToolCreditCost(toolSlug: string, inputs: Record<string, string> = {}) {
   const base = SALES_CRM_REVOPS_TOOL_CREDIT_COSTS[toolSlug] ?? 1;
   if (!SALES_CRM_REVOPS_TOOL_SLUGS.includes(toolSlug)) return 1;
-  let credits = inputs.output_depth ? Math.max(base, matchCredit(inputs.output_depth, DEPTH_CREDITS, base)) : base;
+  let credits = inputs.output_depth ? matchCredit(inputs.output_depth, DEPTH_CREDITS, base) : base;
   if (["lead-to-revenue-funnel-map-generator", "opportunity-stage-decision-map-generator", "account-stakeholder-influence-map-generator", "forecast-pipeline-waterfall-map-generator"].includes(toolSlug)) credits = Math.max(credits, matchCredit(inputs.node_count, NODE_CREDITS, base));
   return credits;
 }

@@ -17,7 +17,7 @@ function matchCredit(value: string | undefined, table: Array<[string, number]>, 
 export function calculateHumanResourcesPeopleToolCreditCost(toolSlug: string, inputs: Record<string, string> = {}) {
   const base = HUMAN_RESOURCES_PEOPLE_TOOL_CREDIT_COSTS[toolSlug] ?? 1;
   if (!HUMAN_RESOURCES_PEOPLE_TOOL_SLUGS.includes(toolSlug)) return 1;
-  let credits = inputs.output_depth ? Math.max(base, matchCredit(inputs.output_depth, DEPTH_CREDITS, base)) : base;
+  let credits = inputs.output_depth ? matchCredit(inputs.output_depth, DEPTH_CREDITS, base) : base;
   if (["organization-structure-accountability-map-generator", "employee-lifecycle-people-process-map-generator", "career-path-competency-progression-map-generator", "talent-succession-pipeline-map-generator"].includes(toolSlug)) credits = Math.max(credits, matchCredit(inputs.node_count, NODE_CREDITS, base));
   return credits;
 }

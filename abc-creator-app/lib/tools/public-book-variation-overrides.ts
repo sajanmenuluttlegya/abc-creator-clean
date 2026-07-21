@@ -66,4 +66,24 @@ export const bookVariationOverrideTools: BookTool[] = [
       { id: "avoid", label: "Avoid", type: "textarea", placeholder: "Optional: visual clichés, wrong character details, spoilers, text problems, style issues.", required: false },
     ],
   },
+  {
+    id: "book-title-generator",
+    slug: "book-title-generator",
+    name: "Book Title Generator",
+    description: "Generate an exact number of book-title options with concise supporting notes.",
+    icon: "book",
+    detailEmoji: "🏷️",
+    category: "Book Tools",
+    displayCreditCost: 1,
+    outputType: "text",
+    aliases: ["novel-title-generator", "book-name-generator"],
+    nextActions: [{ label: "Build a book outline", href: "/tools/book-outline-generator", description: "Turn the selected title direction into a structured book plan." }],
+    inputs: [
+      ...commonBookInputs,
+      { id: "title_count", label: "Number of Titles", type: "select", required: true, options: ["1 title (1 credit)", "3 titles (2 credits)", "5 titles (3 credits)", "10 titles (5 credits)"] },
+      { id: "book_brief", label: "Book Brief", type: "textarea", placeholder: "Describe the plot, topic, themes, audience, world, tone, and market angle.", required: true },
+      { id: "title_style", label: "Title Style", type: "select", required: true, options: ["Commercial", "Literary", "Fantasy", "Thriller", "Romance", "Children's", "Non-fiction authority", "Short and punchy", "Poetic", "Mixed"] },
+    ],
+  },
+
 ];

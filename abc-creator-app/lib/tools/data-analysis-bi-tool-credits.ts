@@ -62,7 +62,7 @@ export function calculateDataAnalysisBIToolCreditCost(toolSlug: string, inputs: 
   const base = DATA_ANALYSIS_BI_TOOL_CREDIT_COSTS[toolSlug] ?? 1;
   if (!DATA_ANALYSIS_BI_TOOL_SLUGS.includes(toolSlug)) return 1;
 
-  let credits = inputs.output_depth ? Math.max(base, matchCredit(inputs.output_depth, DEPTH_CREDITS, base)) : base;
+  let credits = inputs.output_depth ? matchCredit(inputs.output_depth, DEPTH_CREDITS, base) : base;
   if (["data-analysis-brief-generator", "dashboard-story-layout-planner"].includes(toolSlug)) {
     credits = Math.max(credits, matchCredit(inputs.version_count, VERSION_CREDITS, base));
   }

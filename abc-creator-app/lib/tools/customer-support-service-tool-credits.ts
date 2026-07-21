@@ -17,7 +17,7 @@ function matchCredit(value: string | undefined, table: Array<[string, number]>, 
 export function calculateCustomerSupportServiceToolCreditCost(toolSlug: string, inputs: Record<string, string> = {}) {
   const base = CUSTOMER_SUPPORT_SERVICE_TOOL_CREDIT_COSTS[toolSlug] ?? 1;
   if (!CUSTOMER_SUPPORT_SERVICE_TOOL_SLUGS.includes(toolSlug)) return 1;
-  let credits = inputs.output_depth ? Math.max(base, matchCredit(inputs.output_depth, DEPTH_CREDITS, base)) : base;
+  let credits = inputs.output_depth ? matchCredit(inputs.output_depth, DEPTH_CREDITS, base) : base;
   if (["service-request-escalation-map-generator", "customer-support-journey-service-blueprint-generator", "ticket-taxonomy-routing-map-generator", "incident-communication-resolution-map-generator"].includes(toolSlug)) credits = Math.max(credits, matchCredit(inputs.node_count, NODE_CREDITS, base));
   return credits;
 }

@@ -48,7 +48,7 @@ function countSelectionCredits(selection: string | undefined, customValue: strin
 }
 
 function depthCredits(value: string | undefined, fallback: number) {
-  return Math.max(fallback, matchCredit(value, DEPTH_CREDITS, fallback));
+  return value ? matchCredit(value, DEPTH_CREDITS, fallback) : fallback;
 }
 
 export function calculateAnimationToolCreditCost(toolSlug: string, inputs: Record<string, string> = {}) {

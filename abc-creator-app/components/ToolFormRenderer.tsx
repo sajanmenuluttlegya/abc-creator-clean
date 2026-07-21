@@ -469,7 +469,7 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
                 </div>
               ) : null}
             </div>
-            <button type="submit" disabled={isLoading} className="mt-8 flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-3 font-semibold text-white shadow-lg shadow-purple-500/20 transition-all duration-200 hover:from-indigo-700 hover:to-purple-700 hover:shadow-purple-500/40 disabled:from-indigo-600/50 disabled:to-purple-600/50">
+            <button type="submit" data-abc-generate-button="true" disabled={isLoading} className="abc-flow-generate-button mt-8 flex w-full items-center justify-center gap-2 rounded-full px-6 py-3 font-semibold text-white shadow-lg shadow-purple-500/20 transition-all duration-200 hover:shadow-purple-500/40 disabled:opacity-55">
               {isLoading ? <><span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />Generating...</> : <><ThemeIcon name="spark" size="xs" />Generate — {creditCost} credits</>}
             </button>
           </form>

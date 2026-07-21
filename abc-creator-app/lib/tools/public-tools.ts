@@ -247,7 +247,24 @@ const rawPublicTools: Tool[] = [
   },
 ];
 
-export const publicTools: Tool[] = rawPublicTools.filter((tool, index, tools) => tools.findIndex((item) => item.slug === tool.slug) === index);
+
+function nextActionScore(source: Tool, candidate: Tool) {
+  if (source.slug === candidate.slug || source.category !== candidate.category) return -1000;
+  const current = `${source.name} ${source.slug}`.toLowerCase(); const next = `${candidate.name} ${candidate.slug}`.toLowerCase(); let score = 0;
+  if (/(idea|name|title|brief|prompt|question|research)/.test(current) && /(outline|planner|strategy|roadmap|framework|brief)/.test(next)) score += 9;
+  if (/(plan|planner|outline|strategy|roadmap|framework|brief)/.test(current) && /(writer|generator|builder|creator|draft|content)/.test(next)) score += 9;
+  if (/(writer|generator|builder|creator|draft|copy|content)/.test(current) && /(analy|audit|checker|review|optimizer|assessment)/.test(next)) score += 8;
+  if (/(analy|audit|checker|review|assessment|diagnostic)/.test(current) && /(plan|planner|strategy|roadmap|optimizer|remediation|action)/.test(next)) score += 9;
+  if (/generator|planner|analyzer|auditor|builder|writer|optimizer/.test(next)) score += 2; return score;
+}
+function inferRecommendedAction(tool: Tool, tools: Tool[]): RecommendedNextAction[] | undefined {
+  if (tool.category === "Blog Workflow" || tool.outputType !== "text") return undefined;
+  const best = tools.map((candidate) => ({ candidate, score: nextActionScore(tool, candidate) })).filter((item) => item.score > 2).sort((a,b) => b.score-a.score || a.candidate.name.localeCompare(b.candidate.name))[0]?.candidate;
+  return best ? [{ label: best.name, href: `/tools/${best.slug}`, description: `Continue this workflow with ${best.name.toLowerCase()}.` }] : undefined;
+}
+
+const deduplicatedPublicTools = rawPublicTools.filter((tool, index, tools) => tools.findIndex((candidate) => candidate.slug === tool.slug) === index);
+export const publicTools = deduplicatedPublicTools.map((tool) => tool.nextActions?.length ? tool : { ...tool, nextActions: inferRecommendedAction(tool, deduplicatedPublicTools) });
 
 export function getToolBySlug(slug: string): Tool | undefined {
   return publicTools.find((tool) => tool.slug === slug || tool.aliases?.includes(slug));

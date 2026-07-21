@@ -18,7 +18,7 @@ function matchCredit(value: string | undefined, table: Array<[string, number]>, 
 export function calculateFinanceAccountingToolCreditCost(toolSlug: string, inputs: Record<string, string> = {}) {
   const base = FINANCE_ACCOUNTING_TOOL_CREDIT_COSTS[toolSlug] ?? 1;
   if (!FINANCE_ACCOUNTING_TOOL_SLUGS.includes(toolSlug)) return 1;
-  let credits = inputs.output_depth ? Math.max(base, matchCredit(inputs.output_depth, DEPTH_CREDITS, base)) : base;
+  let credits = inputs.output_depth ? matchCredit(inputs.output_depth, DEPTH_CREDITS, base) : base;
   if (["profitability-unit-economics-driver-tree-generator", "financial-close-reporting-process-map-generator"].includes(toolSlug)) credits = Math.max(credits, matchCredit(inputs.node_count, NODE_CREDITS, base));
   if (["cash-flow-runway-dashboard-generator", "budget-actual-variance-chart-pack-generator"].includes(toolSlug)) credits = Math.max(credits, matchCredit(inputs.chart_count, CHART_CREDITS, base));
   return credits;

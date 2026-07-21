@@ -61,7 +61,7 @@ function matchCredit(value: string | undefined, table: Array<[string, number]>, 
 
 function depthCredit(inputs: Record<string, string>, fallback: number) {
   const selected = inputs.output_depth || inputs.analysis_depth || inputs.plan_depth || inputs.audit_depth || inputs.coaching_depth || inputs.proposal_depth || inputs.scope_depth || inputs.pack_depth || inputs.case_depth || inputs.comparison_depth || inputs.preparation_depth || inputs.rewrite_depth || inputs.optimization_depth;
-  return Math.max(fallback, matchCredit(selected, DEPTH_CREDITS, fallback));
+  return selected ? matchCredit(selected, DEPTH_CREDITS, fallback) : fallback;
 }
 
 export function calculateCareerProfessionalToolCreditCost(toolSlug: string, inputs: Record<string, string> = {}) {
@@ -72,16 +72,16 @@ export function calculateCareerProfessionalToolCreditCost(toolSlug: string, inpu
     case "star-story-builder":
     case "interview-follow-up-generator":
     case "resignation-letter-generator":
-      return Math.max(base, matchCredit(inputs.variation_count, VERSION_CREDITS, base));
+      return inputs.variation_count ? matchCredit(inputs.variation_count, VERSION_CREDITS, base) : base;
     case "interview-question-generator":
     case "client-discovery-questionnaire-generator":
-      return Math.max(base, matchCredit(inputs.question_count, QUESTION_CREDITS, base));
+      return inputs.question_count ? matchCredit(inputs.question_count, QUESTION_CREDITS, base) : base;
     case "achievement-bullet-generator":
-      return Math.max(base, matchCredit(inputs.bullet_count, BULLET_CREDITS, base));
+      return inputs.bullet_count ? matchCredit(inputs.bullet_count, BULLET_CREDITS, base) : base;
     case "mock-interview-preparation-pack-generator":
       return Math.max(depthCredit(inputs, base), matchCredit(inputs.interview_duration, INTERVIEW_DURATION_CREDITS, base));
     case "manager-one-on-one-prep-generator":
-      return Math.max(base, matchCredit(inputs.meeting_duration, MEETING_DURATION_CREDITS, base));
+      return inputs.meeting_duration ? matchCredit(inputs.meeting_duration, MEETING_DURATION_CREDITS, base) : base;
     case "ats-resume-generator":
     case "resume-rewriter-humanizer":
     case "job-tailored-resume-optimizer":

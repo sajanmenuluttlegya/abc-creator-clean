@@ -172,7 +172,7 @@ function PremiumMenu<T extends string>({ label, valueLabel, options, disabled, o
 
   return (
     <div ref={rootRef} className="relative inline-flex">
-      <button ref={buttonRef} type="button" disabled={disabled} onClick={() => setOpen((current) => !current)} className="inline-flex min-h-10 items-center gap-3 rounded-full border border-purple-300/30 bg-white/[0.055] px-4 py-2 text-sm font-bold text-white shadow-lg shadow-purple-950/20 backdrop-blur-xl transition hover:border-purple-200/50 hover:bg-white/[0.11] disabled:cursor-not-allowed disabled:opacity-60">
+      <button ref={buttonRef} type="button" data-abc-download-control={label === "Download" ? "true" : undefined} disabled={disabled} onClick={() => setOpen((current) => !current)} className="inline-flex min-h-10 items-center gap-3 rounded-full border border-purple-300/30 bg-white/[0.055] px-4 py-2 text-sm font-bold text-white shadow-lg shadow-purple-950/20 backdrop-blur-xl transition hover:border-purple-200/50 hover:bg-white/[0.11] disabled:cursor-not-allowed disabled:opacity-60">
         <span>{valueLabel || label}</span>
         <span className={`h-2.5 w-2.5 border-b-2 border-r-2 border-purple-100/85 transition-transform ${open ? "-rotate-135" : "rotate-45"}`} />
       </button>
@@ -205,7 +205,7 @@ function cleanOutputForDisplay(value: string) {
     }
     if (!skipping) kept.push(line);
   }
-  return kept.join("\n").replace(/\n{4,}/g, "\n\n\n").trim();
+  return kept.join("\n").replace(/^(#{1,6}\s+)(?:ultra[-\s]*)?premium\s+/gim, "$1").replace(/\n{4,}/g, "\n\n\n").trim();
 }
 
 function splitOutputIntoDeletableBlocks(markdown: string): DeletableOutputBlock[] {
@@ -281,7 +281,7 @@ function compactText(value: string, maxLength: number) {
 }
 
 function defaultRegenerateInstruction(sectionText: string) {
-  return `Rewrite this section to be more premium and professional while preserving the same meaning and Markdown heading. If this is book prose, write like a professional author, preserve canon, keep natural paragraphing, and never sound AI-generated.\n\n${sectionText}`;
+  return `Rewrite this section to be clearer, more precise, and professional while preserving the same meaning and Markdown heading. If this is book prose, write like a professional author, preserve canon, keep natural paragraphing, and never sound AI-generated.\n\n${sectionText}`;
 }
 
 function defaultSideImagePrompt(sectionText: string, inputs: Record<string, string>, toolSlug: string) {
@@ -331,6 +331,9 @@ export function OutputPanel({ isLoading, output, recommendedNextActions = [], do
   const [downloadError, setDownloadError] = useState("");
   const [deletedBlockIds, setDeletedBlockIds] = useState<Set<string>>(() => new Set());
   const [blockOverrides, setBlockOverrides] = useState<Record<string, string>>({});
+  const [previousBlockOverrides, setPreviousBlockOverrides] = useState<Record<string, string | null>>({});
+  const [activeEditBlockId, setActiveEditBlockId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState("");
   const [activeRegenerateBlockId, setActiveRegenerateBlockId] = useState<string | null>(null);
   const [regenerateInstruction, setRegenerateInstruction] = useState("");
   const [regeneratingBlockId, setRegeneratingBlockId] = useState<string | null>(null);
@@ -364,6 +367,9 @@ export function OutputPanel({ isLoading, output, recommendedNextActions = [], do
   useEffect(() => {
     setDeletedBlockIds(new Set());
     setBlockOverrides({});
+    setPreviousBlockOverrides({});
+    setActiveEditBlockId(null);
+    setEditDraft("");
     setActiveRegenerateBlockId(null);
     setRegenerateInstruction("");
     setRegeneratingBlockId(null);
@@ -466,6 +472,24 @@ export function OutputPanel({ isLoading, output, recommendedNextActions = [], do
       setDownloadError(error instanceof Error ? `Download failed: ${error.message}` : "Download failed. Please try again.");
       setIsDownloading(false);
     }
+  };
+
+  const openManualEdit = (block: DeletableOutputBlock) => {
+    setActiveRegenerateBlockId(null); setActiveImageBlockId(null); setActiveEditBlockId(block.id);
+    setEditDraft(blockOverrides[block.id] ?? block.content); setSectionActionMessage("");
+  };
+  const saveManualEdit = (block: DeletableOutputBlock) => {
+    const next = editDraft.trim(); if (!next) { setSectionActionMessage("Edited text cannot be empty."); return; }
+    const current = blockOverrides[block.id] ?? block.content;
+    setPreviousBlockOverrides((items) => ({ ...items, [block.id]: current }));
+    setBlockOverrides((items) => ({ ...items, [block.id]: next }));
+    setActiveEditBlockId(null); setEditDraft(""); setSectionActionMessage("Manual edit saved. No credits were used.");
+  };
+  const undoManualEdit = (blockId: string) => {
+    const previous = previousBlockOverrides[blockId]; if (previous === undefined) return;
+    setBlockOverrides((items) => ({ ...items, [blockId]: previous || "" }));
+    setPreviousBlockOverrides((items) => { const next = { ...items }; delete next[blockId]; return next; });
+    setSectionActionMessage("Manual edit undone.");
   };
 
   const deleteOutputBlock = (blockId: string) => setDeletedBlockIds((current) => new Set([...current, blockId]));
@@ -679,17 +703,26 @@ export function OutputPanel({ isLoading, output, recommendedNextActions = [], do
               return (
                 <div key={block.id} className="group relative rounded-2xl border border-transparent p-1 transition hover:border-cyan-300/20 hover:bg-white/[0.015]">
                   <div data-export-ignore="true" className="absolute right-2 top-2 z-10 flex flex-wrap justify-end gap-2 opacity-0 transition group-hover:opacity-100">
+                    <button type="button" aria-label="Edit this output section manually" title="Edit this output section manually — no credits" onClick={() => openManualEdit(block)} className="inline-flex h-8 items-center justify-center rounded-full border border-white/20 bg-white/[0.07] px-3 text-xs font-semibold text-white">Edit</button>
+                    {previousBlockOverrides[block.id] !== undefined ? <button type="button" onClick={() => undoManualEdit(block.id)} className="inline-flex h-8 items-center justify-center rounded-full border border-white/15 bg-white/[0.045] px-3 text-xs font-semibold text-slate-200">Undo edit</button> : null}
                     <button type="button" aria-label="Regenerate this output section" title="Regenerate this output section" onClick={() => openRegeneratePanel(block)} className="inline-flex h-8 items-center justify-center rounded-full border border-cyan-300/30 bg-cyan-500/15 px-3 text-xs font-semibold text-cyan-100 shadow-lg shadow-cyan-950/20 transition hover:bg-cyan-500/25">Regenerate</button>
                     {canGenerateSectionImage ? <button type="button" aria-label="Add image beside this output section" title="Add image to this output section" onClick={() => openImagePanel(block)} className="inline-flex h-8 items-center justify-center rounded-full border border-emerald-300/30 bg-emerald-500/15 px-3 text-xs font-semibold text-emerald-100 shadow-lg shadow-emerald-950/20 transition hover:bg-emerald-500/25">Add image</button> : null}
                     <button type="button" aria-label="Delete this output section" title="Delete this output section" onClick={() => deleteOutputBlock(block.id)} className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-red-300/30 bg-red-500/15 text-sm text-red-100 shadow-lg shadow-red-950/20 transition hover:bg-red-500/25">🗑</button>
                   </div>
+                  {activeEditBlockId === block.id ? (
+                    <div data-export-ignore="true" className="mb-4 border-y border-white/10 bg-white/[0.025] px-1 py-5 pr-4 pt-12">
+                      <div className="flex items-center justify-between gap-3"><label className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-300">Edit text manually</label><span className="text-xs text-slate-500">Free — no credits</span></div>
+                      <textarea value={editDraft} onChange={(event) => setEditDraft(event.currentTarget.value)} className="mt-3 min-h-44 w-full resize-y rounded-2xl border border-white/15 bg-black/35 px-4 py-3 text-sm leading-7 text-white" />
+                      <div className="mt-3 flex gap-2"><button type="button" onClick={() => saveManualEdit(block)} className="rounded-full border border-purple-300/35 bg-purple-500/15 px-4 py-2 text-xs font-semibold text-purple-100">Save edit</button><button type="button" onClick={() => { setActiveEditBlockId(null); setEditDraft(""); }} className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-slate-200">Cancel</button></div>
+                    </div>
+                  ) : null}
                   {activeRegenerateBlockId === block.id ? (
                     <div data-export-ignore="true" className="mb-4 rounded-2xl border border-cyan-300/20 bg-cyan-500/10 p-4 pr-4 pt-12">
                       <label className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-200">Regenerate this section</label>
                       <textarea value={regenerateInstruction} onChange={(event) => setRegenerateInstruction(event.currentTarget.value)} className="mt-3 h-28 w-full resize-none rounded-2xl border border-cyan-300/20 bg-black/40 px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500" />
                       <div className="mt-3 flex flex-wrap gap-2">
-                        <button type="button" onClick={() => setRegenerateInstruction("Make this section shorter, sharper, and more premium while preserving the meaning and Markdown heading. For book prose, preserve canon and natural author voice.")} className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-200">Shorter</button>
-                        <button type="button" onClick={() => setRegenerateInstruction("Make this section longer, richer, more author-level, and more premium while preserving the meaning, canon, and Markdown heading.")} className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-200">Longer</button>
+                        <button type="button" onClick={() => setRegenerateInstruction("Make this section shorter and sharper while preserving the meaning and Markdown heading. For book prose, preserve canon and natural author voice.")} className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-200">Shorter</button>
+                        <button type="button" onClick={() => setRegenerateInstruction("Make this section richer and more complete while preserving the meaning, canon, and Markdown heading.")} className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-200">Longer</button>
                         <button type="button" onClick={() => void regenerateOutputBlock(block)} disabled={regeneratingBlockId === block.id} className="rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 px-4 py-1.5 text-xs font-semibold text-white disabled:opacity-60">{regeneratingBlockId === block.id ? "Regenerating..." : "Apply regenerate"}</button>
                         <button type="button" onClick={() => setActiveRegenerateBlockId(null)} disabled={regeneratingBlockId === block.id} className="rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-semibold text-slate-200">Cancel</button>
                       </div>
@@ -715,7 +748,7 @@ export function OutputPanel({ isLoading, output, recommendedNextActions = [], do
             }) : <div className="rounded-2xl border border-red-300/20 bg-red-500/10 p-5 text-sm text-red-100">All output sections were deleted. Run the tool again to regenerate the output.</div>}
             {isStreamingVisible ? <span className="mt-2 inline-block h-5 w-2 animate-pulse rounded-sm bg-purple-300 align-middle" /> : null}
           </div>
-          {showNextActions ? <div className="mt-5 rounded-2xl border border-purple-500/20 bg-purple-500/10 p-5"><h3 className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-purple-200">Recommended next actions</h3><div className="space-y-3">{recommendedNextActions.map((action) => <Link key={`${action.href}-${action.label}`} href={action.href} className="block rounded-xl border border-purple-400/20 bg-black/35 p-4 transition hover:border-purple-300/50 hover:bg-purple-500/10"><div className="text-sm font-semibold text-white">{action.label}</div><p className="mt-1 text-xs leading-5 text-gray-400">{action.description}</p></Link>)}</div></div> : null}
+          {showNextActions ? <div className="mt-7 border-t border-white/10 pt-5"><h3 className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Continue with</h3><div className="divide-y divide-white/[0.07]">{recommendedNextActions.map((action) => <Link key={`${action.href}-${action.label}`} href={action.href} className="group/action flex items-center justify-between gap-5 py-4"><div><div className="text-sm font-semibold text-white group-hover/action:text-purple-200">{action.label}</div><p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500">{action.description}</p></div><span className="text-lg text-purple-300 transition-transform group-hover/action:translate-x-1">→</span></Link>)}</div></div> : null}
         </>
       ) : isLoading ? <div className="flex items-center gap-3 rounded-2xl border border-purple-500/20 bg-white/5 p-5 text-purple-200"><div className="h-5 w-5 animate-spin rounded-full border-2 border-purple-400 border-t-transparent" /><p>Generating...</p></div> : <div className="rounded-2xl border border-purple-500/15 bg-black/70 p-6 text-gray-400">Your generated result will appear here. Text tools can be copied or downloaded from this panel.</div>}
     </div>

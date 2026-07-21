@@ -51,7 +51,7 @@ function matchCredit(value: string | undefined, table: Array<[string, number]>, 
 }
 
 function depthCredit(value: string | undefined, fallback: number) {
-  return Math.max(fallback, matchCredit(value, DEPTH_CREDITS, fallback));
+  return value ? matchCredit(value, DEPTH_CREDITS, fallback) : fallback;
 }
 
 export function calculateInteriorArchitectureToolCreditCost(toolSlug: string, inputs: Record<string, string> = {}) {

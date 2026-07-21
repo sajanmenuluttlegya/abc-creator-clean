@@ -54,10 +54,21 @@ import { PRESENTATION_PITCH_VISUAL_TOOL_SLUGS } from "@/lib/tools/public-present
 import { POSTER_PROMOTIONAL_IMAGE_TOOL_SLUGS } from "@/lib/tools/public-poster-promotional-tools";
 import { getToolBySlug } from "@/lib/tools/public-tools";
 
+const MODERN_UI_CATEGORIES = new Set([
+  "Personal Productivity Planning Tools", "Career / Professional Tools", "Interior / Architecture Tools", "Interior Architecture Tools",
+  "Food / Hospitality Creator Tools", "Food / Hospitality Tools", "Fashion / Apparel Creator Tools", "Fashion / Apparel Tools",
+  "Marketing Campaign Tools", "Research / Knowledge Tools", "Education / Learning Tools", "Data Analysis / Business Intelligence Tools",
+  "Finance / Accounting Tools", "Legal / Compliance Tools", "Customer Support / Service Operations Tools",
+  "Sales / CRM / Revenue Operations Tools", "HR / People Operations Tools", "Cybersecurity / IT Operations Tools",
+  "Presentation / Pitch Creator Tools", "Poster / Promotional Design Tools",
+]);
+
+
 export default function DynamicToolPage() {
   const params = useParams();
   const slug = params?.slug as string;
   const tool = getToolBySlug(slug);
+  const useModernToolUI = Boolean(tool && MODERN_UI_CATEGORIES.has(tool.category));
 
   if (!tool) {
     return (
@@ -109,7 +120,7 @@ export default function DynamicToolPage() {
         </div>
       </div>
 
-      <section className="mx-auto max-w-[1500px] px-6 pb-12">
+      <section className={`mx-auto max-w-[1500px] px-6 pb-12 ${useModernToolUI ? "abc-modern-tool-ui" : ""}`}> 
         <div className="mb-12">
           <div className="mb-6 flex items-center gap-6">
             <span className="text-5xl leading-none" aria-hidden="true">{tool.detailEmoji}</span>

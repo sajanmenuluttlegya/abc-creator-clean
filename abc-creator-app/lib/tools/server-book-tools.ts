@@ -96,11 +96,11 @@ Then return: # Premium Book Concepts. Scale concept count and depth by output_le
   },
   "book-title-generator": {
     creditCost: 1,
-    requiredInputs: [...commonRequired, outputLengthRequired, { id: "book_brief", label: "Book brief", required: true, minLength: 10, maxLength: 9000 }, { id: "title_style", label: "Title style", required: true, minLength: 2, maxLength: 120 }],
+    requiredInputs: [...commonRequired, { id: "title_count", label: "Number of titles", required: true, minLength: 2, maxLength: 80 }, { id: "book_brief", label: "Book brief", required: true, minLength: 10, maxLength: 9000 }, { id: "title_style", label: "Title style", required: true, minLength: 2, maxLength: 120 }],
     system: `You are ABC Creator's premium book title strategist.${bookSystem}`,
     outputGuide: `${titlePageGuide}
 
-Return: # Book Title Options. Scale title count by output_length: Compact = 10 titles, Standard = 20 titles, Long = 40 titles, Premium deep = 60 titles plus deeper subtitle, series, tagline, positioning, reader-promise, and shortlist notes. Include ## Title Strategy, ## Premium Titles, ## Subtitle Options, ## Series Title Options, ## Taglines, ## Best Picks by Reader Promise, and ## Verify Before Publishing. Do not claim availability.`
+Return # Book Title Options. Produce exactly the selected title_count: 1, 3, 5, or 10 title options—never extra titles. Keep the response focused. For each title include one concise rationale and, only when useful, one subtitle or series-line suggestion. End with a short Best Fit note and a Verify Availability reminder. Do not claim title, domain, trademark, or marketplace availability.`
   },
   "book-bible-generator": {
     creditCost: 5,
