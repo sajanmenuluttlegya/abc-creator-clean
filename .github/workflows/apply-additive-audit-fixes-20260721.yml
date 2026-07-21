@@ -76,3 +76,5 @@ jobs:
           fi
           git commit -m 'Restore Blog scope and complete additive audit fixes'
           git push origin HEAD:main
+
+# Trigger marker: 2026-07-21 additive repair validation
