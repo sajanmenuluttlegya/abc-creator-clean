@@ -1,0 +1,62 @@
+name: M0 Exact Resolution and M1 Credits Once
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/m0-exact-resolution-m1-credits-once.yml"
+      - "automation/apply_m0_exact_native_resolution_and_m1_credits_once.py"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Apply only the approved M0 resolution and credit changes
+        run: python automation/apply_m0_exact_native_resolution_and_m1_credits_once.py
+
+      - name: Validate Python controller syntax
+        run: python -m py_compile automation/m0_kaggle_controller.py
+
+      - name: Install app dependencies
+        working-directory: abc-creator-app
+        run: npm ci --no-audit --no-fund
+
+      - name: Build the production app
+        working-directory: abc-creator-app
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: build-placeholder
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+          SUPABASE_SERVICE_ROLE_KEY: build-placeholder
+          M0_WORKER_API_KEY: build-placeholder-worker-key
+          M0_ALLOWED_WORKERS: m0-cinefax,m0-steverichards77,m0-ashstizhard,m0-dpstards,m0-iitmania,m0-assskr
+          M0_ALLOWED_TUNNEL_SUFFIXES: .trycloudflare.com
+        run: npm run build
+
+      - name: Remove one-time patch files and commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f automation/apply_m0_exact_native_resolution_and_m1_credits_once.py
+          rm -f .github/workflows/m0-exact-resolution-m1-credits-once.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes were required."
+            exit 0
+          fi
+          git commit -m "Use exact M0 outputs without resizing and match M1 credits"
+          git push origin HEAD:main
