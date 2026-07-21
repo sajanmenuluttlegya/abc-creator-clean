@@ -3,7 +3,7 @@ name: Apply additive audit fixes
 on:
   push:
     branches:
-      - fix/restore-blog-additive-audit-20260721
+      - main
     paths:
       - automation/apply_additive_audit_fixes_20260721.py
       - .github/workflows/apply-additive-audit-fixes-20260721.yml
@@ -18,10 +18,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - name: Check out branch
+      - name: Check out main
         uses: actions/checkout@v4
         with:
-          ref: fix/restore-blog-additive-audit-20260721
+          ref: main
           fetch-depth: 0
 
       - name: Set up Python
@@ -75,4 +75,4 @@ jobs:
             exit 0
           fi
           git commit -m 'Restore Blog scope and complete additive audit fixes'
-          git push origin HEAD:fix/restore-blog-additive-audit-20260721
+          git push origin HEAD:main
