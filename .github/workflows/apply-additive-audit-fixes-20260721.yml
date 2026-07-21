@@ -7,6 +7,12 @@ on:
     paths:
       - automation/apply_additive_audit_fixes_20260721.py
       - .github/workflows/apply-additive-audit-fixes-20260721.yml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - automation/apply_additive_audit_fixes_20260721.py
+      - .github/workflows/apply-additive-audit-fixes-20260721.yml
   workflow_dispatch:
 
 permissions:
@@ -16,11 +22,13 @@ jobs:
   apply-and-validate:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      TARGET_BRANCH: ${{ github.event.pull_request.head.ref || 'main' }}
     steps:
-      - name: Check out main
+      - name: Check out target branch
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ env.TARGET_BRANCH }}
           fetch-depth: 0
 
       - name: Set up Python
@@ -48,7 +56,7 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add automation/additive-audit-fix-run.log
           git commit -m 'Record additive audit fixer failure'
-          git push origin HEAD:main
+          git push origin "HEAD:${TARGET_BRANCH}"
 
       - name: Stop after patch failure
         if: steps.patch.outputs.status != '0'
@@ -102,4 +110,4 @@ jobs:
             exit 0
           fi
           git commit -m 'Restore Blog scope and complete additive audit fixes'
-          git push origin HEAD:main
+          git push origin "HEAD:${TARGET_BRANCH}"
