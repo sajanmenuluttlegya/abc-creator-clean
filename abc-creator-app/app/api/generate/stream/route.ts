@@ -84,6 +84,21 @@ function buildArticleStructureInstructions(toolSlug: string) {
   return `\n\nMandatory article structure guard:\n- Use real Markdown headings, never plain standalone section labels.\n- Start with exactly one # H1 article title.\n- Use ## H2 for major sections and ### H3 for subsections.\n- Do not use bold text as a fake heading.\n- Do not output bare labels like Introduction, Conclusion, FAQ, Framework, Strategy, or Overview without ## or ###.\n- Tables must be valid GitHub-flavored Markdown tables with a header row, separator row, and complete body rows.\n- Do not output broken tables, half-empty rows, huge unreadable cells, or paragraph text pretending to be a table.\n- Keep all tables concise, useful, aligned with the section, and professional.`;
 }
 
+
+function buildConcisePlanningInstructions(toolSlug: string) {
+  const normalized = toolSlug.toLowerCase();
+  if (!/(planner|planning|calendar|roadmap)/.test(normalized)) return "";
+
+  return `
+
+Concise planning guard:
+- Preserve every requested decision-critical section, phase, risk, milestone, and action.
+- Keep each section compact: one short paragraph or 1–4 specific bullets unless a table is clearer.
+- Use compact tables for timelines, phases, risks, owners, dependencies, and metrics.
+- Remove repeated summaries, generic motivation, filler introductions, and duplicated advice.
+- Be concise and easy to scan while remaining detailed, executable, and specific to the supplied evidence.`;
+}
+
 function validateCalendarCustomPostCount(toolSlug: string, inputs: Record<string, string>) {
   if (toolSlug !== "blog-content-calendar") return null;
   if (inputs.posting_frequency !== CALENDAR_CUSTOM_FREQUENCY_OPTION) return null;
@@ -445,6 +460,7 @@ export async function POST(req: NextRequest) {
       ? `\n\nSource/research context:\n${researchContext}\n\nResearch instructions:\nUse the source/research context above for data-backed insights and coded visuals. Do not invent numeric claims beyond supplied or fetched context.`
       : "";
     const structureInstructions = buildArticleStructureInstructions(toolSlug);
+    const planningInstructions = buildConcisePlanningInstructions(toolSlug);
 
     const messages: ChatMessage[] = [
       {
@@ -461,7 +477,7 @@ User inputs:
 ${formatInputs(inputs)}${researchInstructions}
 
 Output requirements:
-${prompt.outputGuide}${structureInstructions}`,
+${prompt.outputGuide}${structureInstructions}${planningInstructions}`,
       },
     ];
 

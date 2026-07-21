@@ -1,12 +1,53 @@
-UI and dynamic-credit additive upgrade audit
+UI and dynamic-credit additive upgrade — final validated audit
 
-Changed files:
+Status: production build validated; no tool, field, category, route, prompt contract, or capability was deleted.
 
+Implemented files:
+- abc-creator-app/app/api/generate/stream/route.ts
+- abc-creator-app/app/globals.css
+- abc-creator-app/app/tools/[slug]/page.tsx
+- abc-creator-app/components/OutputPanel.tsx
+- abc-creator-app/components/PresetBlogOutputPanel.tsx
+- abc-creator-app/components/ToolFormRenderer.tsx
+- abc-creator-app/lib/tools/animation-tool-credits.ts
+- abc-creator-app/lib/tools/career-professional-tool-credits.ts
+- abc-creator-app/lib/tools/credit-costs.ts
+- abc-creator-app/lib/tools/customer-support-service-tool-credits.ts
+- abc-creator-app/lib/tools/cybersecurity-it-operations-tool-credits.ts
+- abc-creator-app/lib/tools/data-analysis-bi-tool-credits.ts
+- abc-creator-app/lib/tools/education-learning-tool-credits.ts
+- abc-creator-app/lib/tools/fashion-apparel-tool-credits.ts
+- abc-creator-app/lib/tools/film-video-tool-credits.ts
+- abc-creator-app/lib/tools/finance-accounting-tool-credits.ts
+- abc-creator-app/lib/tools/food-hospitality-tool-credits.ts
+- abc-creator-app/lib/tools/hr-people-operations-tool-credits.ts
+- abc-creator-app/lib/tools/human-resources-people-tool-credits.ts
+- abc-creator-app/lib/tools/interior-architecture-tool-credits.ts
+- abc-creator-app/lib/tools/legal-compliance-tool-credits.ts
+- abc-creator-app/lib/tools/marketing-campaign-tool-credits.ts
+- abc-creator-app/lib/tools/poster-promotional-tool-credits.ts
+- abc-creator-app/lib/tools/presentation-pitch-tool-credits.ts
+- abc-creator-app/lib/tools/productivity-planning-tool-credits.ts
+- abc-creator-app/lib/tools/public-book-variation-overrides.ts
+- abc-creator-app/lib/tools/public-tools.ts
+- abc-creator-app/lib/tools/research-knowledge-tool-credits.ts
+- abc-creator-app/lib/tools/sales-crm-revops-tool-credits.ts
+- abc-creator-app/lib/tools/sales-crm-tool-credits.ts
+- abc-creator-app/lib/tools/server-book-tools.ts
+- abc-creator-app/lib/tools/storyboard-comic-tool-credits.ts
 
-Remaining expressions intentionally retained for secondary-control review:
-- animation-tool-credits.ts:43: return Math.min(15, Math.max(fallback, Math.ceil(count / 4) + 3));
-- career-professional-tool-credits.ts:91: return Math.max(base, questionCount >= 10 ? 9 : questionCount >= 6 ? 7 : questionCount >= 3 ? 5 : base);
-- film-video-tool-credits.ts:45: return Math.min(15, Math.max(fallback, Math.ceil(count / 4) + 3));
-- hr-people-operations-tool-credits.ts:9: export function calculateHRPeopleOperationsToolCreditCost(toolSlug:string,inputs:Record<string,string>={}){const base=HR_PEOPLE_OPERATIONS_TOOL_CREDIT_COSTS[toolSlug]??1;if(!HR_PEOPLE_OPERATIONS_TOOL_SLUGS.includes(toolSlug))return 1;let credits=inputs.output_depth?Math.max(base,match(inputs.output_depth,DEPTH_CREDITS,base)):base;if(HR_PEOPLE_OPERATIONS_VISUAL_TOOL_SLUGS.includes(toolSlug as (typeof HR_PEOPLE_OPERATIONS_VISUAL_TOOL_SLUGS)[number]))credits=Math.max(credits,match(inputs.node_count,NODE_CREDITS,base));return credits;}
-- presentation-pitch-tool-credits.ts:9: function customSlides(inputs:Record<string,string>,fallback:number){if(!has(inputs.slide_count,"custom"))return match(inputs.slide_count,SLIDES,fallback);const n=Number((inputs.custom_slide_count||"").trim());return Number.isInteger(n)&&n>=1&&n<49?Math.max(fallback,Math.min(25,3+Math.ceil(n/2))):fallback;}
-- storyboard-comic-tool-credits.ts:39: return Math.min(15, Math.max(fallback, Math.ceil(count / 4) + 3));
+Pricing verification:
+- Book Title Generator: 1 title = 1 credit; 3 = 2; 5 = 3; 10 = 5.
+- Valid selected depth replaces a static fallback base for affected later categories.
+- Independent workload controls (slides, nodes, questions, custom counts) remain additive/controlling where intended.
+
+UI verification:
+- Newer-category form surfaces are scoped by abc-modern-tool-ui.
+- Protected older tool layouts are not included in the newer-category form redesign.
+- Native file chooser styling is neutral and universal.
+- Manual text edits are free; AI regeneration remains credit-consuming.
+- Recommended next actions render as an unboxed continuation treatment in the shared output panel.
+- Planner/calendar/roadmap outputs retain requested sections but receive a concise planning guard.
+
+Retained secondary-control formulas:
+- Custom scene/slide/node/question formulas remain where they represent real workload rather than a depth-floor bug.
