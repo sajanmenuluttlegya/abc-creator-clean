@@ -1,2 +1,2 @@
 Trigger the build-gated additive UI and dynamic-credit upgrade on the same-repository validation pull request.
-Diagnostic attempt: 4 — typed public tool registry matcher corrected.
+Diagnostic attempt: 5 — preserve exact production build error.
