@@ -108,24 +108,47 @@ jobs:
         run: exit 1
 
       - name: Validate protected and additive scope
+        id: validate
         if: steps.patch.outputs.status == '0' && steps.build.outputs.status == '0'
         shell: bash
         run: |
+          set +e
+          {
+            set -x
+            git diff --check
+            changed="$(git diff --name-only)"
+            printf '%s\n' "$changed"
+            test -n "$changed"
+            ! printf '%s\n' "$changed" | grep -E '^abc-creator-app/lib/tools/public-book-variation-overrides\.ts$'
+            ! printf '%s\n' "$changed" | grep -E '^abc-creator-app/lib/tools/public-blog-tools\.ts$'
+            ! printf '%s\n' "$changed" | grep -E '^abc-creator-app/lib/tools/server-blog'
+            grep -q 'Regenerate — 2 credits' abc-creator-app/components/PresetBlogOutputPanel.tsx
+            grep -q 'serverPosterPromotionalTools' abc-creator-app/lib/tools/server-prompt-registry.ts
+            grep -q 'posterPromotionalTools' abc-creator-app/lib/tools/public-tools.ts
+            grep -q 'book_title_generation_invalid_count' abc-creator-app/app/api/generate/stream/route.ts
+          } > automation/additive-audit-validation.log 2>&1
+          status=$?
+          cat automation/additive-audit-validation.log
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Commit validation diagnostics on failure
+        if: steps.patch.outputs.status == '0' && steps.build.outputs.status == '0' && steps.validate.outputs.status != '0'
+        shell: bash
+        run: |
           set -euo pipefail
-          git diff --check
-          changed="$(git diff --name-only)"
-          printf '%s\n' "$changed"
-          test -n "$changed"
-          ! printf '%s\n' "$changed" | grep -E '^abc-creator-app/lib/tools/public-book-variation-overrides\.ts$'
-          ! printf '%s\n' "$changed" | grep -E '^abc-creator-app/lib/tools/public-blog-tools\.ts$'
-          ! printf '%s\n' "$changed" | grep -E '^abc-creator-app/lib/tools/server-blog'
-          grep -q 'Regenerate — 2 credits' abc-creator-app/components/PresetBlogOutputPanel.tsx
-          grep -q 'serverPosterPromotionalTools' abc-creator-app/lib/tools/server-prompt-registry.ts
-          grep -q 'posterPromotionalTools' abc-creator-app/lib/tools/public-tools.ts
-          grep -q 'book_title_generation_invalid_count' abc-creator-app/app/api/generate/stream/route.ts
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add automation/additive-audit-validation.log
+          git commit -m 'Record additive audit validation failure'
+          git push origin "HEAD:${TARGET_BRANCH}"
+
+      - name: Stop after validation failure
+        if: steps.patch.outputs.status == '0' && steps.build.outputs.status == '0' && steps.validate.outputs.status != '0'
+        run: exit 1
 
       - name: Commit validated implementation
-        if: steps.patch.outputs.status == '0' && steps.build.outputs.status == '0'
+        if: steps.patch.outputs.status == '0' && steps.build.outputs.status == '0' && steps.validate.outputs.status == '0'
         shell: bash
         run: |
           set -euo pipefail
