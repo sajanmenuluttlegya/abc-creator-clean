@@ -1,2 +1,2 @@
 Trigger the build-gated additive UI and dynamic-credit upgrade on the same-repository validation pull request.
-Diagnostic attempt: 3 — multiline Book Title matcher corrected.
+Diagnostic attempt: 4 — typed public tool registry matcher corrected.
