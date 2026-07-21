@@ -23,6 +23,28 @@ jobs:
         with:
           ref: main
 
+      - name: Correct M0-only validation in the one-time patch
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path("automation/apply_m0_exact_native_resolution_and_m1_credits_once.py")
+          text = path.read_text(encoding="utf-8")
+          old = '''    for path, text in updates.items():
+                  require(OLD_M0_CREDITS not in text, f"Old M0 credit map remains in {path}")
+          '''
+          new = '''    for path, text in updates.items():
+                  require(
+                      f"M0: {OLD_M0_CREDITS}" not in text,
+                      f"Old M0 credit map remains in {path}",
+                  )
+          '''
+          if old not in text:
+              raise SystemExit("Expected validation block was not found.")
+          path.write_text(text.replace(old, new, 1), encoding="utf-8")
+          compile(path.read_text(encoding="utf-8"), str(path), "exec")
+          PY
+
       - name: Apply and validate the approved patch
         id: patch
         shell: bash
