@@ -14,7 +14,6 @@ permissions:
 
 jobs:
   apply-and-validate:
-    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -30,9 +29,33 @@ jobs:
           python-version: '3.12'
 
       - name: Apply guarded fixes
-        run: python automation/apply_additive_audit_fixes_20260721.py
+        id: patch
+        shell: bash
+        run: |
+          set +e
+          python automation/apply_additive_audit_fixes_20260721.py > automation/additive-audit-fix-run.log 2>&1
+          status=$?
+          cat automation/additive-audit-fix-run.log
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Commit patch diagnostics on failure
+        if: steps.patch.outputs.status != '0'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add automation/additive-audit-fix-run.log
+          git commit -m 'Record additive audit fixer failure'
+          git push origin HEAD:main
+
+      - name: Stop after patch failure
+        if: steps.patch.outputs.status != '0'
+        run: exit 1
 
       - name: Set up Node
+        if: steps.patch.outputs.status == '0'
         uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -40,14 +63,17 @@ jobs:
           cache-dependency-path: abc-creator-app/package-lock.json
 
       - name: Install dependencies
+        if: steps.patch.outputs.status == '0'
         working-directory: abc-creator-app
         run: npm ci
 
       - name: Production build
+        if: steps.patch.outputs.status == '0'
         working-directory: abc-creator-app
         run: npm run build
 
       - name: Validate protected and additive scope
+        if: steps.patch.outputs.status == '0'
         shell: bash
         run: |
           set -euo pipefail
@@ -64,6 +90,7 @@ jobs:
           grep -q 'book_title_generation_invalid_count' abc-creator-app/app/api/generate/stream/route.ts
 
       - name: Commit validated implementation
+        if: steps.patch.outputs.status == '0'
         shell: bash
         run: |
           set -euo pipefail
@@ -76,5 +103,3 @@ jobs:
           fi
           git commit -m 'Restore Blog scope and complete additive audit fixes'
           git push origin HEAD:main
-
-# Trigger marker: 2026-07-21 additive repair validation
