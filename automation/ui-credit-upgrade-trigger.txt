@@ -1,2 +1,2 @@
 Trigger the build-gated additive UI and dynamic-credit upgrade on the same-repository validation pull request.
-Diagnostic attempt: 8 — correct Supabase publishable-key variable.
+Final validation attempt: HR credit floor, strict newer-tool scope, universal file chooser, concise planner output, and restored audit.
