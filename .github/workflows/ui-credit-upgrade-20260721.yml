@@ -84,7 +84,7 @@ jobs:
           echo "status=$status" >> "$GITHUB_OUTPUT"
           exit 0
 
-      - name: Commit exact failure diagnostic
+      - name: Commit exact patch failure diagnostic
         if: steps.patch.outputs.status != '0'
         shell: bash
         run: |
@@ -103,11 +103,31 @@ jobs:
 
       - name: Run production build
         if: steps.patch.outputs.status == '0'
+        id: build
+        shell: bash
         working-directory: abc-creator-app
-        run: npm run build
+        run: |
+          set +e
+          npm run build > ../automation/ui-credit-build-failure.log 2>&1
+          status=$?
+          cat ../automation/ui-credit-build-failure.log
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Commit exact build failure diagnostic
+        if: steps.patch.outputs.status == '0' && steps.build.outputs.status != '0'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add automation/ui-credit-build-failure.log
+          git commit -m "Record UI credit build failure"
+          git push origin HEAD:main
+          exit 1
 
       - name: Commit validated changes
-        if: steps.patch.outputs.status == '0'
+        if: steps.patch.outputs.status == '0' && steps.build.outputs.status == '0'
         shell: bash
         run: |
           set -euo pipefail
