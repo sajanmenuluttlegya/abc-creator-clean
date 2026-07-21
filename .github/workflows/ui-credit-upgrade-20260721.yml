@@ -70,6 +70,11 @@ jobs:
               "old = 'export const publicTools: Tool[] = rawPublicTools.filter((tool, index, tools) => tools.findIndex((item) => item.slug === tool.slug) === index);'",
               1,
           )
+          script_text = script_text.replace(
+              '        text = replace_once(text, "\\n];", insertion + "\\n];", "book title override insertion")',
+              '        head, marker, tail = text.rpartition("\\n];")\n        if not marker: raise RuntimeError("Book title tools array terminator not found")\n        text = head + insertion + "\\n];" + tail',
+              1,
+          )
           script.write_text(script_text, encoding="utf-8")
           PY
 
