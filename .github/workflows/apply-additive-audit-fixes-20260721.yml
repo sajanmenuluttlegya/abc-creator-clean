@@ -76,12 +76,35 @@ jobs:
         run: npm ci
 
       - name: Production build
+        id: build
         if: steps.patch.outputs.status == '0'
+        shell: bash
         working-directory: abc-creator-app
-        run: npm run build
+        run: |
+          set +e
+          npm run build > ../automation/additive-audit-build.log 2>&1
+          status=$?
+          cat ../automation/additive-audit-build.log
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Commit build diagnostics on failure
+        if: steps.patch.outputs.status == '0' && steps.build.outputs.status != '0'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add automation/additive-audit-build.log
+          git commit -m 'Record additive audit build failure'
+          git push origin "HEAD:${TARGET_BRANCH}"
+
+      - name: Stop after build failure
+        if: steps.patch.outputs.status == '0' && steps.build.outputs.status != '0'
+        run: exit 1
 
       - name: Validate protected and additive scope
-        if: steps.patch.outputs.status == '0'
+        if: steps.patch.outputs.status == '0' && steps.build.outputs.status == '0'
         shell: bash
         run: |
           set -euo pipefail
@@ -98,7 +121,7 @@ jobs:
           grep -q 'book_title_generation_invalid_count' abc-creator-app/app/api/generate/stream/route.ts
 
       - name: Commit validated implementation
-        if: steps.patch.outputs.status == '0'
+        if: steps.patch.outputs.status == '0' && steps.build.outputs.status == '0'
         shell: bash
         run: |
           set -euo pipefail
