@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "/home/runner/work/abc-creator-clean/abc-creator-clean/automation/apply_ui_credit_upgrade_20260721.py", line 300, in <module>
+    if __name__ == "__main__": main()
+                               ^^^^^^
+  File "/home/runner/work/abc-creator-clean/abc-creator-clean/automation/apply_ui_credit_upgrade_20260721.py", line 296, in main
+    patch_book_title_variations(); patch_credit_floors(); patch_dynamic_page_scope(); patch_tool_form_generate_button(); patch_output_panel(); patch_preset_blog_output(); patch_public_tools_fallback_actions(); patch_global_css(); write_audit_report()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/abc-creator-clean/abc-creator-clean/automation/apply_ui_credit_upgrade_20260721.py", line 83, in patch_book_title_variations
+    raise RuntimeError("Book title output-guide block not found")
+RuntimeError: Book title output-guide block not found
