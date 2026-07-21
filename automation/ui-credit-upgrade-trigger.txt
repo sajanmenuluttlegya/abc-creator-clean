@@ -1,2 +1,2 @@
 Trigger the build-gated additive UI and dynamic-credit upgrade on the same-repository validation pull request.
-Diagnostic attempt: 7 — production build has its required build-only Supabase environment.
+Diagnostic attempt: 8 — correct Supabase publishable-key variable.
