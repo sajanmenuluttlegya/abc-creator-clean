@@ -161,3 +161,5 @@ jobs:
           fi
           git commit -m 'Restore Blog scope and complete additive audit fixes'
           git push origin "HEAD:${TARGET_BRANCH}"
+
+# Validation-diagnostic PR trigger from the current main branch.
