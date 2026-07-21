@@ -30,18 +30,24 @@ Import trace:
     ./app/api/export/pdf/route.ts
 
 
-✓ Compiled successfully in 33.7s
+✓ Compiled successfully in 34.5s
   Running TypeScript ...
-Failed to type check.
+  Finished TypeScript in 12.3s ...
+  Collecting page data using 1 worker ...
+  Generating static pages using 1 worker (0/17) ...
+  Generating static pages using 1 worker (4/17) 
+  Generating static pages using 1 worker (8/17) 
+Error occurred prerendering page "/login". Read more: https://nextjs.org/docs/messages/prerender-error
+Error: @supabase/ssr: Your project's URL and API key are required to create a Supabase client!
 
-./lib/tools/public-book-variation-overrides.ts:25:5
-Type error: Object literal may only specify known properties, and 'slug' does not exist in type 'BookInput'.
+Check your Supabase project's API settings to find these values
 
-  [90m23 |[0m   {
-  [90m24 |[0m     id: [32m"book-title-generator"[0m,
-[31m[1m>[0m [90m25 |[0m     slug: [32m"book-title-generator"[0m,
-  [90m   |[0m     [31m[1m^[0m
-  [90m26 |[0m     name: [32m"Book Title Generator"[0m,
-  [90m27 |[0m     description: [32m"Generate an exact number of book-title options with concise supporting n...[0m
-  [90m28 |[0m     icon: [32m"book"[0m,
-Next.js build worker exited with code: 1 and signal: null
+https://supabase.com/dashboard/project/_/settings/api
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at auth.persistSession (.next/server/chunks/ssr/_1a-0c_d._.js:55:71)
+    at <unknown> (.next/server/chunks/ssr/_1a-0c_d._.js:59:4984)
+    at <unknown> (.next/server/chunks/ssr/components_AuthCard_tsx_0b1xr9k._.js:1:965) {
+  digest: '934699948'
+}
+Export encountered an error on /login/page: /login, exiting the build.
+⨯ Next.js build worker exited with code: 1 and signal: null
