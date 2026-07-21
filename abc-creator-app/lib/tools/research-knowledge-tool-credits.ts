@@ -44,7 +44,7 @@ const DEPTH_CREDITS: Array<[string, number]> = [
   ["Standard premium", 5],
   ["Quick professional", 2],
 ];
-const VERSION_CREDITS: Array<[string, number]> = [["10 versions", 9], ["5 versions", 7], ["3 versions", 5], ["1 version", 2]];
+const VERSION_CREDITS: Array<[string, number]> = [["10 versions", 5], ["5 versions", 3], ["3 versions", 2], ["1 version", 1]];
 const SOURCE_COUNT_CREDITS: Array<[string, number]> = [["50 sources", 15], ["30 sources", 11], ["20 sources", 9], ["10 sources", 7], ["5 sources", 5]];
 const STUDY_COUNT_CREDITS: Array<[string, number]> = [["50 studies", 15], ["30 studies", 11], ["20 studies", 9], ["10 studies", 7], ["Custom from supplied material", 9]];
 const NODE_COUNT_CREDITS: Array<[string, number]> = [["50 nodes", 13], ["30 nodes", 9], ["20 nodes", 7], ["10 nodes", 5]];
@@ -68,7 +68,7 @@ export function calculateResearchKnowledgeToolCreditCost(toolSlug: string, input
 
   let credits = inputs.output_depth ? depthCredit(inputs.output_depth, base) : base;
   if (["research-question-refiner", "boolean-search-query-builder", "theoretical-framework-builder"].includes(toolSlug)) {
-    credits = Math.max(credits, matchCredit(inputs.version_count || inputs.query_versions, VERSION_CREDITS, base));
+    return matchCredit(inputs.version_count || inputs.query_versions, VERSION_CREDITS, 1);
   }
   if (toolSlug === "source-discovery-triage-planner") {
     credits = Math.max(credits, matchCredit(inputs.source_count, SOURCE_COUNT_CREDITS, base));

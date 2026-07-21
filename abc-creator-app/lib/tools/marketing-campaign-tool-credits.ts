@@ -39,7 +39,7 @@ const DEPTH_CREDITS: Array<[string, number]> = [
   ["Standard premium", 5],
   ["Quick professional", 2],
 ];
-const VERSION_CREDITS: Array<[string, number]> = [["10 versions", 9], ["5 versions", 7], ["3 versions", 5], ["1 version", 2]];
+const VERSION_CREDITS: Array<[string, number]> = [["10 versions", 5], ["5 versions", 3], ["3 versions", 2], ["1 version", 1]];
 const ASSET_COUNT_CREDITS: Array<[string, number]> = [["48 assets", 15], ["36 assets", 13], ["24 assets", 11], ["18 assets", 9], ["12 assets", 7], ["8 assets", 5]];
 const SEGMENT_COUNT_CREDITS: Array<[string, number]> = [["6 segments", 11], ["5 segments", 9], ["4 segments", 7], ["3 segments", 5], ["2 segments", 3]];
 const SCENARIO_CREDITS: Array<[string, number]> = [["5 scenarios", 9], ["3 scenarios", 7], ["1 scenario", 3]];
@@ -62,7 +62,7 @@ export function calculateMarketingCampaignToolCreditCost(toolSlug: string, input
 
   let credits = inputs.output_depth ? depthCredit(inputs.output_depth, base) : base;
   if (toolSlug === "campaign-positioning-big-idea-generator") {
-    credits = Math.max(credits, matchCredit(inputs.version_count, VERSION_CREDITS, base));
+    return matchCredit(inputs.version_count, VERSION_CREDITS, 1);
   }
   if (["campaign-content-matrix-generator", "campaign-asset-requirements-generator"].includes(toolSlug)) {
     credits = Math.max(credits, matchCredit(inputs.asset_count, ASSET_COUNT_CREDITS, base));

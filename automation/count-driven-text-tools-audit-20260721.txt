@@ -8,31 +8,31 @@ Purpose: find title/idea/name/query/question/version-style generators that expos
 - furniture-layout-planner | Furniture Layout Planner | count=option_count / Layout Options / options=['<unresolved>'] | output-depth=commonTail
 
 ## public-food-hospitality-tools.ts
-- restaurant-brand-story-generator | Restaurant Brand Story Generator | count=version_count / Versions / options=['<unresolved>'] | output-depth=commonTail
-- menu-description-dish-naming-generator | Menu Description & Dish Naming Generator | count=version_count / Versions / options=['<unresolved>'] | output-depth=commonTail
+- restaurant-brand-story-generator | Restaurant Brand Story Generator | count=version_count / Versions / options=['<unresolved>'] | output-depth=none
+- menu-description-dish-naming-generator | Menu Description & Dish Naming Generator | count=version_count / Versions / options=['<unresolved>'] | output-depth=none
 
 ## public-fashion-apparel-tools.ts
-- collection-story-naming-generator | Collection Story & Naming Generator | count=version_count / Versions / options=['<unresolved>'] | output-depth=commonTail
-- apparel-product-description-generator | Apparel Product Description Generator | count=version_count / Versions / options=['<unresolved>'] | output-depth=commonTail
+- collection-story-naming-generator | Collection Story & Naming Generator | count=version_count / Versions / options=['<unresolved>'] | output-depth=none
+- apparel-product-description-generator | Apparel Product Description Generator | count=version_count / Versions / options=['<unresolved>'] | output-depth=none
 
 ## public-marketing-campaign-tools.ts
-- campaign-positioning-big-idea-generator | Campaign Positioning & Big-Idea Generator | count=version_count / Creative Territories / options=['<unresolved>'] | output-depth=commonTail
+- campaign-positioning-big-idea-generator | Campaign Positioning & Big-Idea Generator | count=version_count / Creative Territories / options=['<unresolved>'] | output-depth=none
 - lead-generation-campaign-planner | Lead Generation Campaign Planner | count=lead_magnet_conversion / Value Exchange / Conversion / options=['<unresolved>'] | output-depth=commonTail
 - campaign-experiment-ab-test-planner | Campaign Experiment & A/B Test Planner | count=variants_control / Control / Variants / Variable / options=['<unresolved>'] | output-depth=commonTail
 
 ## public-research-knowledge-tools.ts
-- research-question-refiner | Research Question Refiner | count=version_count / Question Variants / options=['<unresolved>'] | output-depth=commonTail
-- boolean-search-query-builder | Boolean Search Query Builder | count=query_versions / Query Variants / options=['<unresolved>'] | output-depth=commonTail
-- theoretical-framework-builder | Theoretical Framework Builder | count=version_count / Framework Options / options=['<unresolved>'] | output-depth=commonTail
+- research-question-refiner | Research Question Refiner | count=version_count / Question Variants / options=['<unresolved>'] | output-depth=none
+- boolean-search-query-builder | Boolean Search Query Builder | count=query_versions / Query Variants / options=['<unresolved>'] | output-depth=none
+- theoretical-framework-builder | Theoretical Framework Builder | count=version_count / Framework Options / options=['<unresolved>'] | output-depth=none
 - knowledge-map-concept-graph-generator | Knowledge Map & Concept Graph Generator | count=node_count / Target Graph Size / options=['<unresolved>'] | output-depth=commonTail
 - qualitative-interview-guide-generator | Qualitative Interview Guide Generator | count=question_count / Guide Length / options=['<unresolved>'] | output-depth=commonTail
 - survey-research-plan-generator | Survey Research Plan Generator | count=question_count / Questionnaire Scope / options=['<unresolved>'] | output-depth=commonTail
 
 ## public-education-learning-tools.ts
-- learning-objectives-success-criteria-generator | Learning Objectives & Success Criteria Generator | count=version_count / Objective Sets / options=['<unresolved>'] | output-depth=commonTail
-- classroom-activity-engagement-designer | Classroom Activity & Engagement Designer | count=version_count / Activity Options / options=['<unresolved>'] | output-depth=commonTail
+- learning-objectives-success-criteria-generator | Learning Objectives & Success Criteria Generator | count=version_count / Objective Sets / options=['<unresolved>'] | output-depth=none
+- classroom-activity-engagement-designer | Classroom Activity & Engagement Designer | count=version_count / Activity Options / options=['<unresolved>'] | output-depth=none
 - discussion-seminar-debate-planner | Discussion, Seminar & Debate Planner | count=question_count / Discussion Question Count / options=['<unresolved>'] | output-depth=commonTail
-- scaffold-worked-example-generator | Scaffold & Worked Example Generator | count=version_count / Worked Example Sets / options=['<unresolved>'] | output-depth=commonTail
+- scaffold-worked-example-generator | Scaffold & Worked Example Generator | count=version_count / Worked Example Sets / options=['<unresolved>'] | output-depth=none
 - formative-assessment-exit-ticket-generator | Formative Assessment & Exit Ticket Generator | count=question_count / Check Count / options=['<unresolved>'] | output-depth=commonTail
 - question-bank-assessment-blueprint-generator | Question Bank & Assessment Blueprint Generator | count=item_count / Question Bank Size / options=['<unresolved>'] | output-depth=commonTail
 - concept-prerequisite-map-generator | Concept & Prerequisite Map Generator | count=node_count / Target Map Size / options=['<unresolved>'] | output-depth=commonTail

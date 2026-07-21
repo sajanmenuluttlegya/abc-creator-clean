@@ -1,0 +1,27 @@
+Count-driven generator finalization
+
+Applied only to newer non-blog/non-book text tools where a selected number of alternatives is the real output-size control.
+
+Exact quantity pricing:
+- 1 version = 1 credit
+- 3 versions = 2 credits
+- 5 versions = 3 credits
+- 10 versions = 5 credits
+
+Output Depth is removed from the visible form for:
+- apparel-product-description-generator
+- boolean-search-query-builder
+- campaign-positioning-big-idea-generator
+- classroom-activity-engagement-designer
+- collection-story-naming-generator
+- learning-objectives-success-criteria-generator
+- menu-description-dish-naming-generator
+- research-question-refiner
+- restaurant-brand-story-generator
+- scaffold-worked-example-generator
+- theoretical-framework-builder
+
+Intentionally retained:
+- Output Depth for planners, questionnaires, maps, matrices, question banks, long-form packs, and other tools where count and detail are independent workload controls.
+- Existing Blog Workflow and other Book Tool behaviour.
+- Existing input fields, prompts, routing, models, generation endpoints, and output capabilities outside the targeted quantity/depth conflict.

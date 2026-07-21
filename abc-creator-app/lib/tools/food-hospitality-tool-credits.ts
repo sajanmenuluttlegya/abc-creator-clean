@@ -39,7 +39,7 @@ const DEPTH_CREDITS: Array<[string, number]> = [
   ["Standard premium", 5],
   ["Quick professional", 2],
 ];
-const VERSION_CREDITS: Array<[string, number]> = [["10 versions", 9], ["5 versions", 7], ["3 versions", 5], ["1 version", 2]];
+const VERSION_CREDITS: Array<[string, number]> = [["10 versions", 5], ["5 versions", 3], ["3 versions", 2], ["1 version", 1]];
 const ITEM_COUNT_CREDITS: Array<[string, number]> = [["48 items", 13], ["36 items", 11], ["24 items", 9], ["18 items", 7], ["12 items", 5], ["8 items", 3]];
 const YIELD_CREDITS: Array<[string, number]> = [["100 portions", 11], ["50 portions", 9], ["20 portions", 7], ["10 portions", 5], ["6 portions", 4], ["4 portions", 3], ["2 portions", 2]];
 
@@ -61,7 +61,7 @@ export function calculateFoodHospitalityToolCreditCost(toolSlug: string, inputs:
 
   let credits = inputs.output_depth ? depthCredit(inputs.output_depth, base) : base;
   if (["restaurant-brand-story-generator", "menu-description-dish-naming-generator"].includes(toolSlug)) {
-    credits = Math.max(credits, matchCredit(inputs.version_count, VERSION_CREDITS, base));
+    return matchCredit(inputs.version_count, VERSION_CREDITS, 1);
   }
   if (["restaurant-menu-generator", "beverage-menu-generator"].includes(toolSlug)) {
     credits = Math.max(credits, matchCredit(inputs.menu_item_count, ITEM_COUNT_CREDITS, base));

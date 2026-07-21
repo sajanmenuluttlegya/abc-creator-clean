@@ -6,7 +6,7 @@ const toneOptions = ["Academic and rigorous", "Executive and concise", "Analytic
 const depthOptions = ["Quick professional (2 credits)", "Standard premium (5 credits)", "Detailed analytical (7 credits)", "Comprehensive research pack (9 credits)"];
 const disciplineOptions = ["General / interdisciplinary", "Business / management", "Social sciences", "Humanities", "Education", "Health / medicine", "Science / engineering", "Technology / computing", "Law / policy", "Custom from brief"];
 const evidenceModeOptions = ["Use supplied sources only", "Use supplied sources + clearly labelled gaps", "Planning framework only", "Mixed evidence with source-by-source traceability"];
-const versionOptions = ["1 version", "3 versions", "5 versions", "10 versions"];
+const versionOptions = ["1 version (1 credit)", "3 versions (2 credits)", "5 versions (3 credits)", "10 versions (5 credits)"];
 const sourceCountOptions = ["5 sources", "10 sources", "20 sources", "30 sources", "50 sources"];
 const studyCountOptions = ["10 studies", "20 studies", "30 studies", "50 studies", "Custom from supplied material"];
 const nodeCountOptions = ["10 nodes", "20 nodes", "30 nodes", "50 nodes"];
@@ -21,6 +21,8 @@ const commonTail: ToolInput[] = [
   { id: "must_preserve", label: "Facts / Sources / Constraints to Preserve", type: "textarea", placeholder: "Exact claims, quotations, citations, study details, dates, definitions, exclusions, terminology, stakeholder requirements, or facts that must remain unchanged.", required: false },
 ];
 
+const countDrivenTail: ToolInput[] = commonTail.filter((input) => input.id !== "output_depth");
+
 function textTool(input: Omit<Tool, "id" | "category" | "outputType"> & { id?: string }): Tool {
   return { ...input, id: input.id || input.slug, category, outputType: "text" };
 }
@@ -34,7 +36,7 @@ export const researchKnowledgeTools: Tool[] = [
       { id: "context_population", label: "Context / Population / Setting", type: "textarea", placeholder: "Who, where, when, sector, geography, system, population, unit of analysis, or other boundaries.", required: false },
       { id: "known_evidence", label: "Known Evidence / Prior Work", type: "textarea", placeholder: "Existing findings, definitions, theories, datasets, practical constraints, and uncertainties already known.", required: false },
       { id: "version_count", label: "Question Variants", type: "select", required: true, options: versionOptions },
-      ...commonTail,
+      ...countDrivenTail,
     ],
   }),
   textTool({
@@ -65,7 +67,7 @@ export const researchKnowledgeTools: Tool[] = [
       { id: "synonyms_vocabulary", label: "Synonyms / Controlled Vocabulary", type: "textarea", placeholder: "Keywords, acronyms, variants, subject headings, broader/narrower terms, exclusions, and known terminology conflicts.", required: true },
       { id: "target_platforms", label: "Target Databases / Platforms", type: "textarea", placeholder: "Examples: PubMed, Scopus, Web of Science, IEEE Xplore, PsycINFO, ERIC, Google Scholar, legal databases, or custom platforms.", required: true },
       { id: "query_versions", label: "Query Variants", type: "select", required: true, options: versionOptions },
-      ...commonTail,
+      ...countDrivenTail,
     ],
   }),
   textTool({
@@ -195,7 +197,7 @@ export const researchKnowledgeTools: Tool[] = [
       { id: "candidate_theories_evidence", label: "Candidate Theories / Prior Evidence", type: "textarea", placeholder: "Known theories, constructs, authors, prior findings, disciplinary expectations, and competing explanations.", required: false },
       { id: "method_context", label: "Method / Context / Constraints", type: "textarea", placeholder: "Qualitative, quantitative, mixed methods, data available, scale, culture, time horizon, and intended contribution.", required: true },
       { id: "version_count", label: "Framework Options", type: "select", required: true, options: versionOptions },
-      ...commonTail,
+      ...countDrivenTail,
     ],
   }),
   textTool({

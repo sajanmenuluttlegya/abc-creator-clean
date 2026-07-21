@@ -41,7 +41,7 @@ const DEPTH_CREDITS: Array<[string, number]> = [
   ["Standard premium", 5],
   ["Quick professional", 2],
 ];
-const VERSION_CREDITS: Array<[string, number]> = [["10 versions", 9], ["5 versions", 7], ["3 versions", 5], ["1 version", 2]];
+const VERSION_CREDITS: Array<[string, number]> = [["10 versions", 5], ["5 versions", 3], ["3 versions", 2], ["1 version", 1]];
 const RANGE_SIZE_CREDITS: Array<[string, number]> = [["48 styles", 15], ["36 styles", 13], ["24 styles", 11], ["18 styles", 9], ["12 styles", 7], ["8 styles", 5]];
 const LOOK_COUNT_CREDITS: Array<[string, number]> = [["48 looks", 15], ["36 looks", 13], ["24 looks", 11], ["18 looks", 9], ["12 looks", 7], ["6 looks", 5]];
 const OUTFIT_COUNT_CREDITS: Array<[string, number]> = [["40 outfits", 13], ["30 outfits", 11], ["20 outfits", 9], ["10 outfits", 7], ["5 outfits", 5]];
@@ -65,7 +65,7 @@ export function calculateFashionApparelToolCreditCost(toolSlug: string, inputs: 
 
   let credits = inputs.output_depth ? depthCredit(inputs.output_depth, base) : base;
   if (["collection-story-naming-generator", "apparel-product-description-generator"].includes(toolSlug)) {
-    credits = Math.max(credits, matchCredit(inputs.version_count, VERSION_CREDITS, base));
+    return matchCredit(inputs.version_count, VERSION_CREDITS, 1);
   }
   if (toolSlug === "collection-range-assortment-planner") {
     credits = Math.max(credits, matchCredit(inputs.range_size, RANGE_SIZE_CREDITS, base));

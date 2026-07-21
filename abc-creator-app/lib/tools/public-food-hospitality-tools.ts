@@ -8,7 +8,7 @@ const depthOptions = ["Quick professional (2 credits)", "Standard premium (5 cre
 const serviceModelOptions = ["Full service", "Fine dining", "Casual dining", "Fast casual", "Quick service", "Café / bakery", "Bar / lounge", "Delivery / takeaway", "Catering / events", "Hotel / resort dining", "Multi-unit group", "Custom from brief"];
 const menuItemCountOptions = ["8 items", "12 items", "18 items", "24 items", "36 items", "48 items"];
 const recipeYieldOptions = ["2 portions", "4 portions", "6 portions", "10 portions", "20 portions", "50 portions", "100 portions", "Custom yield from brief"];
-const versionOptions = ["1 version", "3 versions", "5 versions", "10 versions"];
+const versionOptions = ["1 version (1 credit)", "3 versions (2 credits)", "5 versions (3 credits)", "10 versions (5 credits)"];
 const questionCountOptions = ["12 questions", "20 questions", "30 questions", "40 questions"];
 
 const commonTail: ToolInput[] = [
@@ -20,6 +20,8 @@ const commonTail: ToolInput[] = [
   { id: "language", label: "Language", type: "select", required: true, options: languageOptions },
   { id: "must_preserve", label: "Facts / Constraints to Preserve", type: "textarea", placeholder: "Exact ingredients, yields, prices, dietary statements, equipment, brand rules, service standards, supplier facts, names, wording, or details that must remain unchanged.", required: false },
 ];
+
+const countDrivenTail: ToolInput[] = commonTail.filter((input) => input.id !== "output_depth");
 
 function textTool(input: Omit<Tool, "id" | "category" | "outputType"> & { id?: string }): Tool {
   return { ...input, id: input.id || input.slug, category, outputType: "text" };
@@ -100,7 +102,7 @@ export const foodHospitalityTools: Tool[] = [
       { id: "concept_identity", label: "Concept / Identity", type: "textarea", placeholder: "Cuisine, values, sourcing, atmosphere, guest relationship, signature details, and what the venue stands for.", required: true },
       { id: "audiences_channels", label: "Audience / Channels", type: "textarea", placeholder: "Website, menu, press kit, investor material, social, in-venue copy, team induction, or other uses.", required: true },
       { id: "version_count", label: "Versions", type: "select", required: true, options: versionOptions },
-      ...commonTail,
+      ...countDrivenTail,
     ],
   }),
   textTool({
@@ -162,7 +164,7 @@ export const foodHospitalityTools: Tool[] = [
       { id: "menu_context", label: "Menu / Brand Context", type: "textarea", placeholder: "Restaurant concept, menu section, neighbouring items, price tier, guest, language style, and space limits.", required: true },
       { id: "description_length", label: "Description Length", type: "select", required: true, options: ["Very short (3–7 words)", "Concise menu line (8–15 words)", "Standard premium (16–28 words)", "Story-led (29–50 words)", "Mixed set"] },
       { id: "version_count", label: "Versions", type: "select", required: true, options: versionOptions },
-      ...commonTail,
+      ...countDrivenTail,
     ],
   }),
   textTool({

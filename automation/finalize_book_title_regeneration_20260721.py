@@ -7,9 +7,9 @@ APP = ROOT / "abc-creator-app"
 
 
 def replace_once(text: str, old: str, new: str, label: str) -> str:
+    if new in text:
+        return text
     if old not in text:
-        if new in text:
-            return text
         raise RuntimeError(f"Expected block not found: {label}")
     return text.replace(old, new, 1)
 

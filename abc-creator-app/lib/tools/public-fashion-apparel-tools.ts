@@ -7,7 +7,7 @@ const unitOptions = ["Metric", "US customary", "Metric + US customary", "Preserv
 const depthOptions = ["Quick professional (2 credits)", "Standard premium (5 credits)", "Detailed strategic (7 credits)", "Executive comprehensive (9 credits)"];
 const marketTierOptions = ["Value", "Accessible premium", "Contemporary", "Premium", "Luxury", "Performance / technical", "Custom from brief"];
 const channelOptions = ["Direct-to-consumer", "Wholesale", "Marketplace", "Retail stores", "Department store", "Made-to-order", "Uniform / B2B", "Multi-channel", "Custom from brief"];
-const versionOptions = ["1 version", "3 versions", "5 versions", "10 versions"];
+const versionOptions = ["1 version (1 credit)", "3 versions (2 credits)", "5 versions (3 credits)", "10 versions (5 credits)"];
 const rangeSizeOptions = ["8 styles", "12 styles", "18 styles", "24 styles", "36 styles", "48 styles"];
 const lookCountOptions = ["6 looks", "12 looks", "18 looks", "24 looks", "36 looks", "48 looks"];
 const outfitCountOptions = ["5 outfits", "10 outfits", "20 outfits", "30 outfits", "40 outfits"];
@@ -22,6 +22,8 @@ const commonTail: ToolInput[] = [
   { id: "language", label: "Language", type: "select", required: true, options: languageOptions },
   { id: "must_preserve", label: "Facts / Constraints to Preserve", type: "textarea", placeholder: "Exact measurements, garment details, materials, trims, prices, supplier facts, brand rules, fit comments, approved wording, sustainability evidence, or details that must not change.", required: false },
 ];
+
+const countDrivenTail: ToolInput[] = commonTail.filter((input) => input.id !== "output_depth");
 
 function textTool(input: Omit<Tool, "id" | "category" | "outputType"> & { id?: string }): Tool {
   return { ...input, id: input.id || input.slug, category, outputType: "text" };
@@ -116,7 +118,7 @@ export const fashionApparelTools: Tool[] = [
       { id: "brand_voice_audience", label: "Brand Voice / Audience", type: "textarea", placeholder: "Tone, customer, price tier, cultural context, vocabulary, channels, language restrictions, and words to avoid.", required: true },
       { id: "naming_scope", label: "Naming Scope", type: "select", required: true, options: ["Collection name only", "Collection + style names", "Collection + colourway names", "Complete naming architecture", "Campaign story + names", "Custom from brief"] },
       { id: "version_count", label: "Versions", type: "select", required: true, options: versionOptions },
-      ...commonTail,
+      ...countDrivenTail,
     ],
   }),
   textTool({
@@ -309,7 +311,7 @@ export const fashionApparelTools: Tool[] = [
       { id: "customer_channel_context", label: "Customer / Channel Context", type: "textarea", placeholder: "Target customer, price tier, website, marketplace, wholesale, store, campaign, SEO needs, regional wording, and brand voice.", required: true },
       { id: "fit_size_guidance", label: "Fit / Size Guidance", type: "textarea", placeholder: "Model size if verified, garment measurements, fit notes, stretch, intended ease, size advice, body data, and areas requiring technical confirmation.", required: false },
       { id: "version_count", label: "Versions", type: "select", required: true, options: versionOptions },
-      ...commonTail,
+      ...countDrivenTail,
     ],
   }),
 

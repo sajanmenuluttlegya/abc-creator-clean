@@ -10,7 +10,7 @@ const frameworkOptions = ["Use supplied standards only", "Local / institutional 
 const durationOptions = ["15 minutes", "30 minutes", "45 minutes", "60 minutes", "90 minutes", "Multi-session", "Custom from brief"];
 const questionCountOptions = ["5 questions", "10 questions", "15 questions", "20 questions", "30 questions", "40 questions"];
 const itemCountOptions = ["8 items", "12 items", "16 items", "20 items", "30 items", "40 items"];
-const versionOptions = ["1 version", "3 versions", "5 versions", "10 versions"];
+const versionOptions = ["1 version (1 credit)", "3 versions (2 credits)", "5 versions (3 credits)", "10 versions (5 credits)"];
 const nodeCountOptions = ["10 nodes", "20 nodes", "30 nodes", "40 nodes"];
 const lessonCountOptions = ["4 lessons", "6 lessons", "8 lessons", "10 lessons", "12 lessons", "16 lessons"];
 
@@ -23,6 +23,8 @@ const commonTail: ToolInput[] = [
   { id: "language", label: "Language", type: "select", required: true, options: languageOptions },
   { id: "must_preserve", label: "Facts / Standards / Learner Constraints to Preserve", type: "textarea", placeholder: "Exact standards, curriculum wording, approved content, learner needs, accommodations, terminology, assessment rules, safety constraints, or details that must remain unchanged.", required: false },
 ];
+
+const countDrivenTail: ToolInput[] = commonTail.filter((input) => input.id !== "output_depth");
 
 function textTool(input: Omit<Tool, "id" | "category" | "outputType"> & { id?: string }): Tool {
   return { ...input, id: input.id || input.slug, category, outputType: "text" };
@@ -72,7 +74,7 @@ export const educationLearningTools: Tool[] = [
       { id: "topic_standard", label: "Topic / Standard / Competency", type: "textarea", placeholder: "Exact learning focus, standard wording, skill, concept, performance, or transfer goal.", required: true },
       { id: "learner_evidence_context", label: "Learner / Evidence Context", type: "textarea", placeholder: "Learner level, prior knowledge, assessment type, available time, accessibility needs, and what evidence is realistic.", required: true },
       { id: "version_count", label: "Objective Sets", type: "select", required: true, options: versionOptions },
-      ...commonTail,
+      ...countDrivenTail,
     ],
   }),
   textTool({
@@ -111,7 +113,7 @@ export const educationLearningTools: Tool[] = [
       { id: "class_profile", label: "Class Profile", type: "textarea", placeholder: "Group size, age, readiness, interests, language, accessibility, participation patterns, and classroom culture.", required: true },
       { id: "activity_constraints", label: "Activity Constraints", type: "textarea", placeholder: "Time, room, materials, noise, movement, technology, safeguarding, individual/group expectations, and exclusions.", required: false },
       { id: "version_count", label: "Activity Options", type: "select", required: true, options: versionOptions },
-      ...commonTail,
+      ...countDrivenTail,
     ],
   }),
   textTool({
@@ -205,7 +207,7 @@ export const educationLearningTools: Tool[] = [
       { id: "learner_difficulties", label: "Learner Difficulties / Prior Knowledge", type: "textarea", placeholder: "Known misconceptions, missing prerequisites, cognitive load, vocabulary, procedural errors, and successful strategies already taught.", required: true },
       { id: "example_requirements", label: "Example / Scaffold Requirements", type: "textarea", placeholder: "Number of examples, modality, annotation, self-explanation, fading, independent item, answer format, and prohibited shortcuts.", required: false },
       { id: "version_count", label: "Worked Example Sets", type: "select", required: true, options: versionOptions },
-      ...commonTail,
+      ...countDrivenTail,
     ],
   }),
   textTool({

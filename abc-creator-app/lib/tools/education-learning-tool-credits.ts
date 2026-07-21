@@ -45,7 +45,7 @@ const DEPTH_CREDITS: Array<[string, number]> = [
   ["Standard premium", 5],
   ["Quick professional", 2],
 ];
-const VERSION_CREDITS: Array<[string, number]> = [["10 versions", 9], ["5 versions", 7], ["3 versions", 5], ["1 version", 2]];
+const VERSION_CREDITS: Array<[string, number]> = [["10 versions", 5], ["5 versions", 3], ["3 versions", 2], ["1 version", 1]];
 const ITEM_CREDITS: Array<[string, number]> = [["40 items", 15], ["30 items", 13], ["20 items", 9], ["16 items", 8], ["12 items", 7], ["8 items", 5]];
 const QUESTION_CREDITS: Array<[string, number]> = [["40 questions", 15], ["30 questions", 13], ["20 questions", 9], ["15 questions", 8], ["10 questions", 7], ["5 questions", 5]];
 const NODE_CREDITS: Array<[string, number]> = [["40 nodes", 13], ["30 nodes", 11], ["20 nodes", 9], ["10 nodes", 7]];
@@ -65,7 +65,7 @@ export function calculateEducationLearningToolCreditCost(toolSlug: string, input
 
   let credits = inputs.output_depth ? matchCredit(inputs.output_depth, DEPTH_CREDITS, base) : base;
   if (["learning-objectives-success-criteria-generator", "classroom-activity-engagement-designer", "scaffold-worked-example-generator"].includes(toolSlug)) {
-    credits = Math.max(credits, matchCredit(inputs.version_count, VERSION_CREDITS, base));
+    return matchCredit(inputs.version_count, VERSION_CREDITS, 1);
   }
   if (["worksheet-independent-practice-generator", "diagnostic-assessment-generator", "quiz-test-generator", "question-bank-assessment-blueprint-generator", "flashcard-deck-generator", "practice-test-answer-explanation-generator"].includes(toolSlug)) {
     credits = Math.max(credits, matchCredit(inputs.item_count, ITEM_CREDITS, base));

@@ -7,7 +7,7 @@ const depthOptions = ["Quick professional (2 credits)", "Standard premium (5 cre
 const businessModelOptions = ["B2C", "B2B", "B2B2C", "E-commerce", "SaaS / subscription", "Marketplace", "Local / service business", "Nonprofit / public-interest", "Enterprise / complex sale", "Custom from brief"];
 const stageOptions = ["Planning", "Pre-launch", "Launch", "Always-on", "Growth / scale", "Optimization", "Recovery / turnaround", "Post-campaign review"];
 const channelOptions = ["Integrated multi-channel", "Paid media", "Organic social", "Email / lifecycle", "Content / SEO", "Partnerships / creators", "Events / webinars", "Offline / field", "Custom from brief"];
-const versionOptions = ["1 version", "3 versions", "5 versions", "10 versions"];
+const versionOptions = ["1 version (1 credit)", "3 versions (2 credits)", "5 versions (3 credits)", "10 versions (5 credits)"];
 const assetCountOptions = ["8 assets", "12 assets", "18 assets", "24 assets", "36 assets", "48 assets"];
 const segmentCountOptions = ["2 segments", "3 segments", "4 segments", "5 segments", "6 segments"];
 const scenarioOptions = ["1 scenario", "3 scenarios", "5 scenarios"];
@@ -21,6 +21,8 @@ const commonTail: ToolInput[] = [
   { id: "language", label: "Language", type: "select", required: true, options: languageOptions },
   { id: "must_preserve", label: "Facts / Constraints to Preserve", type: "textarea", placeholder: "Exact product facts, prices, dates, offer terms, audience evidence, brand rules, approved claims, budgets, channel limits, legal wording, or details that must remain unchanged.", required: false },
 ];
+
+const countDrivenTail: ToolInput[] = commonTail.filter((input) => input.id !== "output_depth");
 
 function textTool(input: Omit<Tool, "id" | "category" | "outputType"> & { id?: string }): Tool {
   return { ...input, id: input.id || input.slug, category, outputType: "text" };
@@ -110,7 +112,7 @@ export const marketingCampaignTools: Tool[] = [
       { id: "audience_tension", label: "Audience Tension / Insight", type: "textarea", placeholder: "Need, frustration, desire, barrier, cultural or category tension, research evidence, and assumptions.", required: true },
       { id: "competitive_context", label: "Competitive / Category Context", type: "textarea", placeholder: "Competitor messages, conventions, clichés, overused claims, white space, and what the campaign must not resemble.", required: true },
       { id: "version_count", label: "Creative Territories", type: "select", required: true, options: versionOptions },
-      ...commonTail,
+      ...countDrivenTail,
     ],
   }),
   textTool({

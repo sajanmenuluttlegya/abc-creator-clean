@@ -1,5 +1,18 @@
 const SEO_PACK_ARTICLE_MAX_CHARS = 40000;
 const LENGTH_CONTROL_FIELD = "length_control_note";
+const COUNT_DRIVEN_NO_DEPTH_TOOLS = new Set([
+  "restaurant-brand-story-generator",
+  "menu-description-dish-naming-generator",
+  "collection-story-naming-generator",
+  "apparel-product-description-generator",
+  "campaign-positioning-big-idea-generator",
+  "research-question-refiner",
+  "boolean-search-query-builder",
+  "theoretical-framework-builder",
+  "learning-objectives-success-criteria-generator",
+  "classroom-activity-engagement-designer",
+  "scaffold-worked-example-generator",
+]);
 
 function normalizeText(value: string) {
   return value
@@ -110,6 +123,12 @@ export function preprocessToolInputs(toolSlug: string, inputs: Record<string, st
   const lengthControlNote = buildLengthControlNote(next);
   if (lengthControlNote) {
     next[LENGTH_CONTROL_FIELD] = lengthControlNote;
+  }
+
+  if (COUNT_DRIVEN_NO_DEPTH_TOOLS.has(toolSlug) && !(next.output_depth || "").trim()) {
+    // UI intentionally uses quantity instead of a redundant depth selector for these tools.
+    // Keep the legacy server contract satisfied without exposing or pricing this fallback.
+    next.output_depth = "Quick professional (2 credits)";
   }
 
   return next;
