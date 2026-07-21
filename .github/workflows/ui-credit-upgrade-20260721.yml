@@ -35,17 +35,40 @@ jobs:
           fetch-depth: 0
 
       - name: Apply additive upgrade
-        run: python automation/apply_ui_credit_upgrade_20260721.py
+        id: patch
+        shell: bash
+        run: |
+          set +e
+          python automation/apply_ui_credit_upgrade_20260721.py > automation/ui-credit-upgrade-failure.log 2>&1
+          status=$?
+          cat automation/ui-credit-upgrade-failure.log
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Commit exact failure diagnostic
+        if: steps.patch.outputs.status != '0'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add automation/ui-credit-upgrade-failure.log
+          git commit -m "Record UI credit patch failure"
+          git push origin HEAD:main
+          exit 1
 
       - name: Install application dependencies
+        if: steps.patch.outputs.status == '0'
         working-directory: abc-creator-app
         run: npm install --no-audit --no-fund
 
       - name: Run production build
+        if: steps.patch.outputs.status == '0'
         working-directory: abc-creator-app
         run: npm run build
 
       - name: Commit validated changes
+        if: steps.patch.outputs.status == '0'
         shell: bash
         run: |
           set -euo pipefail
