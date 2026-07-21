@@ -493,7 +493,7 @@ export function ToolFormRenderer({ tool }: ToolFormRendererProps) {
         ) : usePresetEditor ? (
           <PresetBlogOutputPanel isLoading={isLoading} output={blogOutput} recommendedNextActions={tool.nextActions} downloadFileBaseName={`${tool.slug}-output`} toolSlug={tool.slug} inputs={formData} />
         ) : useEmailOutputEditor ? (
-          <EmailOutputEditorPanel isLoading={isLoading} output={output} downloadFileBaseName={`${tool.slug}-output`} />
+          <EmailOutputEditorPanel isLoading={isLoading} output={output} recommendedNextActions={tool.nextActions} downloadFileBaseName={`${tool.slug}-output`} />
         ) : (
           <OutputPanel isLoading={isLoading} output={blogOutput} recommendedNextActions={tool.nextActions} downloadFileBaseName={`${tool.slug}-output`} toolSlug={tool.slug} inputs={formData} />
         )}

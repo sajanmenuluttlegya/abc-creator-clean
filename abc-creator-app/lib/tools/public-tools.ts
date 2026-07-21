@@ -22,6 +22,7 @@ import { salesCRMRevOpsTools } from "./public-sales-crm-revops-tools";
 import { hrPeopleOperationsTools } from "./public-hr-people-operations-tools";
 import { cybersecurityITOperationsTools } from "./public-cybersecurity-it-operations-tools";
 import { presentationPitchTools } from "./public-presentation-pitch-tools";
+import { posterPromotionalTools } from "./public-poster-promotional-tools";
 import { aiPromptBatchTools } from "./public-ai-prompt-batch-tools";
 import { socialVariationOverrideTools } from "./public-social-variation-overrides";
 import { socialTools } from "./public-social-tools";
@@ -225,6 +226,7 @@ const rawPublicTools: Tool[] = [
   ...hrPeopleOperationsTools,
   ...cybersecurityITOperationsTools,
   ...presentationPitchTools,
+  ...posterPromotionalTools,
   ...aiPromptBatchTools,
   ...socialVariationOverrideTools,
   ...socialTools,

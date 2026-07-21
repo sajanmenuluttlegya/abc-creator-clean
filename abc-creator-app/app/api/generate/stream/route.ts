@@ -7,6 +7,7 @@ import {
 import { preprocessToolInputs } from "@/lib/tools/preprocess-inputs";
 import { buildResearchContext } from "@/lib/tools/research-context";
 import { calculateToolCreditCost } from "@/lib/tools/credit-costs";
+import { getBookTitleSelection } from "@/lib/tools/book-title-selection";
 import { createClient } from "@/lib/supabase/server";
 import { routeToAI, type ChatMessage } from "@/lib/ai/routeToAI";
 
@@ -263,6 +264,11 @@ function makeTextStreamFromOpenRouter(response: Response) {
   });
 }
 
+function hasExactBookTitleOptions(value: string, expectedCount: number) {
+  const numbers = Array.from(value.matchAll(/^##\s+Title\s+(\d+)\s*[—–:-]/gim)).map((match) => Number(match[1]));
+  return numbers.length === expectedCount && numbers.every((number, index) => number === index + 1);
+}
+
 function makeTextStreamFromText(text: string) {
   const encoder = new TextEncoder();
 
@@ -480,6 +486,25 @@ Output requirements:
 ${prompt.outputGuide}${structureInstructions}${planningInstructions}`,
       },
     ];
+
+    if (toolSlug === "book-title-generator") {
+      const selection = getBookTitleSelection(inputs.title_count);
+      let validResult: Awaited<ReturnType<typeof routeToAI>> | null = null;
+      let validText = "";
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        const attemptMessages: ChatMessage[] = attempt === 0 ? messages : [...messages, { role: "user", content: `Correction required: return exactly ${selection.count} title options numbered consecutively from Title 1 through Title ${selection.count}. Do not return more or fewer.` }];
+        const candidate = await routeToAI({ requestLabel: `book-title-generator:attempt-${attempt + 1}`, temperature: 0.72, maxTokens: Math.min(4200, 1100 + selection.count * 280), messages: attemptMessages });
+        const candidateText = candidate.text.trim();
+        if (candidateText && hasExactBookTitleOptions(candidateText, selection.count)) { validResult = candidate; validText = candidateText; break; }
+      }
+      if (!validResult || !validText) {
+        await refundIfReserved("book_title_generation_invalid_count");
+        return Response.json({ ok: false, error: `Book Title Generator did not return exactly ${selection.count} title option${selection.count === 1 ? "" : "s"}. No credits were charged.`, code: "INVALID_TITLE_COUNT" }, { status: 502 });
+      }
+      const spend = await spendReservation(validResult.provider, validResult.model);
+      if (!spend.ok) return spend.response;
+      return new Response(makeTextStreamFromText(validText), { headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-cache, no-transform", "X-Accel-Buffering": "no", "X-Creator-Stream-Provider": validResult.provider, "X-Creator-Stream-Model": validResult.model } });
+    }
 
     const maxTokens = 25000;
     const failures: string[] = [];
