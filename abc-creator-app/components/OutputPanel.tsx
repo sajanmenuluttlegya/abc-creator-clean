@@ -6,7 +6,7 @@ import { createPortal } from "react-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { Components } from "react-markdown";
-import type { RecommendedNextAction } from "@/lib/tools/public-tools";
+import { getToolBySlug, type RecommendedNextAction } from "@/lib/tools/public-tools";
 import { getBookTitleSelection, isBookTitleOptionBlock } from "@/lib/tools/book-title-selection";
 import { downloadOutput, type OutputDownloadFormat } from "@/lib/download/exportDocuments";
 import { downloadHtmlOutput } from "@/lib/download/exportHtml";
@@ -47,6 +47,18 @@ const BOOK_IMAGE_OUTPUT_TOOLS = [
 const IMAGE_OUTPUT_TOOLS = new Set<string>([...BLOG_IMAGE_OUTPUT_TOOLS, ...BOOK_IMAGE_OUTPUT_TOOLS]);
 const BOOK_IMAGE_OUTPUT_TOOL_SET = new Set<string>(BOOK_IMAGE_OUTPUT_TOOLS);
 const BLOG_IMAGE_OUTPUT_TOOL_SET = new Set<string>(BLOG_IMAGE_OUTPUT_TOOLS);
+const MODERN_OUTPUT_CATEGORIES = new Set([
+  "Personal Productivity Planning Tools", "Career / Professional Tools", "Interior / Architecture Tools", "Interior Architecture Tools",
+  "Food / Hospitality Creator Tools", "Food / Hospitality Tools", "Fashion / Apparel Creator Tools", "Fashion / Apparel Tools",
+  "Marketing Campaign Tools", "Research / Knowledge Tools", "Education / Learning Tools", "Data Analysis / Business Intelligence Tools",
+  "Finance / Accounting Tools", "Legal / Compliance Tools", "Customer Support / Service Operations Tools",
+  "Sales / CRM / Revenue Operations Tools", "HR / People Operations Tools", "Cybersecurity / IT Operations Tools",
+  "Presentation / Pitch Creator Tools", "Poster / Promotional Design Tools",
+]);
+
+function toolCategory(toolSlug: string) { return getToolBySlug(toolSlug)?.category || ""; }
+function isModernOutputTool(toolSlug: string) { return MODERN_OUTPUT_CATEGORIES.has(toolCategory(toolSlug)); }
+function isBlogWorkflowTool(toolSlug: string) { return toolCategory(toolSlug) === "Blog Workflow"; }
 
 type OutputPanelDownloadFormat = OutputDownloadFormat | "html";
 type SideImageRatio = "1:1" | "16:9" | "9:16" | "4:5" | "3:4" | "4:3" | "3:2" | "2:3";
@@ -192,7 +204,7 @@ function isRemovedBlogSectionHeading(line: string) {
   return ["verify before publishing notes", "verify before publishing", "final on-page seo checklist", "on-page seo checklist", "final seo checklist", "publisher notes", "meta data suggestions", "metadata suggestions", "meta title", "meta description", "slug", "internal link placeholder ideas", "internal-link placeholder ideas", "change log", "verification checklist", "verification checklist for factual claims"].includes(normalized);
 }
 
-function cleanOutputForDisplay(value: string) {
+function cleanOutputForDisplay(value: string, toolSlug: string) {
   const lines = value.replace(/\r\n/g, "\n").split("\n");
   const kept: string[] = [];
   let skipping = false;
@@ -207,7 +219,9 @@ function cleanOutputForDisplay(value: string) {
     }
     if (!skipping) kept.push(line);
   }
-  return kept.join("\n").replace(/^(#{1,6}\s+)ultra[-\s]*premium\s+/gim, "$1").replace(/^(#{1,6}\s+)premium\s+(output|result|deliverable|canvas|studio)\b/gim, "$1$2").replace(/\n{4,}/g, "\n\n\n").trim();
+  const cleaned = kept.join("\n").replace(/\n{4,}/g, "\n\n\n").trim();
+  if (!isModernOutputTool(toolSlug)) return cleaned;
+  return cleaned.replace(/^(#{1,6}\s+)ultra[-\s]*premium\s+/gim, "$1").replace(/^(#{1,6}\s+)premium\s+(output|result|deliverable|canvas|studio)\b/gim, "$1$2").trim();
 }
 
 function splitOutputIntoDeletableBlocks(markdown: string): DeletableOutputBlock[] {
@@ -282,8 +296,11 @@ function compactText(value: string, maxLength: number) {
   return cleaned.length > maxLength ? `${cleaned.slice(0, Math.max(0, maxLength - 3))}...` : cleaned;
 }
 
-function defaultRegenerateInstruction(sectionText: string) {
-  return `Rewrite this section to be clearer, more precise, and professional while preserving the same meaning and Markdown heading. If this is book prose, write like a professional author, preserve canon, keep natural paragraphing, and never sound AI-generated.\n\n${sectionText}`;
+function defaultRegenerateInstruction(sectionText: string, toolSlug: string) {
+  const instruction = isModernOutputTool(toolSlug)
+    ? "Rewrite this section to be clearer, more precise, and professional while preserving the same meaning and Markdown heading."
+    : "Rewrite this section to be more premium and professional while preserving the same meaning and Markdown heading.";
+  return `${instruction} If this is book prose, write like a professional author, preserve canon, keep natural paragraphing, and never sound AI-generated.\n\n${sectionText}`;
 }
 
 function defaultSideImagePrompt(sectionText: string, inputs: Record<string, string>, toolSlug: string) {
@@ -355,7 +372,7 @@ export function OutputPanel({ isLoading, output, recommendedNextActions = [], do
   const exportContentRef = useRef<HTMLDivElement | null>(null);
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
 
-  const displayOutput = useMemo(() => cleanOutputForDisplay(output), [output]);
+  const displayOutput = useMemo(() => cleanOutputForDisplay(output, toolSlug), [output, toolSlug]);
   const effectiveDisplayOutput = bookTitleOutputOverride ?? displayOutput;
   const outputBlocks = useMemo(() => splitOutputIntoDeletableBlocks(effectiveDisplayOutput), [effectiveDisplayOutput]);
   const visibleOutputBlocks = useMemo(() => outputBlocks.filter((block) => !deletedBlockIds.has(block.id)).map((block) => ({ ...block, content: blockOverrides[block.id] ?? block.content })), [outputBlocks, deletedBlockIds, blockOverrides]);
@@ -521,7 +538,7 @@ export function OutputPanel({ isLoading, output, recommendedNextActions = [], do
         return;
       }
       if (scope === "all") {
-        setBookTitleOutputOverride(cleanOutputForDisplay(data.text));
+        setBookTitleOutputOverride(cleanOutputForDisplay(data.text, toolSlug));
         setDeletedBlockIds(new Set());
         setBlockOverrides({});
         setPreviousBlockOverrides({});
@@ -542,7 +559,7 @@ export function OutputPanel({ isLoading, output, recommendedNextActions = [], do
   const openRegeneratePanel = (block: DeletableOutputBlock) => {
     setActiveImageBlockId(null);
     setActiveRegenerateBlockId((current) => (current === block.id ? null : block.id));
-    setRegenerateInstruction(defaultRegenerateInstruction(block.content));
+    setRegenerateInstruction(defaultRegenerateInstruction(block.content, toolSlug));
     setSectionActionMessage("");
   };
 
@@ -796,7 +813,14 @@ export function OutputPanel({ isLoading, output, recommendedNextActions = [], do
             }) : <div className="rounded-2xl border border-red-300/20 bg-red-500/10 p-5 text-sm text-red-100">All output sections were deleted. Run the tool again to regenerate the output.</div>}
             {isStreamingVisible ? <span className="mt-2 inline-block h-5 w-2 animate-pulse rounded-sm bg-purple-300 align-middle" /> : null}
           </div>
-          {showNextActions ? <div className="mt-7 border-t border-white/10 pt-5"><h3 className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Continue with</h3><div className="divide-y divide-white/[0.07]">{recommendedNextActions.map((action) => <Link key={`${action.href}-${action.label}`} href={action.href} className="group/action flex items-center justify-between gap-5 py-4"><div><div className="text-sm font-semibold text-white group-hover/action:text-purple-200">{action.label}</div><p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500">{action.description}</p></div><span className="text-lg text-purple-300 transition-transform group-hover/action:translate-x-1">→</span></Link>)}</div></div> : null}
+          {showNextActions ? (isBlogWorkflowTool(toolSlug) ? (
+            <div className="mt-5 rounded-2xl border border-purple-500/20 bg-purple-500/10 p-5">
+              <h3 className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-purple-200">Recommended next actions</h3>
+              <div className="space-y-3">{recommendedNextActions.map((action) => <Link key={`${action.href}-${action.label}`} href={action.href} className="block rounded-xl border border-purple-400/20 bg-black/35 p-4 transition hover:border-purple-300/50 hover:bg-purple-500/10"><div className="text-sm font-semibold text-white">{action.label}</div><p className="mt-1 text-xs leading-5 text-gray-400">{action.description}</p></Link>)}</div>
+            </div>
+          ) : (
+            <div className="mt-7 border-t border-white/10 pt-5"><h3 className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Continue with</h3><div className="divide-y divide-white/[0.07]">{recommendedNextActions.map((action) => <Link key={`${action.href}-${action.label}`} href={action.href} className="group/action flex items-center justify-between gap-5 py-4"><div><div className="text-sm font-semibold text-white group-hover/action:text-purple-200">{action.label}</div><p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500">{action.description}</p></div><span className="text-lg text-purple-300 transition-transform group-hover/action:translate-x-1">→</span></Link>)}</div></div>
+          )) : null}
         </>
       ) : isLoading ? <div className="flex items-center gap-3 rounded-2xl border border-purple-500/20 bg-white/5 p-5 text-purple-200"><div className="h-5 w-5 animate-spin rounded-full border-2 border-purple-400 border-t-transparent" /><p>Generating...</p></div> : <div className="rounded-2xl border border-purple-500/15 bg-black/70 p-6 text-gray-400">Your generated result will appear here. Text tools can be copied or downloaded from this panel.</div>}
     </div>

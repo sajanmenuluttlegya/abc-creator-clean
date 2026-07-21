@@ -38,6 +38,16 @@ function exactTitleIndex(sectionText: string) {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : 1;
 }
 
+function exactTitleNumbers(value: string) {
+  return Array.from(value.matchAll(/^##\s+Title\s+(\d+)\s*[—–:-]/gim)).map((match) => Number(match[1]));
+}
+
+function hasExactTitleShape(value: string, scope: "single" | "all", titleIndex: number, expectedCount: number) {
+  const numbers = exactTitleNumbers(value);
+  if (scope === "single") return numbers.length === 1 && numbers[0] === titleIndex;
+  return numbers.length === expectedCount && numbers.every((number, index) => number === index + 1);
+}
+
 function inputContext(inputs: Record<string, string>) {
   const ordered = [
     ["Working book title", inputs.book_title],
@@ -128,17 +138,27 @@ export async function POST(req: NextRequest) {
       ? `Replace title option ${titleIndex}.\n\nOriginal inputs:\n${inputContext(inputs)}\n\nCurrent complete output to avoid duplicates:\n${fullOutput}\n\nSelected title section:\n${sectionText}`
       : `Original inputs:\n${inputContext(inputs)}\n\nThe user selected exactly ${selection.count} titles. Generate a fresh complete result.`;
 
-    const result = await routeToAI({
-      requestLabel: `book-title-regenerate:${scope}`,
-      temperature: 0.78,
-      maxTokens: scope === "single" ? 700 : Math.min(4200, 1100 + selection.count * 280),
-      messages: [{ role: "system", content: system }, { role: "user", content: user }],
-    });
+    let result: Awaited<ReturnType<typeof routeToAI>> | null = null;
+    let text = "";
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const attemptUser = attempt === 0 ? user : `${user}\n\nCorrection required: the previous response had the wrong number or numbering of title sections. Return the exact required Markdown title sections and nothing extra beyond the allowed structure.`;
+      const candidate = await routeToAI({
+        requestLabel: `book-title-regenerate:${scope}:attempt-${attempt + 1}`,
+        temperature: 0.78,
+        maxTokens: scope === "single" ? 700 : Math.min(4200, 1100 + selection.count * 280),
+        messages: [{ role: "system", content: system }, { role: "user", content: attemptUser }],
+      });
+      const candidateText = candidate.text.trim();
+      if (candidateText && hasExactTitleShape(candidateText, scope, titleIndex, selection.count)) {
+        result = candidate;
+        text = candidateText;
+        break;
+      }
+    }
 
-    const text = result.text.trim();
-    if (!text) {
-      await refundIfReserved("book_title_regeneration_empty");
-      return Response.json({ ok: false, error: "Title regeneration returned no text.", requiredCredits }, { status: 502 });
+    if (!result || !text) {
+      await refundIfReserved("book_title_regeneration_invalid_count");
+      return Response.json({ ok: false, error: `Title regeneration did not return the exact required ${scope === "single" ? 1 : selection.count} title option${scope === "single" || selection.count === 1 ? "" : "s"}. No credits were charged.`, requiredCredits }, { status: 502 });
     }
 
     const spendResponse = await supabase.rpc("spend_reserved_credits", { p_transaction_id: reservedTransactionId, p_provider: result.provider, p_model: result.model });
