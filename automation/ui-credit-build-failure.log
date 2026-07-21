@@ -1,0 +1,47 @@
+
+> abc-creator-app@0.1.0 build
+> next build
+
+⚠ No build cache found. Please configure build caching for faster rebuilds. Read more: https://nextjs.org/docs/messages/no-cache
+Attention: Next.js now collects completely anonymous telemetry regarding usage.
+This information is used to shape Next.js' roadmap and prioritize features.
+You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+https://nextjs.org/telemetry
+
+▲ Next.js 16.2.9 (Turbopack)
+
+  Creating an optimized production build ...
+Turbopack build encountered 1 warnings:
+./next.config.ts
+Encountered unexpected file in NFT list
+A file was traced that indicates that the whole project was traced unintentionally. Somewhere in the import trace below, there are:
+- filesystem operations (like path.join, path.resolve or fs.readFile), or
+- very dynamic requires (like require('./' + foo)).
+To resolve this, you can
+- remove them if possible, or
+- only use them in development, or
+- make sure they are statically scoped to some subfolder: path.join(process.cwd(), 'data', bar), or
+- add ignore comments: path.join(/*turbopackIgnore: true*/ process.cwd(), bar)
+
+Import trace:
+  App Route:
+    ./next.config.ts
+    ./lib/pdf/exportPdfDocument.ts
+    ./app/api/export/pdf/route.ts
+
+
+✓ Compiled successfully in 34.4s
+  Running TypeScript ...
+Failed to type check.
+
+./lib/tools/public-book-variation-overrides.ts:25:5
+Type error: Object literal may only specify known properties, and 'slug' does not exist in type 'BookInput'.
+
+  [90m23 |[0m   {
+  [90m24 |[0m     id: [32m"book-title-generator"[0m,
+[31m[1m>[0m [90m25 |[0m     slug: [32m"book-title-generator"[0m,
+  [90m   |[0m     [31m[1m^[0m
+  [90m26 |[0m     name: [32m"Book Title Generator"[0m,
+  [90m27 |[0m     description: [32m"Generate an exact number of book-title options with concise supporting n...[0m
+  [90m28 |[0m     icon: [32m"book"[0m,
+Next.js build worker exited with code: 1 and signal: null
