@@ -7,6 +7,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { Components } from "react-markdown";
 import type { RecommendedNextAction } from "@/lib/tools/public-tools";
+import { getBookTitleSelection, isBookTitleOptionBlock } from "@/lib/tools/book-title-selection";
 import { downloadOutput, type OutputDownloadFormat } from "@/lib/download/exportDocuments";
 import { downloadHtmlOutput } from "@/lib/download/exportHtml";
 import { DiagramRenderer, parseDiagramSpec, type DiagramSpec } from "./diagrams/DiagramRendererClean";
@@ -60,6 +61,7 @@ type MarkdownDiagramSegment =
 
 type DeletableOutputBlock = { id: string; content: string };
 type SectionRegenerateResponse = { ok?: boolean; error?: string; details?: string; text?: string };
+type BookTitleRegenerateResponse = SectionRegenerateResponse & { code?: string; requiredCredits?: number; creditsSpent?: number; titleCount?: number };
 type OutputImageResponse = { ok?: boolean; error?: string; details?: string; code?: string; requiredCredits?: number; currentCredits?: number; images?: Array<{ dataUrl: string; filename?: string }> };
 
 type SideImageState = {
@@ -338,6 +340,8 @@ export function OutputPanel({ isLoading, output, recommendedNextActions = [], do
   const [regenerateInstruction, setRegenerateInstruction] = useState("");
   const [regeneratingBlockId, setRegeneratingBlockId] = useState<string | null>(null);
   const [sectionActionMessage, setSectionActionMessage] = useState("");
+  const [bookTitleOutputOverride, setBookTitleOutputOverride] = useState<string | null>(null);
+  const [regeneratingAllBookTitles, setRegeneratingAllBookTitles] = useState(false);
   const [sideImages, setSideImages] = useState<Record<string, SideImageState>>({});
   const [previousSideImages, setPreviousSideImages] = useState<Record<string, SideImageState | null>>({});
   const [activeImageBlockId, setActiveImageBlockId] = useState<string | null>(null);
@@ -352,7 +356,8 @@ export function OutputPanel({ isLoading, output, recommendedNextActions = [], do
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
 
   const displayOutput = useMemo(() => cleanOutputForDisplay(output), [output]);
-  const outputBlocks = useMemo(() => splitOutputIntoDeletableBlocks(displayOutput), [displayOutput]);
+  const effectiveDisplayOutput = bookTitleOutputOverride ?? displayOutput;
+  const outputBlocks = useMemo(() => splitOutputIntoDeletableBlocks(effectiveDisplayOutput), [effectiveDisplayOutput]);
   const visibleOutputBlocks = useMemo(() => outputBlocks.filter((block) => !deletedBlockIds.has(block.id)).map((block) => ({ ...block, content: blockOverrides[block.id] ?? block.content })), [outputBlocks, deletedBlockIds, blockOverrides]);
   const exportOutput = useMemo(() => visibleOutputBlocks.map((block) => block.content).join("\n\n").trim(), [visibleOutputBlocks]);
   const hasOutput = Boolean(displayOutput.trim());
@@ -363,6 +368,8 @@ export function OutputPanel({ isLoading, output, recommendedNextActions = [], do
   const autoGenerateBlogImages = shouldAutoGenerateBlogImages(toolSlug, inputs, isLoading);
   const canGenerateSectionImage = IMAGE_OUTPUT_TOOLS.has(toolSlug);
   const isBookImageTool = BOOK_IMAGE_OUTPUT_TOOL_SET.has(toolSlug);
+  const isBookTitleGenerator = toolSlug === "book-title-generator";
+  const bookTitleSelection = getBookTitleSelection(inputs.title_count);
 
   useEffect(() => {
     setDeletedBlockIds(new Set());
@@ -374,6 +381,8 @@ export function OutputPanel({ isLoading, output, recommendedNextActions = [], do
     setRegenerateInstruction("");
     setRegeneratingBlockId(null);
     setSectionActionMessage("");
+    setBookTitleOutputOverride(null);
+    setRegeneratingAllBookTitles(false);
     setSideImages({});
     setPreviousSideImages({});
     setActiveImageBlockId(null);
@@ -493,6 +502,42 @@ export function OutputPanel({ isLoading, output, recommendedNextActions = [], do
   };
 
   const deleteOutputBlock = (blockId: string) => setDeletedBlockIds((current) => new Set([...current, blockId]));
+
+  const regenerateBookTitle = async (scope: "single" | "all", block?: DeletableOutputBlock) => {
+    if (scope === "single" && !block) return;
+    if (scope === "all") setRegeneratingAllBookTitles(true);
+    else setRegeneratingBlockId(block!.id);
+    setSectionActionMessage("");
+    try {
+      const response = await fetch("/api/generate/book-title-regenerate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scope, sectionText: block?.content || "", fullOutput: exportOutput, inputs }),
+      });
+      const data = (await response.json()) as BookTitleRegenerateResponse;
+      if (!response.ok || !data.ok || !data.text?.trim()) {
+        const required = data.requiredCredits ? ` This action needs ${data.requiredCredits} credit${data.requiredCredits === 1 ? "" : "s"}.` : "";
+        setSectionActionMessage(`${data.error || "Book-title regeneration failed."}${required}${data.details ? ` ${data.details}` : ""}`);
+        return;
+      }
+      if (scope === "all") {
+        setBookTitleOutputOverride(cleanOutputForDisplay(data.text));
+        setDeletedBlockIds(new Set());
+        setBlockOverrides({});
+        setPreviousBlockOverrides({});
+        setSectionActionMessage(`All ${data.titleCount || bookTitleSelection.count} titles regenerated for ${data.creditsSpent || bookTitleSelection.credits} credit${(data.creditsSpent || bookTitleSelection.credits) === 1 ? "" : "s"}.`);
+      } else if (block) {
+        setPreviousBlockOverrides((current) => ({ ...current, [block.id]: blockOverrides[block.id] ?? block.content }));
+        setBlockOverrides((current) => ({ ...current, [block.id]: data.text!.trim() }));
+        setSectionActionMessage("Title regenerated for 1 credit.");
+      }
+    } catch (error) {
+      setSectionActionMessage(error instanceof Error ? error.message : String(error));
+    } finally {
+      if (scope === "all") setRegeneratingAllBookTitles(false);
+      else setRegeneratingBlockId(null);
+    }
+  };
 
   const openRegeneratePanel = (block: DeletableOutputBlock) => {
     setActiveImageBlockId(null);
@@ -672,6 +717,7 @@ export function OutputPanel({ isLoading, output, recommendedNextActions = [], do
         </div>
         {hasVisibleOutput ? (
           <div className="flex flex-wrap items-center gap-3">
+            {isBookTitleGenerator ? <button type="button" onClick={() => void regenerateBookTitle("all")} disabled={regeneratingAllBookTitles || Boolean(regeneratingBlockId)} className="rounded-full border border-fuchsia-300/30 bg-fuchsia-500/12 px-4 py-2 text-sm font-semibold text-fuchsia-100 transition hover:bg-fuchsia-500/20 disabled:cursor-not-allowed disabled:opacity-55">{regeneratingAllBookTitles ? "Regenerating all..." : `Regenerate all — ${bookTitleSelection.credits} credit${bookTitleSelection.credits === 1 ? "" : "s"}`}</button> : null}
             <button type="button" onClick={copyOutput} className="rounded-full border border-purple-400/30 bg-purple-500/10 px-4 py-2 text-sm font-semibold text-purple-100 transition hover:bg-purple-500/20">{copied ? "Copied!" : "Copy"}</button>
             <PremiumMenu<OutputPanelDownloadFormat>
               label="Download"
@@ -705,7 +751,9 @@ export function OutputPanel({ isLoading, output, recommendedNextActions = [], do
                   <div data-export-ignore="true" className="absolute right-2 top-2 z-10 flex flex-wrap justify-end gap-2 opacity-0 transition group-hover:opacity-100">
                     <button type="button" aria-label="Edit this output section manually" title="Edit this output section manually — no credits" onClick={() => openManualEdit(block)} className="inline-flex h-8 items-center justify-center rounded-full border border-white/20 bg-white/[0.07] px-3 text-xs font-semibold text-white">Edit</button>
                     {previousBlockOverrides[block.id] !== undefined ? <button type="button" onClick={() => undoManualEdit(block.id)} className="inline-flex h-8 items-center justify-center rounded-full border border-white/15 bg-white/[0.045] px-3 text-xs font-semibold text-slate-200">Undo edit</button> : null}
-                    <button type="button" aria-label="Regenerate this output section" title="Regenerate this output section" onClick={() => openRegeneratePanel(block)} className="inline-flex h-8 items-center justify-center rounded-full border border-cyan-300/30 bg-cyan-500/15 px-3 text-xs font-semibold text-cyan-100 shadow-lg shadow-cyan-950/20 transition hover:bg-cyan-500/25">Regenerate</button>
+                    {isBookTitleGenerator && isBookTitleOptionBlock(block.content)
+                      ? <button type="button" aria-label="Regenerate this title for 1 credit" title="Regenerate this title — 1 credit" onClick={() => void regenerateBookTitle("single", block)} disabled={regeneratingBlockId === block.id || regeneratingAllBookTitles} className="inline-flex h-8 items-center justify-center rounded-full border border-cyan-300/30 bg-cyan-500/15 px-3 text-xs font-semibold text-cyan-100 shadow-lg shadow-cyan-950/20 transition hover:bg-cyan-500/25 disabled:opacity-55">{regeneratingBlockId === block.id ? "Regenerating..." : "Regenerate title — 1 credit"}</button>
+                      : <button type="button" aria-label="Regenerate this output section" title="Regenerate this output section" onClick={() => openRegeneratePanel(block)} className="inline-flex h-8 items-center justify-center rounded-full border border-cyan-300/30 bg-cyan-500/15 px-3 text-xs font-semibold text-cyan-100 shadow-lg shadow-cyan-950/20 transition hover:bg-cyan-500/25">Regenerate</button>}
                     {canGenerateSectionImage ? <button type="button" aria-label="Add image beside this output section" title="Add image to this output section" onClick={() => openImagePanel(block)} className="inline-flex h-8 items-center justify-center rounded-full border border-emerald-300/30 bg-emerald-500/15 px-3 text-xs font-semibold text-emerald-100 shadow-lg shadow-emerald-950/20 transition hover:bg-emerald-500/25">Add image</button> : null}
                     <button type="button" aria-label="Delete this output section" title="Delete this output section" onClick={() => deleteOutputBlock(block.id)} className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-red-300/30 bg-red-500/15 text-sm text-red-100 shadow-lg shadow-red-950/20 transition hover:bg-red-500/25">🗑</button>
                   </div>

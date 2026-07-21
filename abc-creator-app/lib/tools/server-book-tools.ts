@@ -100,7 +100,7 @@ Then return: # Premium Book Concepts. Scale concept count and depth by output_le
     system: `You are ABC Creator's premium book title strategist.${bookSystem}`,
     outputGuide: `${titlePageGuide}
 
-Return # Book Title Options. Produce exactly the selected title_count: 1, 3, 5, or 10 title options—never extra titles. Keep the response focused. For each title include one concise rationale and, only when useful, one subtitle or series-line suggestion. End with a short Best Fit note and a Verify Availability reminder. Do not claim title, domain, trademark, or marketplace availability.`
+Return # Book Title Options and exactly the selected title_count: 1, 3, 5, or 10 title options—never more or fewer. Format every option as its own section: ## Title 1 — <title>, ## Title 2 — <title>, and so on. Under each title include one concise rationale and, only when genuinely useful, one subtitle or series-line suggestion. End with ## Best Fit and ## Verify Availability. Keep the whole response focused. Do not claim title, domain, trademark, or marketplace availability.`
   },
   "book-bible-generator": {
     creditCost: 5,
