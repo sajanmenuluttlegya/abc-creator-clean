@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { RecommendedNextAction } from "@/lib/tools/public-tools";
+import { getToolCreditEstimate } from "@/lib/tools/credit-costs";
 import { downloadOutput, type OutputDownloadFormat } from "@/lib/download/exportDocuments";
 import { downloadHtmlOutput } from "@/lib/download/exportHtml";
 import { PresetBlogOutputEditor } from "./PresetBlogOutputEditor";
@@ -39,6 +40,7 @@ export function PresetBlogOutputPanel({
   const [isRegenerating, setIsRegenerating] = useState(false);
   const exportContentRef = useRef<HTMLDivElement | null>(null);
   const displayOutput = useMemo(() => cleanOutput(manualOutput || output), [manualOutput, output]);
+  const regenerationCredits = useMemo(() => getToolCreditEstimate(toolSlug, inputs).credits, [inputs, toolSlug]);
   const hasOutput = Boolean(displayOutput.trim());
   const isStreamingVisible = isLoading && hasOutput;
   const isErrorOutput = /^(error:|not enough credits)/i.test(displayOutput.trim());
@@ -51,25 +53,49 @@ export function PresetBlogOutputPanel({
 
   const regenerateOutput = async () => {
     if (!displayOutput.trim() || isRegenerating) return;
+    const previous = displayOutput;
     setIsRegenerating(true);
     setDownloadError("");
+    setPreviousManualOutput(previous);
+    setIsEditingText(false);
+    setEditDraft("");
+
     try {
-      const response = await fetch("/api/generate/section-regenerate", {
+      const response = await fetch("/api/generate/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          toolSlug,
-          sectionText: displayOutput,
-          instruction: "Regenerate the complete blog output while preserving the selected tool purpose, user inputs, factual constraints, structure quality, useful visuals/tables, and professional formatting. Return only the complete replacement output.",
-        }),
+        body: JSON.stringify({ toolSlug, inputs }),
       });
-      const data = (await response.json()) as { ok?: boolean; text?: string; error?: string; details?: string };
-      if (!response.ok || !data.ok || !data.text?.trim()) throw new Error([data.error || "Regeneration failed.", data.details].filter(Boolean).join(" "));
-      setPreviousManualOutput(displayOutput);
-      setManualOutput(data.text.trim());
-      setIsEditingText(false);
-      setEditDraft("");
+
+      if (!response.ok) {
+        const raw = await response.text();
+        try {
+          const data = JSON.parse(raw) as { error?: string; details?: string; requiredCredits?: number; currentCredits?: number };
+          if (response.status === 402) {
+            throw new Error(`Not enough credits. This regeneration needs ${data.requiredCredits ?? regenerationCredits} credits; current balance: ${data.currentCredits ?? 0}.`);
+          }
+          throw new Error([data.error || "Regeneration failed.", data.details].filter(Boolean).join(" "));
+        } catch (error) {
+          if (error instanceof SyntaxError) throw new Error(raw || "Regeneration failed.");
+          throw error;
+        }
+      }
+
+      if (!response.body) throw new Error("The regeneration response was empty.");
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let next = "";
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        next += decoder.decode(value, { stream: true });
+        setManualOutput(next);
+      }
+      next += decoder.decode();
+      if (!next.trim()) throw new Error("Regeneration returned no text.");
+      setManualOutput(next.trim());
     } catch (error) {
+      setManualOutput(previous);
       setDownloadError(error instanceof Error ? error.message : "Regeneration failed. Please try again.");
     } finally {
       setIsRegenerating(false);
@@ -125,7 +151,7 @@ export function PresetBlogOutputPanel({
         {hasOutput ? (
           <div className="flex flex-wrap items-center gap-3">
             <button type="button" onClick={openManualEdit} className="rounded-full border border-white/15 bg-white/[0.055] px-4 py-2 text-sm font-semibold text-white">Edit</button>
-            <button type="button" onClick={() => void regenerateOutput()} disabled={isRegenerating || isLoading || isErrorOutput} className="rounded-full border border-cyan-300/30 bg-cyan-500/15 px-4 py-2 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-500/25 disabled:cursor-not-allowed disabled:opacity-55">{isRegenerating ? "Regenerating..." : "Regenerate — 2 credits"}</button>
+            <button type="button" onClick={() => void regenerateOutput()} disabled={isRegenerating || isLoading || isErrorOutput} className="rounded-full border border-cyan-300/30 bg-cyan-500/15 px-4 py-2 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-500/25 disabled:cursor-not-allowed disabled:opacity-55">{isRegenerating ? "Regenerating..." : `Regenerate — ${regenerationCredits} credit${regenerationCredits === 1 ? "" : "s"}`}</button>
             {previousManualOutput ? <button type="button" onClick={undoManualEdit} className="rounded-full border border-white/10 bg-white/[0.035] px-4 py-2 text-sm font-semibold text-slate-300">Undo edit</button> : null}
             <button type="button" onClick={copyOutput} className="rounded-full border border-purple-400/30 bg-purple-500/10 px-4 py-2 text-sm font-semibold text-purple-100 transition hover:bg-purple-500/20">
               {copied ? "Copied!" : "Copy"}
