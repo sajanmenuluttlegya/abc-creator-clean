@@ -30,7 +30,7 @@ Import trace:
     ./app/api/export/pdf/route.ts
 
 
-✓ Compiled successfully in 34.4s
+✓ Compiled successfully in 33.7s
   Running TypeScript ...
 Failed to type check.
 
