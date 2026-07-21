@@ -106,9 +106,7 @@ def add_count_driven_tail(text: str, filename: str) -> str:
     declaration = 'const countDrivenTail: ToolInput[] = commonTail.filter((input) => input.id !== "output_depth");'
     if declaration in text:
         return text
-    marker = "];
-
-function textTool"
+    marker = "];\n\nfunction textTool"
     if marker not in text:
         raise RuntimeError(f"commonTail terminator not found: {filename}")
     return text.replace(marker, f"];\n\n{declaration}\n\nfunction textTool", 1)

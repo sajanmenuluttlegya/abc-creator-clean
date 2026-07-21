@@ -30,24 +30,262 @@ Import trace:
     ./app/api/export/pdf/route.ts
 
 
-✓ Compiled successfully in 37.4s
-  Running TypeScript ...
-  Finished TypeScript in 13.2s ...
-  Collecting page data using 1 worker ...
-  Generating static pages using 1 worker (0/17) ...
-  Generating static pages using 1 worker (4/17) 
-  Generating static pages using 1 worker (8/17) 
-Error occurred prerendering page "/login". Read more: https://nextjs.org/docs/messages/prerender-error
-Error: @supabase/ssr: Your project's URL and API key are required to create a Supabase client!
 
-Check your Supabase project's API settings to find these values
+> Build error occurred
+Error: Turbopack build failed with 8 errors:
+./components/OutputPanel.tsx:347:10
+the name `bookTitleOutputOverride` is defined multiple times
+  [90m345 |[0m   [36mconst[0m [bookTitleOutputOverride, setBookTitleOutputOverride] = useState<string | [36mnull[0m>([36mn...[0m
+  [90m346 |[0m   [36mconst[0m [regeneratingAllBookTitles, setRegeneratingAllBookTitles] = useState([36mfalse[0m);
+[31m[1m>[0m [90m347 |[0m   [36mconst[0m [bookTitleOutputOverride, setBookTitleOutputOverride] = useState<string | [36mnull[0m>([36mn...[0m
+  [90m    |[0m          [31m[1m^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m348 |[0m   [36mconst[0m [regeneratingAllBookTitles, setRegeneratingAllBookTitles] = useState([36mfalse[0m);
+  [90m349 |[0m   [36mconst[0m [sideImages, setSideImages] = useState<[33mRecord[0m<string, [33mSideImageState[0m>>({});
+  [90m350 |[0m   [36mconst[0m [previousSideImages, setPreviousSideImages] = useState<[33mRecord[0m<string, [33mSideImageSt...[0m
 
-https://supabase.com/dashboard/project/_/settings/api
-    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
-    at auth.persistSession (.next/server/chunks/ssr/_1a-0c_d._.js:55:71)
-    at <unknown> (.next/server/chunks/ssr/_1a-0c_d._.js:59:4984)
-    at <unknown> (.next/server/chunks/ssr/components_AuthCard_tsx_0b1xr9k._.js:1:965) {
-  digest: '934699948'
-}
-Export encountered an error on /login/page: /login, exiting the build.
-⨯ Next.js build worker exited with code: 1 and signal: null
+Ecmascript file had an error
+
+Import traces:
+  App Route:
+    ./components/OutputPanel.tsx
+    ./lib/pdf/exportPdfDocument.ts
+    ./app/api/export/pdf/route.ts
+
+  Client Component Browser:
+    ./components/OutputPanel.tsx [Client Component Browser]
+    ./components/PresentationPitchTextPanel.tsx [Client Component Browser]
+    ./app/tools/[slug]/page.tsx [Client Component Browser]
+    ./app/tools/[slug]/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/OutputPanel.tsx [Client Component SSR]
+    ./components/PresentationPitchTextPanel.tsx [Client Component SSR]
+    ./app/tools/[slug]/page.tsx [Client Component SSR]
+    ./app/tools/[slug]/page.tsx [Server Component]
+
+
+./components/OutputPanel.tsx:378:9
+the name `bookTitleSelection` is defined multiple times
+  [90m376 |[0m   [36mconst[0m bookTitleSelection = getBookTitleSelection(inputs.title_count);
+  [90m377 |[0m   [36mconst[0m isBookTitleGenerator = toolSlug === [32m"book-title-generator"[0m;
+[31m[1m>[0m [90m378 |[0m   [36mconst[0m bookTitleSelection = getBookTitleSelection(inputs.title_count);
+  [90m    |[0m         [31m[1m^^^^^^^^^^^^^^^^^^[0m
+  [90m379 |[0m
+  [90m380 |[0m   useEffect(() => {
+  [90m381 |[0m     setDeletedBlockIds([36mnew[0m [33mSet[0m());
+
+Ecmascript file had an error
+
+Import traces:
+  App Route:
+    ./components/OutputPanel.tsx
+    ./lib/pdf/exportPdfDocument.ts
+    ./app/api/export/pdf/route.ts
+
+  Client Component Browser:
+    ./components/OutputPanel.tsx [Client Component Browser]
+    ./components/PresentationPitchTextPanel.tsx [Client Component Browser]
+    ./app/tools/[slug]/page.tsx [Client Component Browser]
+    ./app/tools/[slug]/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/OutputPanel.tsx [Client Component SSR]
+    ./components/PresentationPitchTextPanel.tsx [Client Component SSR]
+    ./app/tools/[slug]/page.tsx [Client Component SSR]
+    ./app/tools/[slug]/page.tsx [Server Component]
+
+
+./components/OutputPanel.tsx:11:10
+the name `getBookTitleSelection` is defined multiple times
+  [90m 9 |[0m [36mimport[0m [36mtype[0m { [33mRecommendedNextAction[0m } [36mfrom[0m [32m"@/lib/tools/public-tools"[0m;
+  [90m10 |[0m [36mimport[0m { getBookTitleSelection, isBookTitleOptionBlock } [36mfrom[0m [32m"@/lib/tools/book-title-sele...[0m
+[31m[1m>[0m [90m11 |[0m [36mimport[0m { getBookTitleSelection, isBookTitleOptionBlock } [36mfrom[0m [32m"@/lib/tools/book-title-sele...[0m
+  [90m   |[0m          [31m[1m^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m12 |[0m [36mimport[0m { downloadOutput, [36mtype[0m [33mOutputDownloadFormat[0m } [36mfrom[0m [32m"@/lib/download/exportDocuments"[0m;
+  [90m13 |[0m [36mimport[0m { downloadHtmlOutput } [36mfrom[0m [32m"@/lib/download/exportHtml"[0m;
+  [90m14 |[0m [36mimport[0m { [33mDiagramRenderer[0m, parseDiagramSpec, [36mtype[0m [33mDiagramSpec[0m } [36mfrom[0m [32m"./diagrams/DiagramRen...[0m
+
+Ecmascript file had an error
+
+Import traces:
+  App Route:
+    ./components/OutputPanel.tsx
+    ./lib/pdf/exportPdfDocument.ts
+    ./app/api/export/pdf/route.ts
+
+  Client Component Browser:
+    ./components/OutputPanel.tsx [Client Component Browser]
+    ./components/PresentationPitchTextPanel.tsx [Client Component Browser]
+    ./app/tools/[slug]/page.tsx [Client Component Browser]
+    ./app/tools/[slug]/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/OutputPanel.tsx [Client Component SSR]
+    ./components/PresentationPitchTextPanel.tsx [Client Component SSR]
+    ./app/tools/[slug]/page.tsx [Client Component SSR]
+    ./app/tools/[slug]/page.tsx [Server Component]
+
+
+./components/OutputPanel.tsx:377:9
+the name `isBookTitleGenerator` is defined multiple times
+  [90m375 |[0m   [36mconst[0m isBookTitleGenerator = toolSlug === [32m"book-title-generator"[0m;
+  [90m376 |[0m   [36mconst[0m bookTitleSelection = getBookTitleSelection(inputs.title_count);
+[31m[1m>[0m [90m377 |[0m   [36mconst[0m isBookTitleGenerator = toolSlug === [32m"book-title-generator"[0m;
+  [90m    |[0m         [31m[1m^^^^^^^^^^^^^^^^^^^^[0m
+  [90m378 |[0m   [36mconst[0m bookTitleSelection = getBookTitleSelection(inputs.title_count);
+  [90m379 |[0m
+  [90m380 |[0m   useEffect(() => {
+
+Ecmascript file had an error
+
+Import traces:
+  App Route:
+    ./components/OutputPanel.tsx
+    ./lib/pdf/exportPdfDocument.ts
+    ./app/api/export/pdf/route.ts
+
+  Client Component Browser:
+    ./components/OutputPanel.tsx [Client Component Browser]
+    ./components/PresentationPitchTextPanel.tsx [Client Component Browser]
+    ./app/tools/[slug]/page.tsx [Client Component Browser]
+    ./app/tools/[slug]/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/OutputPanel.tsx [Client Component SSR]
+    ./components/PresentationPitchTextPanel.tsx [Client Component SSR]
+    ./app/tools/[slug]/page.tsx [Client Component SSR]
+    ./app/tools/[slug]/page.tsx [Server Component]
+
+
+./components/OutputPanel.tsx:11:33
+the name `isBookTitleOptionBlock` is defined multiple times
+  [90m 9 |[0m [36mimport[0m [36mtype[0m { [33mRecommendedNextAction[0m } [36mfrom[0m [32m"@/lib/tools/public-tools"[0m;
+  [90m10 |[0m [36mimport[0m { getBookTitleSelection, isBookTitleOptionBlock } [36mfrom[0m [32m"@/lib/tools/book-title-sele...[0m
+[31m[1m>[0m [90m11 |[0m [36mimport[0m { getBookTitleSelection, isBookTitleOptionBlock } [36mfrom[0m [32m"@/lib/tools/book-title-sele...[0m
+  [90m   |[0m                                 [31m[1m^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m12 |[0m [36mimport[0m { downloadOutput, [36mtype[0m [33mOutputDownloadFormat[0m } [36mfrom[0m [32m"@/lib/download/exportDocuments"[0m;
+  [90m13 |[0m [36mimport[0m { downloadHtmlOutput } [36mfrom[0m [32m"@/lib/download/exportHtml"[0m;
+  [90m14 |[0m [36mimport[0m { [33mDiagramRenderer[0m, parseDiagramSpec, [36mtype[0m [33mDiagramSpec[0m } [36mfrom[0m [32m"./diagrams/DiagramRen...[0m
+
+Ecmascript file had an error
+
+Import traces:
+  App Route:
+    ./components/OutputPanel.tsx
+    ./lib/pdf/exportPdfDocument.ts
+    ./app/api/export/pdf/route.ts
+
+  Client Component Browser:
+    ./components/OutputPanel.tsx [Client Component Browser]
+    ./components/PresentationPitchTextPanel.tsx [Client Component Browser]
+    ./app/tools/[slug]/page.tsx [Client Component Browser]
+    ./app/tools/[slug]/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/OutputPanel.tsx [Client Component SSR]
+    ./components/PresentationPitchTextPanel.tsx [Client Component SSR]
+    ./app/tools/[slug]/page.tsx [Client Component SSR]
+    ./app/tools/[slug]/page.tsx [Server Component]
+
+
+./components/OutputPanel.tsx:348:10
+the name `regeneratingAllBookTitles` is defined multiple times
+  [90m346 |[0m   [36mconst[0m [regeneratingAllBookTitles, setRegeneratingAllBookTitles] = useState([36mfalse[0m);
+  [90m347 |[0m   [36mconst[0m [bookTitleOutputOverride, setBookTitleOutputOverride] = useState<string | [36mnull[0m>([36mn...[0m
+[31m[1m>[0m [90m348 |[0m   [36mconst[0m [regeneratingAllBookTitles, setRegeneratingAllBookTitles] = useState([36mfalse[0m);
+  [90m    |[0m          [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m349 |[0m   [36mconst[0m [sideImages, setSideImages] = useState<[33mRecord[0m<string, [33mSideImageState[0m>>({});
+  [90m350 |[0m   [36mconst[0m [previousSideImages, setPreviousSideImages] = useState<[33mRecord[0m<string, [33mSideImageSt...[0m
+  [90m351 |[0m   [36mconst[0m [activeImageBlockId, setActiveImageBlockId] = useState<string | [36mnull[0m>([36mnull[0m);
+
+Ecmascript file had an error
+
+Import traces:
+  App Route:
+    ./components/OutputPanel.tsx
+    ./lib/pdf/exportPdfDocument.ts
+    ./app/api/export/pdf/route.ts
+
+  Client Component Browser:
+    ./components/OutputPanel.tsx [Client Component Browser]
+    ./components/PresentationPitchTextPanel.tsx [Client Component Browser]
+    ./app/tools/[slug]/page.tsx [Client Component Browser]
+    ./app/tools/[slug]/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/OutputPanel.tsx [Client Component SSR]
+    ./components/PresentationPitchTextPanel.tsx [Client Component SSR]
+    ./app/tools/[slug]/page.tsx [Client Component SSR]
+    ./app/tools/[slug]/page.tsx [Server Component]
+
+
+./components/OutputPanel.tsx:347:35
+the name `setBookTitleOutputOverride` is defined multiple times
+  [90m345 |[0m ...[36mnst[0m [bookTitleOutputOverride, setBookTitleOutputOverride] = useState<string | [36mnull[0m>([36mnu..[0m.
+  [90m346 |[0m ...[36mnst[0m [regeneratingAllBookTitles, setRegeneratingAllBookTitles] = useState([36mfalse[0m);
+[31m[1m>[0m [90m347 |[0m ...[36mnst[0m [bookTitleOutputOverride, setBookTitleOutputOverride] = useState<string | [36mnull[0m>([36mnu..[0m.
+  [90m    |[0m                                  [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m348 |[0m ...[36mnst[0m [regeneratingAllBookTitles, setRegeneratingAllBookTitles] = useState([36mfalse[0m);
+  [90m349 |[0m ...[36mnst[0m [sideImages, setSideImages] = useState<[33mRecord[0m<string, [33mSideImageState[0m>>({});
+  [90m350 |[0m ...[36mnst[0m [previousSideImages, setPreviousSideImages] = useState<[33mRecord[0m<string, [33mSideImageSta..[0m.
+
+Ecmascript file had an error
+
+Import traces:
+  App Route:
+    ./components/OutputPanel.tsx
+    ./lib/pdf/exportPdfDocument.ts
+    ./app/api/export/pdf/route.ts
+
+  Client Component Browser:
+    ./components/OutputPanel.tsx [Client Component Browser]
+    ./components/PresentationPitchTextPanel.tsx [Client Component Browser]
+    ./app/tools/[slug]/page.tsx [Client Component Browser]
+    ./app/tools/[slug]/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/OutputPanel.tsx [Client Component SSR]
+    ./components/PresentationPitchTextPanel.tsx [Client Component SSR]
+    ./app/tools/[slug]/page.tsx [Client Component SSR]
+    ./app/tools/[slug]/page.tsx [Server Component]
+
+
+./components/OutputPanel.tsx:348:37
+the name `setRegeneratingAllBookTitles` is defined multiple times
+  [90m346 |[0m ... [regeneratingAllBookTitles, setRegeneratingAllBookTitles] = useState([36mfalse[0m);
+  [90m347 |[0m ... [bookTitleOutputOverride, setBookTitleOutputOverride] = useState<string | [36mnull[0m>([36mnull[0m);
+[31m[1m>[0m [90m348 |[0m ... [regeneratingAllBookTitles, setRegeneratingAllBookTitles] = useState([36mfalse[0m);
+  [90m    |[0m                                 [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m349 |[0m ... [sideImages, setSideImages] = useState<[33mRecord[0m<string, [33mSideImageState[0m>>({});
+  [90m350 |[0m ... [previousSideImages, setPreviousSideImages] = useState<[33mRecord[0m<string, [33mSideImageState[0m ..[36m.[0m
+  [90m351 |[0m ... [activeImageBlockId, setActiveImageBlockId] = useState<string | [36mnull[0m>([36mnull[0m);
+
+Ecmascript file had an error
+
+Import traces:
+  App Route:
+    ./components/OutputPanel.tsx
+    ./lib/pdf/exportPdfDocument.ts
+    ./app/api/export/pdf/route.ts
+
+  Client Component Browser:
+    ./components/OutputPanel.tsx [Client Component Browser]
+    ./components/PresentationPitchTextPanel.tsx [Client Component Browser]
+    ./app/tools/[slug]/page.tsx [Client Component Browser]
+    ./app/tools/[slug]/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/OutputPanel.tsx [Client Component SSR]
+    ./components/PresentationPitchTextPanel.tsx [Client Component SSR]
+    ./app/tools/[slug]/page.tsx [Client Component SSR]
+    ./app/tools/[slug]/page.tsx [Server Component]
+
+
+    at <unknown> (./components/OutputPanel.tsx:347:10)
+    at <unknown> (./components/OutputPanel.tsx:378:9)
+    at <unknown> (./components/OutputPanel.tsx:11:10)
+    at <unknown> (./components/OutputPanel.tsx:377:9)
+    at <unknown> (./components/OutputPanel.tsx:11:33)
+    at <unknown> (./components/OutputPanel.tsx:348:10)
+    at <unknown> (./components/OutputPanel.tsx:347:35)
+    at <unknown> (./components/OutputPanel.tsx:348:37)
