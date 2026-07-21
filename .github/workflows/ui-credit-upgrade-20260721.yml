@@ -10,6 +10,7 @@ on:
       - "automation/apply_ui_credit_finalization_20260721.py"
       - "automation/refine_output_copy_preservation_20260721.py"
       - "automation/finalize_book_title_regeneration_20260721.py"
+      - "automation/audit_count_driven_text_tools_20260721.py"
   pull_request:
     branches:
       - main
@@ -20,6 +21,7 @@ on:
       - "automation/apply_ui_credit_finalization_20260721.py"
       - "automation/refine_output_copy_preservation_20260721.py"
       - "automation/finalize_book_title_regeneration_20260721.py"
+      - "automation/audit_count_driven_text_tools_20260721.py"
   workflow_dispatch:
 
 permissions:
@@ -107,6 +109,10 @@ jobs:
         if: steps.patch.outputs.status == '0'
         run: python automation/finalize_book_title_regeneration_20260721.py
 
+      - name: Audit count-driven text tools
+        if: steps.patch.outputs.status == '0'
+        run: python automation/audit_count_driven_text_tools_20260721.py
+
       - name: Commit exact patch failure diagnostic
         if: steps.patch.outputs.status != '0'
         shell: bash
@@ -159,10 +165,10 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add abc-creator-app automation/ui-credit-upgrade-audit-20260721.txt
+          git add abc-creator-app automation/ui-credit-upgrade-audit-20260721.txt automation/count-driven-text-tools-audit-20260721.txt
           if git diff --cached --quiet; then
             echo "No changes were needed."
             exit 0
           fi
-          git commit -m "Finalize Book Title Generator regeneration"
+          git commit -m "Audit newer count-driven text tools"
           git push origin HEAD:main
