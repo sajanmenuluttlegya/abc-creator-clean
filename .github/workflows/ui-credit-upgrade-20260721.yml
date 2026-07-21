@@ -44,21 +44,43 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Repair count-driven finalizer source
+      - name: Repair finalizer sources
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
-          path = Path("automation/finalize_count_driven_generators_20260721.py")
-          text = path.read_text(encoding="utf-8")
+
+          count_path = Path("automation/finalize_count_driven_generators_20260721.py")
+          count_text = count_path.read_text(encoding="utf-8")
           broken = '''    marker = "];
 
           function textTool"'''.replace("          function", "function")
           fixed = r'    marker = "];\n\nfunction textTool"'
-          if broken in text:
-              path.write_text(text.replace(broken, fixed, 1), encoding="utf-8")
-          elif fixed not in text:
+          if broken in count_text:
+              count_path.write_text(count_text.replace(broken, fixed, 1), encoding="utf-8")
+          elif fixed not in count_text:
               raise SystemExit("Count-driven finalizer marker could not be repaired.")
+
+          book_path = Path("automation/finalize_book_title_regeneration_20260721.py")
+          book_text = book_path.read_text(encoding="utf-8")
+          old_replace_once = '''def replace_once(text: str, old: str, new: str, label: str) -> str:
+              if old not in text:
+                  if new in text:
+                      return text
+                  raise RuntimeError(f"Expected block not found: {label}")
+              return text.replace(old, new, 1)
+          '''.replace("              ", "    ")
+          new_replace_once = '''def replace_once(text: str, old: str, new: str, label: str) -> str:
+              if new in text:
+                  return text
+              if old not in text:
+                  raise RuntimeError(f"Expected block not found: {label}")
+              return text.replace(old, new, 1)
+          '''.replace("              ", "    ")
+          if old_replace_once in book_text:
+              book_path.write_text(book_text.replace(old_replace_once, new_replace_once, 1), encoding="utf-8")
+          elif new_replace_once not in book_text:
+              raise SystemExit("Book Title finalizer idempotency guard could not be repaired.")
           PY
 
       - name: Correct live-file patch matchers
@@ -151,7 +173,7 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add automation/ui-credit-upgrade-failure.log
+          git add automation/ui-credit-upgrade-failure.log automation/finalize_book_title_regeneration_20260721.py automation/finalize_count_driven_generators_20260721.py
           git commit -m "Record UI credit patch failure"
           git push origin HEAD:main
           exit 1
@@ -163,7 +185,7 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add automation/count-driven-generator-failure.log automation/finalize_count_driven_generators_20260721.py
+          git add automation/count-driven-generator-failure.log automation/finalize_book_title_regeneration_20260721.py automation/finalize_count_driven_generators_20260721.py
           git commit -m "Record count-driven finalizer failure"
           git push origin HEAD:main
           exit 1
@@ -196,7 +218,7 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add automation/ui-credit-build-failure.log automation/finalize_count_driven_generators_20260721.py
+          git add automation/ui-credit-build-failure.log automation/finalize_book_title_regeneration_20260721.py automation/finalize_count_driven_generators_20260721.py
           git commit -m "Record UI credit build failure"
           git push origin HEAD:main
           exit 1
@@ -208,7 +230,7 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add abc-creator-app automation/finalize_count_driven_generators_20260721.py automation/ui-credit-upgrade-audit-20260721.txt automation/count-driven-text-tools-audit-20260721.txt automation/count-driven-generator-finalization-20260721.txt
+          git add abc-creator-app automation/finalize_book_title_regeneration_20260721.py automation/finalize_count_driven_generators_20260721.py automation/ui-credit-upgrade-audit-20260721.txt automation/count-driven-text-tools-audit-20260721.txt automation/count-driven-generator-finalization-20260721.txt
           if git diff --cached --quiet; then
             echo "No changes were needed."
             exit 0
