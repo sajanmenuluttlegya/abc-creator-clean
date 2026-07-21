@@ -1,36 +1,7 @@
 UI and dynamic-credit additive upgrade audit
 
 Changed files:
-- abc-creator-app/app/globals.css
-- abc-creator-app/app/tools/[slug]/page.tsx
-- abc-creator-app/components/OutputPanel.tsx
-- abc-creator-app/components/PresetBlogOutputPanel.tsx
-- abc-creator-app/components/ToolFormRenderer.tsx
-- abc-creator-app/lib/tools/animation-tool-credits.ts
-- abc-creator-app/lib/tools/career-professional-tool-credits.ts
-- abc-creator-app/lib/tools/credit-costs.ts
-- abc-creator-app/lib/tools/customer-support-service-tool-credits.ts
-- abc-creator-app/lib/tools/cybersecurity-it-operations-tool-credits.ts
-- abc-creator-app/lib/tools/data-analysis-bi-tool-credits.ts
-- abc-creator-app/lib/tools/education-learning-tool-credits.ts
-- abc-creator-app/lib/tools/fashion-apparel-tool-credits.ts
-- abc-creator-app/lib/tools/film-video-tool-credits.ts
-- abc-creator-app/lib/tools/finance-accounting-tool-credits.ts
-- abc-creator-app/lib/tools/food-hospitality-tool-credits.ts
-- abc-creator-app/lib/tools/human-resources-people-tool-credits.ts
-- abc-creator-app/lib/tools/interior-architecture-tool-credits.ts
-- abc-creator-app/lib/tools/legal-compliance-tool-credits.ts
-- abc-creator-app/lib/tools/marketing-campaign-tool-credits.ts
-- abc-creator-app/lib/tools/poster-promotional-tool-credits.ts
-- abc-creator-app/lib/tools/presentation-pitch-tool-credits.ts
-- abc-creator-app/lib/tools/productivity-planning-tool-credits.ts
-- abc-creator-app/lib/tools/public-book-variation-overrides.ts
-- abc-creator-app/lib/tools/public-tools.ts
-- abc-creator-app/lib/tools/research-knowledge-tool-credits.ts
-- abc-creator-app/lib/tools/sales-crm-revops-tool-credits.ts
-- abc-creator-app/lib/tools/sales-crm-tool-credits.ts
-- abc-creator-app/lib/tools/server-book-tools.ts
-- abc-creator-app/lib/tools/storyboard-comic-tool-credits.ts
+
 
 Remaining expressions intentionally retained for secondary-control review:
 - animation-tool-credits.ts:43: return Math.min(15, Math.max(fallback, Math.ceil(count / 4) + 3));
