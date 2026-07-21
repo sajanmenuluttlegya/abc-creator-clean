@@ -112,11 +112,19 @@ jobs:
         run: python automation/finalize_book_title_regeneration_20260721.py
 
       - name: Finalize newer count-driven generators
+        id: count_patch
         if: steps.patch.outputs.status == '0'
-        run: python automation/finalize_count_driven_generators_20260721.py
+        shell: bash
+        run: |
+          set +e
+          python automation/finalize_count_driven_generators_20260721.py > automation/count-driven-generator-failure.log 2>&1
+          status=$?
+          cat automation/count-driven-generator-failure.log
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit 0
 
       - name: Audit count-driven text tools
-        if: steps.patch.outputs.status == '0'
+        if: steps.patch.outputs.status == '0' && steps.count_patch.outputs.status == '0'
         run: python automation/audit_count_driven_text_tools_20260721.py
 
       - name: Commit exact patch failure diagnostic
@@ -131,13 +139,25 @@ jobs:
           git push origin HEAD:main
           exit 1
 
+      - name: Commit count-driven finalizer diagnostic
+        if: steps.patch.outputs.status == '0' && steps.count_patch.outputs.status != '0'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add automation/count-driven-generator-failure.log
+          git commit -m "Record count-driven finalizer failure"
+          git push origin HEAD:main
+          exit 1
+
       - name: Install application dependencies
-        if: steps.patch.outputs.status == '0'
+        if: steps.patch.outputs.status == '0' && steps.count_patch.outputs.status == '0'
         working-directory: abc-creator-app
         run: npm install --no-audit --no-fund
 
       - name: Run production build
-        if: steps.patch.outputs.status == '0'
+        if: steps.patch.outputs.status == '0' && steps.count_patch.outputs.status == '0'
         id: build
         shell: bash
         working-directory: abc-creator-app
@@ -153,7 +173,7 @@ jobs:
           exit 0
 
       - name: Commit exact build failure diagnostic
-        if: steps.patch.outputs.status == '0' && steps.build.outputs.status != '0'
+        if: steps.patch.outputs.status == '0' && steps.count_patch.outputs.status == '0' && steps.build.outputs.status != '0'
         shell: bash
         run: |
           set -euo pipefail
@@ -165,7 +185,7 @@ jobs:
           exit 1
 
       - name: Commit validated changes
-        if: steps.patch.outputs.status == '0' && steps.build.outputs.status == '0'
+        if: steps.patch.outputs.status == '0' && steps.count_patch.outputs.status == '0' && steps.build.outputs.status == '0'
         shell: bash
         run: |
           set -euo pipefail
