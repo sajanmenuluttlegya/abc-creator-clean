@@ -229,42 +229,37 @@ def set_cell_source(cell: dict[str, Any], source: str) -> None:
 
 
 def quality_override_cell() -> str:
-    return '''# ============================================================
-# ABC CREATOR M0 — HIGH QUALITY OVERRIDE
-# Native maximum: 1024 px per side
+    return """# ============================================================
+# ABC CREATOR M0 — EXACT NATIVE OUTPUT
 # Fixed inference steps: 8
+# No resize or upscale. Only minimal center-crop when Z-Image's
+# required 16-pixel alignment is larger than the requested output.
 # ============================================================
 
 if not WORKER_ENABLED:
     print("[QUALITY] Skipped: outside slot window.")
 else:
-    M0_NATIVE_MAX_SIDE = 1024
+    M0_MAX_OUTPUT_SIDE = 1920
     M0_FIXED_STEPS = 8
 
     def normalize_size(value):
-        # Preserve the requested pair until the aspect-aware wrapper runs.
-        return max(384, min(int(value), 4096))
+        value = int(value)
+        if value < 16 or value > M0_MAX_OUTPUT_SIDE:
+            raise ValueError(
+                "M0 output dimensions must be between 16 and "
+                + str(M0_MAX_OUTPUT_SIDE)
+                + " pixels."
+            )
+        return value
 
     def normalize_steps(_value):
         return M0_FIXED_STEPS
 
-    def normalize_m0_dimensions(width, height):
-        width = max(1, int(width))
-        height = max(1, int(height))
+    def align_up_16(value):
+        value = int(value)
+        return ((value + 15) // 16) * 16
 
-        scale = min(
-            M0_NATIVE_MAX_SIDE / width,
-            M0_NATIVE_MAX_SIDE / height,
-            1.0,
-        )
-
-        def snap(value):
-            snapped = int(round(value / 64.0)) * 64
-            return max(384, min(M0_NATIVE_MAX_SIDE, snapped))
-
-        return snap(width * scale), snap(height * scale)
-
-    _generate_m0_before_quality_override = generate_m0
+    _generate_m0_before_exact_output = generate_m0
 
     def generate_m0(
         prompt,
@@ -272,25 +267,74 @@ else:
         height=512,
         steps=M0_FIXED_STEPS,
         seed=None,
+        show=True,
         **kwargs,
     ):
-        width, height = normalize_m0_dimensions(width, height)
-        return _generate_m0_before_quality_override(
+        target_width = normalize_size(width)
+        target_height = normalize_size(height)
+        generation_width = align_up_16(target_width)
+        generation_height = align_up_16(target_height)
+
+        image, info = _generate_m0_before_exact_output(
             prompt=prompt,
-            width=width,
-            height=height,
+            width=generation_width,
+            height=generation_height,
             steps=M0_FIXED_STEPS,
             seed=seed,
+            show=False,
             **kwargs,
         )
 
-    print(
-        "[QUALITY] Native maximum:",
-        M0_NATIVE_MAX_SIDE,
-        "px; fixed steps:",
-        M0_FIXED_STEPS,
-    )
-'''
+        if image.width < target_width or image.height < target_height:
+            raise RuntimeError(
+                "M0 generated an image smaller than the requested output."
+            )
+
+        cropped = image.size != (target_width, target_height)
+        if cropped:
+            left = (image.width - target_width) // 2
+            top = (image.height - target_height) // 2
+            image = image.crop(
+                (left, top, left + target_width, top + target_height)
+            )
+
+        if image.size != (target_width, target_height):
+            raise RuntimeError(
+                "M0 exact-output validation failed: "
+                + str(image.size)
+                + " != "
+                + str((target_width, target_height))
+            )
+
+        info = dict(info or {})
+        info.update(
+            {
+                "width": target_width,
+                "height": target_height,
+                "generation_width": generation_width,
+                "generation_height": generation_height,
+                "steps": M0_FIXED_STEPS,
+                "post_process": "center-crop-only" if cropped else "none",
+            }
+        )
+
+        if show:
+            display(image)
+
+        print(
+            "[QUALITY] Exact output:",
+            target_width,
+            "x",
+            target_height,
+            "generated at",
+            generation_width,
+            "x",
+            generation_height,
+            "steps",
+            M0_FIXED_STEPS,
+        )
+        return image, info
+"""
 
 
 def patch_m0_quality(cells: list[dict[str, Any]]) -> None:
@@ -311,10 +355,11 @@ def patch_m0_quality(cells: list[dict[str, Any]]) -> None:
         cells,
         match_predicate=lambda source: (
             "ABC CREATOR M0 — HIGH QUALITY OVERRIDE" in source
+            or "ABC CREATOR M0 — EXACT NATIVE OUTPUT" in source
         ),
         source=quality_override_cell(),
         insert_index=model_indexes[0] + 1,
-        label="M0 quality override",
+        label="M0 exact native output",
     )
 
     api_indexes = find_cell_indexes(
@@ -334,8 +379,10 @@ def patch_m0_quality(cells: list[dict[str, Any]]) -> None:
     api_cell = cells[api_indexes[0]]
     api_source = join_cell_source(api_cell)
     api_source = api_source.replace("steps: int = 4", "steps: int = 8")
-    api_source = api_source.replace('"max_width": 512', '"max_width": 1024')
-    api_source = api_source.replace('"max_height": 512', '"max_height": 1024')
+    api_source = api_source.replace('"max_width": 512', '"max_width": 1920')
+    api_source = api_source.replace('"max_width": 1024', '"max_width": 1920')
+    api_source = api_source.replace('"max_height": 512', '"max_height": 1920')
+    api_source = api_source.replace('"max_height": 1024', '"max_height": 1920')
     api_source = api_source.replace('"max_steps": 4', '"max_steps": 8')
     set_cell_source(api_cell, api_source)
 
@@ -702,9 +749,10 @@ def patch_kernel_folder(
         f"SLOT_START_IST = {slot.warm_start_ist!r}",
         f"STOP_SESSION_AT_IST = {slot.stop_ist!r}",
         "FORCE_RUN_OUTSIDE_SLOT = False",
-        "# ABC CREATOR M0 — HIGH QUALITY OVERRIDE",
-        "M0_NATIVE_MAX_SIDE = 1024",
+        "# ABC CREATOR M0 — EXACT NATIVE OUTPUT",
+        "M0_MAX_OUTPUT_SIDE = 1920",
         "M0_FIXED_STEPS = 8",
+        "image.crop(",
         "Worker URL registered successfully.",
         "x-worker-key",
         "[SELF-STOP] Exact slot end reached.",

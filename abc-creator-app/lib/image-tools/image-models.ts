@@ -50,8 +50,8 @@ export const IMAGE_MODEL_OPTIONS: Record<ImageModelKey, {
   M0: {
     label: "M0",
     modelId: "Tongyi-MAI/Z-Image-Turbo",
-    defaultSteps: 4,
-    creditByResolution: { "360p": 2, "480p": 3, "720p": 4, "1080p": 5 },
+    defaultSteps: 8,
+    creditByResolution: { "360p": 9, "480p": 11, "720p": 13, "1080p": 15 },
   },
   M1: {
     label: "M1",

@@ -1,0 +1,13 @@
+Updated automation/m0_kaggle_controller.py
+Updated abc-creator-app/lib/image-tools/m0-image-client.ts
+Updated abc-creator-app/lib/image-tools/image-models.ts
+Updated abc-creator-app/app/api/image/text-to-image/route.ts
+Updated abc-creator-app/scripts/apply-m0-production-integration.mjs
+Updated abc-creator-app/components/MarketingCampaignImagePanel.tsx
+Updated abc-creator-app/components/ImageTextToImagePanel.tsx
+Updated abc-creator-app/components/AnimationCharacterSheetPanel.tsx
+Updated abc-creator-app/components/FoodHospitalityImagePanel.tsx
+Updated abc-creator-app/components/FashionApparelImagePanel.tsx
+Updated abc-creator-app/components/MangaSceneGeneratorPanel.tsx
+Updated abc-creator-app/components/InteriorArchitectureImagePanel.tsx
+M0 exact-resolution, no-resize, and M1-credit patch validated.

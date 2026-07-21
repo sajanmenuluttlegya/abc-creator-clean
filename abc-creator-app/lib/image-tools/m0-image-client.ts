@@ -20,6 +20,19 @@ const M0_MODEL_ID = "Tongyi-MAI/Z-Image-Turbo";
 const DEFAULT_TIMEOUT_MS = 285_000;
 const MAX_PROMPT_CHARS = 1_900;
 
+const M0_16_9_DIMENSIONS: Record<ImageResolution, { width: number; height: number }> = {
+  "360p": { width: 640, height: 360 },
+  "480p": { width: 854, height: 480 },
+  "720p": { width: 1280, height: 720 },
+  "1080p": { width: 1920, height: 1080 },
+};
+
+function m0TargetDimensions(resolution: ImageResolution, aspectRatio: ImageAspectRatio) {
+  return aspectRatio === "16:9"
+    ? M0_16_9_DIMENSIONS[resolution]
+    : getImageDimensions(resolution, aspectRatio);
+}
+
 function requestTimeoutMs() {
   const configured = Number(process.env.M0_WORKER_TIMEOUT_MS || DEFAULT_TIMEOUT_MS);
   if (!Number.isFinite(configured)) return DEFAULT_TIMEOUT_MS;
@@ -43,12 +56,6 @@ function stableSeed(value: string | undefined) {
   return (hash >>> 0) % 2_147_483_647 || 1;
 }
 
-function workerDimensions(width: number, height: number) {
-  if (width === height) return { width: 512, height: 512 };
-  return width > height
-    ? { width: 512, height: 384 }
-    : { width: 384, height: 512 };
-}
 
 function workerPrompt(input: M0GenerateImageInput) {
   const combined = [
@@ -116,8 +123,7 @@ export async function generateM0Image(input: M0GenerateImageInput) {
     );
   }
 
-  const target = getImageDimensions(input.resolution, input.aspectRatio);
-  const native = workerDimensions(target.width, target.height);
+  const target = m0TargetDimensions(input.resolution, input.aspectRatio);
   const seed = stableSeed(input.seed);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), requestTimeoutMs());
@@ -131,9 +137,9 @@ export async function generateM0Image(input: M0GenerateImageInput) {
       },
       body: JSON.stringify({
         prompt: workerPrompt(input),
-        width: native.width,
-        height: native.height,
-        steps: 4,
+        width: target.width,
+        height: target.height,
+        steps: 8,
         seed,
       }),
       cache: "no-store",
@@ -161,15 +167,13 @@ export async function generateM0Image(input: M0GenerateImageInput) {
     if (!metadata.width || !metadata.height) {
       throw new Error("M0 worker returned an unreadable image.");
     }
+    if (metadata.width !== target.width || metadata.height !== target.height) {
+      throw new Error(
+        `M0 worker returned ${metadata.width}x${metadata.height}; expected exact ${target.width}x${target.height}.`
+      );
+    }
 
-    const output = await sharp(source)
-      .resize(target.width, target.height, {
-        fit: "cover",
-        position: "centre",
-        withoutEnlargement: false,
-      })
-      .png({ compressionLevel: 9 })
-      .toBuffer();
+    const output = source;
 
     return {
       ok: true as const,
@@ -185,7 +189,7 @@ export async function generateM0Image(input: M0GenerateImageInput) {
       fallbackModelUsed: false,
       promptRescueUsed: false,
       provider: "kaggle-m0-worker" as const,
-      postProcess: "sharp-resize" as const,
+      postProcess: "native-aligned-crop" as const,
     };
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {

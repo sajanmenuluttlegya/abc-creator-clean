@@ -135,7 +135,7 @@ const CAMERA_OPTIONS = optionList(["Full-length natural", "Full-length straight-
 const COPY_SPACE_OPTIONS = optionList(["No copy space needed", "Small clean masthead zone at the top", "Clean copy-safe space on the left", "Clean copy-safe space on the right", "Large clean headline area", "Clean footer area", "Balanced editorial margins", "Blank product-label area with no generated text"], "Layout");
 const FIDELITY_OPTIONS = optionList(["Strictly preserve uploaded garment and person", "Preserve garment identity; refine presentation", "Preserve silhouette, print, colour, and key construction", "Creative concept based on the brief", "Use reference only for mood and palette"], "Fidelity");
 const CREDIT_MAP: Record<ImageModelKey, Record<ImageResolution, number>> = {
-  M0: { "360p": 2, "480p": 3, "720p": 4, "1080p": 5 },
+  M0: { "360p": 9, "480p": 11, "720p": 13, "1080p": 15 },
   M1: { "360p": 9, "480p": 11, "720p": 13, "1080p": 15 }, M2: { "360p": 5, "480p": 7, "720p": 8, "1080p": 9 },
   M3: { "360p": 8, "480p": 10, "720p": 12, "1080p": 13 }, M4: { "360p": 7, "480p": 9, "720p": 11, "1080p": 12 },
   M5: { "360p": 2, "480p": 3, "720p": 4, "1080p": 5 }, M6: { "360p": 2, "480p": 3, "720p": 3, "1080p": 4 },

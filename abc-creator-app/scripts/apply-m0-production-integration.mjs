@@ -4,7 +4,7 @@ import path from "node:path";
 const repoRoot = process.cwd();
 const appRoot = path.join(repoRoot, "abc-creator-app");
 const componentsRoot = path.join(appRoot, "components");
-const M0_CREDITS = '{ "360p": 2, "480p": 3, "720p": 4, "1080p": 5 }';
+const M0_CREDITS = '{ "360p": 9, "480p": 11, "720p": 13, "1080p": 15 }';
 
 function read(file) {
   return fs.readFileSync(file, "utf8");
@@ -42,7 +42,7 @@ function patchImageModels() {
     content = requiredReplace(
       content,
       '}> = {\n  M1: {',
-      `}> = {\n  M0: {\n    label: "M0",\n    modelId: "Tongyi-MAI/Z-Image-Turbo",\n    defaultSteps: 4,\n    creditByResolution: ${M0_CREDITS},\n  },\n  M1: {`,
+      `}> = {\n  M0: {\n    label: "M0",\n    modelId: "Tongyi-MAI/Z-Image-Turbo",\n    defaultSteps: 8,\n    creditByResolution: ${M0_CREDITS},\n  },\n  M1: {`,
       "M0 shared model registry entry",
     );
   }
@@ -135,7 +135,7 @@ function patchTextToImageRoute() {
         dataUrl: result.dataUrl,
         filename: operation === "edit" ? \`image-edit-\${resultModel}-\${resolution}-\${index + 1}.png\` : \`text-to-image-\${resultModel}-\${resolution}-\${index + 1}.png\`,
         provider: resultIsM0 ? "kaggle-m0-worker" : "cloudflare-workers-ai",
-        postProcess: resultIsM0 ? "sharp-resize" : "provider-native",
+        postProcess: resultIsM0 ? "native-aligned-crop" : "provider-native",
         model: result.modelId,
         modelLabel: resultModel,
         requestedModel,
@@ -169,7 +169,7 @@ function patchTextToImageRoute() {
   content = requiredReplace(
     content,
     '      outputPolish: "provider-native",',
-    '      outputPolish: usedM0 ? "sharp-resize" : "provider-native",',
+    '      outputPolish: usedM0 ? "native-aligned-crop" : "provider-native",',
     "M0 output metadata",
   );
 
@@ -278,7 +278,7 @@ function validate() {
     providerRoute: cloudflare.includes("return generateM0Image(input);"),
     workerAuth: client.includes('"x-worker-key": workerKey'),
     workerRegistry: client.includes("getActiveM0Worker"),
-    serverResize: client.includes("sharp(source)") && client.includes("getImageDimensions"),
+    exactNativeOutput: client.includes("M0_16_9_DIMENSIONS") && client.includes("metadata.width !== target.width"),
     responseMetadata: route.includes('provider: resultIsM0 ? "kaggle-m0-worker"'),
     refundPath: route.includes('refundIfReserved("text_to_image_generation_failed")'),
     editSafety: panel.includes('model: model === "M0" ? "M2" : model') && panel.includes("options={EDIT_MODEL_OPTIONS}"),

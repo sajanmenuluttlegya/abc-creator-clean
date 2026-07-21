@@ -39,7 +39,7 @@ const IMAGE_COUNT_OPTIONS: Option[] = ["1", "2", "3", "4"].map((count) => ({ lab
 const STYLE_OPTIONS: Option[] = ["Photorealistic", "Cinematic", "Anime", "Manga", "Cartoon", "Digital art", "Fantasy art", "Sci-fi", "Cyberpunk", "3D render", "Pixel art", "Vector art", "Logo design", "Product photo", "Portrait", "Oil painting", "Watercolor", "Sketch", "Comic book", "Children’s book", "Minimalist", "Poster art", "Vintage", "Horror", "Dark fantasy", "Steampunk", "Isometric 3D", "Claymation", "Sticker style", "Line art", "1980s"].map((style) => ({ label: style, value: style, meta: "Style" }));
 
 const CREDIT_MAP: Record<ImageModelKey, Record<ImageResolution, number>> = {
-  M0: { "360p": 2, "480p": 3, "720p": 4, "1080p": 5 },
+  M0: { "360p": 9, "480p": 11, "720p": 13, "1080p": 15 },
   M1: { "360p": 9, "480p": 11, "720p": 13, "1080p": 15 },
   M2: { "360p": 5, "480p": 7, "720p": 8, "1080p": 9 },
   M3: { "360p": 8, "480p": 10, "720p": 12, "1080p": 13 },
