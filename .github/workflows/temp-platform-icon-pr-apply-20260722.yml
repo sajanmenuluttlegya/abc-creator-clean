@@ -58,7 +58,7 @@ jobs:
         run: |
           set -euo pipefail
           git diff --check
-          changed="$(git diff --name-only | grep '^abc-creator-app/' || true)"
+          changed="$({ git diff --name-only; git ls-files --others --exclude-standard; } | grep '^abc-creator-app/' | sort -u || true)"
           printf '%s\n' "$changed"
           test "$(printf '%s\n' "$changed" | sed '/^$/d' | wc -l)" -eq 4
           printf '%s\n' "$changed" | grep -qx 'abc-creator-app/app/tools/page.tsx'
@@ -68,7 +68,7 @@ jobs:
           grep -q '/platform-logos/instagram.svg' abc-creator-app/components/PlatformToolLogo.tsx
           grep -q 'PlatformToolIcon tool={tool}' abc-creator-app/app/tools/page.tsx
           grep -q 'fallback={<span className="text-5xl leading-none"' 'abc-creator-app/app/tools/[slug]/page.tsx'
-          ! git diff --name-only | grep -E 'public-tools|credit|server-|ToolFormRenderer|api/generate'
+          ! printf '%s\n' "$changed" | grep -E 'public-tools|credit|server-|ToolFormRenderer|api/generate'
 
       - name: Remove temporary branch automation
         run: |
