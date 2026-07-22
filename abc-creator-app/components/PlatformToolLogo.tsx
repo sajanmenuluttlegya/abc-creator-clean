@@ -24,13 +24,15 @@ type PlatformLogoName =
   | "discord"
   | "threads"
   | "gmail"
-  | "microsoft";
+  | "microsoft"
+  | "blogger";
 
 function getPlatformLogoName(tool: ToolCardTool): PlatformLogoName | null {
   const identity = `${tool.slug} ${tool.name}`.toLowerCase().replace(/[_/]+/g, " ");
   const category = tool.category.toLowerCase();
   const contains = (...terms: string[]) => terms.some((term) => identity.includes(term));
 
+  if (category.includes("blog")) return "blogger";
   if (category.includes("youtube") || contains("youtube")) return "youtube";
   if (contains("linkedin")) return "linkedin";
   if (contains("facebook")) return "facebook";
@@ -73,6 +75,15 @@ function PlatformLogo({ name }: { name: PlatformLogoName }) {
   };
 
   switch (name) {
+    case "blogger":
+      return (
+        <PlatformLogoShell>
+          <svg {...common}>
+            <rect x="1.4" y="1.4" width="21.2" height="21.2" rx="4.6" fill="#FF6D2D" />
+            <path fill="#fff" d="M8.6 5.1h3.8a4.6 4.6 0 0 1 4.6 4.6v.8c0 .9.4 1.3 1.3 1.3h.4c1.2 0 2.2 1 2.2 2.2v2.4a3.8 3.8 0 0 1-3.8 3.8H8.6A5.5 5.5 0 0 1 3.1 14.7V10.6a5.5 5.5 0 0 1 5.5-5.5Zm.5 3a1.15 1.15 0 1 0 0 2.3h4a1.15 1.15 0 1 0 0-2.3h-4Zm0 6a1.15 1.15 0 1 0 0 2.3h7.2a1.15 1.15 0 1 0 0-2.3H9.1Z" />
+          </svg>
+        </PlatformLogoShell>
+      );
     case "youtube":
       return (
         <PlatformLogoShell>
