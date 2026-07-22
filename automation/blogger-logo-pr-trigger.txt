@@ -1,1 +1,0 @@
-Trigger the guarded Blogger logo implementation for all Blog-category tools.
