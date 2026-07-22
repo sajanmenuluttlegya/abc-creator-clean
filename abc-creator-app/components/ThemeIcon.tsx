@@ -53,13 +53,15 @@ export function ThemeIcon({ name, size = "md", className = "" }: ThemeIconProps)
     case "prompt":
       return <IconShell name={name} size={size} className={className}><path {...commonStroke} d="M4.5 6.5h15v11h-15z" /><path {...commonStroke} d="m7 10 2 2-2 2M11.5 14h4.5" /><path {...commonStroke} d="M7 4v2.5M17 4v2.5" opacity="0.65" /></IconShell>;
     case "animation":
-      return <IconShell name={name} size={size} className={className}><circle {...commonStroke} cx="12" cy="12" r="8" /><path d="m10 8 6 4-6 4V8Z" fill="currentColor" /><path {...commonStroke} d="M4 8h3M17 8h3M4 16h3M17 16h3" opacity="0.55" /></IconShell>;
+      return <IconShell name={name} size={size} className={className}><path {...commonStroke} d="M4 8h16v11H4V8Z" /><path {...commonStroke} d="m4 8 3-4h4L8 8m6-4h4l-3 4" /><path d="m10 11 5 3-5 3v-6Z" fill="currentColor" /></IconShell>;
     case "animation-character":
       return <IconShell name={name} size={size} className={className}><circle {...commonStroke} cx="12" cy="7" r="3" /><path {...commonStroke} d="M7.5 20v-3.5A4.5 4.5 0 0 1 12 12a4.5 4.5 0 0 1 4.5 4.5V20M9.5 13.2 7 16M14.5 13.2 17 16" /></IconShell>;
     case "seo":
       return <IconShell name={name} size={size} className={className}><circle {...commonStroke} cx="10.5" cy="10.5" r="5.7" /><path {...commonStroke} d="m15 15 5 5" /></IconShell>;
     case "ad-copy":
       return <IconShell name={name} size={size} className={className}><path {...commonStroke} d="M4 13.5V9.8l11-4.3v12.8l-11-4.8Z" /><path {...commonStroke} d="M15 8.3h2a3.2 3.2 0 0 1 0 6.4h-2" opacity="0.65" /><path {...commonStroke} d="m7 15 1.5 4" /></IconShell>;
+    case "campaign":
+      return <IconShell name={name} size={size} className={className}><path {...commonStroke} d="M4 10.2h3L15.5 6v12L7 13.8H4v-3.6Z" /><path {...commonStroke} d="m7 13.8 1.4 5h3l-1.3-3.6" /><path {...commonStroke} d="M18 8.5c1 .9 1.5 2 1.5 3.5s-.5 2.6-1.5 3.5M20.2 6.3c1.6 1.5 2.3 3.4 2.3 5.7s-.7 4.2-2.3 5.7" opacity="0.72" /></IconShell>;
     case "product":
       return <IconShell name={name} size={size} className={className}><path {...commonStroke} d="M6 8.5 12 5l6 3.5v7L12 19l-6-3.5v-7Z" /><path {...commonStroke} d="m6.5 8.8 5.5 3.3 5.5-3.3M12 12.1V19" opacity="0.7" /></IconShell>;
     case "book":
@@ -85,7 +87,7 @@ export function ThemeIcon({ name, size = "md", className = "" }: ThemeIconProps)
     case "chart":
       return <IconShell name={name} size={size} className={className}><path {...commonStroke} d="M4 20V4M4 20h16" /><path {...commonStroke} d="M8 17v-5M12 17V8M16 17v-9M20 17V5" /></IconShell>;
     case "finance":
-      return <IconShell name={name} size={size} className={className}><circle {...commonStroke} cx="8" cy="12" r="4.5" /><path {...commonStroke} d="M8 9.5v5M6.5 10.5h2.2a1.1 1.1 0 0 1 0 2.2H7.3a1.1 1.1 0 0 0 0 2.2H9.5M13.5 17l2.5-3 2 1 2.5-4" /></IconShell>;
+      return <IconShell name={name} size={size} className={className}><circle {...commonStroke} cx="8.5" cy="12" r="5.2" /><path {...commonStroke} d="M8.5 7.3v9.4M10.8 9.2H8a1.8 1.8 0 1 0 0 3.6h1a1.8 1.8 0 1 1 0 3.6H6.2" /><path {...commonStroke} d="m14.5 17.5 2.7-3.2 2 1.1 2.3-4" /></IconShell>;
     case "legal":
       return <IconShell name={name} size={size} className={className}><path {...commonStroke} d="M12 4v16M7 20h10M5 7h14M7 7l-3 6h6L7 7ZM17 7l-3 6h6l-3-6Z" /></IconShell>;
     case "support":
@@ -103,7 +105,7 @@ export function ThemeIcon({ name, size = "md", className = "" }: ThemeIconProps)
     case "social":
       return <IconShell name={name} size={size} className={className}><circle {...commonStroke} cx="6" cy="12" r="2.5" /><circle {...commonStroke} cx="18" cy="6" r="2.5" /><circle {...commonStroke} cx="18" cy="18" r="2.5" /><path {...commonStroke} d="m8.2 10.8 7.6-3.6M8.2 13.2l7.6 3.6" /></IconShell>;
     case "video":
-      return <IconShell name={name} size={size} className={className}><rect {...commonStroke} x="3.5" y="6" width="13" height="12" rx="2" /><path {...commonStroke} d="m16.5 10 4-2v8l-4-2" /><path d="m8.5 9.5 4.5 2.5-4.5 2.5v-5Z" fill="currentColor" /></IconShell>;
+      return <IconShell name={name} size={size} className={className}><rect {...commonStroke} x="3.5" y="5" width="17" height="14" rx="3" /><path d="m10 9 5.5 3-5.5 3V9Z" fill="currentColor" /><path {...commonStroke} d="M7 3.5v2M12 3.5v2M17 3.5v2" opacity="0.6" /></IconShell>;
     case "script":
       return <IconShell name={name} size={size} className={className}><path {...commonStroke} d="M6 3.5h9l3 3V20H6V3.5Z" /><path {...commonStroke} d="M15 3.5V7h3M9 11h6M9 14h6M9 17h4" opacity="0.75" /></IconShell>;
     case "bolt":
