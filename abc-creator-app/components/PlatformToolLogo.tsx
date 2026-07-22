@@ -169,7 +169,7 @@ function PlatformLogo({ name, size }: { name: PlatformLogoName; size: ToolSymbol
     case "instagram":
       return (
         <PlatformLogoShell size={size}>
-          <img src="/platform-logos/instagram.svg" alt="" className="h-12 w-12 object-contain" />
+          <img src="/platform-logos/instagram.svg" alt="" className={`${symbolSizeClasses[size]} object-contain`} />
         </PlatformLogoShell>
       );
     case "tiktok":
