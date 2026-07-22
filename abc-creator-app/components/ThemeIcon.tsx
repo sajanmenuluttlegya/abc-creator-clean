@@ -63,7 +63,7 @@ export function ThemeIcon({ name, size = "md", className = "" }: ThemeIconProps)
     case "product":
       return <IconShell name={name} size={size} className={className}><path {...commonStroke} d="M6 8.5 12 5l6 3.5v7L12 19l-6-3.5v-7Z" /><path {...commonStroke} d="m6.5 8.8 5.5 3.3 5.5-3.3M12 12.1V19" opacity="0.7" /></IconShell>;
     case "book":
-      return <IconShell name={name} size={size} className={className}><path {...commonStroke} d="M4.5 5.5A3.5 3.5 0 0 1 8 4h4v15H8a3.5 3.5 0 0 0-3.5 1.5v-15Z" /><path {...commonStroke} d="M19.5 5.5A3.5 3.5 0 0 0 16 4h-4v15h4a3.5 3.5 0 0 1 3.5 1.5v-15Z" /></IconShell>;
+      return <IconShell name={name} size={size} className={className}><g transform="rotate(-10 12 12)"><path {...commonStroke} d="M6.2 4.5h10.3a1.8 1.8 0 0 1 1.8 1.8v12.2H8.2a2.5 2.5 0 0 0-2.5 1.5V5a.5.5 0 0 1 .5-.5Z" /><path {...commonStroke} d="M8.2 4.5v14M8.2 18.5h10.1M11 8h4.5M11 11h4.5" opacity="0.72" /></g></IconShell>;
     case "email":
       return <IconShell name={name} size={size} className={className}><rect {...commonStroke} x="3.5" y="5.5" width="17" height="13" rx="2" /><path {...commonStroke} d="m4.5 7 7.5 6 7.5-6" /></IconShell>;
     case "document":

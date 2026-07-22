@@ -43,6 +43,12 @@ function getCategoryLogoName(category: string): PlatformLogoName | null {
   return null;
 }
 
+function getCategoryNavigationLogoName(category: string): PlatformLogoName | null {
+  const value = category.toLowerCase();
+  if (value.includes("social")) return "instagram";
+  return getCategoryLogoName(category);
+}
+
 function getCategoryThemeIcon(category: string): string | null {
   const value = category.toLowerCase();
   if (value.includes("book")) return "book";
@@ -66,6 +72,7 @@ function getCategoryThemeIcon(category: string): string | null {
   if (value.includes("research") || value.includes("knowledge")) return "research";
   if (value.includes("education") || value.includes("learning")) return "education";
   if (value.includes("data") || value.includes("business intelligence")) return "chart";
+  if (value.includes("business")) return "briefcase";
   if (value.includes("finance") || value.includes("accounting")) return "finance";
   if (value.includes("legal") || value.includes("compliance")) return "legal";
   if (value.includes("customer support") || value.includes("service operations")) return "support";
@@ -348,7 +355,7 @@ export function PlatformToolIcon({ tool, fallback, size = "xl" }: { tool: ToolCa
 }
 
 export function ToolCategoryIcon({ category, size = "sm" }: { category: string; size?: ToolSymbolSize }) {
-  const categoryLogo = getCategoryLogoName(category);
+  const categoryLogo = getCategoryNavigationLogoName(category);
   if (categoryLogo) return <PlatformLogo name={categoryLogo} size={size} />;
   return <ThemeIcon name={getCategoryThemeIcon(category) || "folder"} size={size} />;
 }
