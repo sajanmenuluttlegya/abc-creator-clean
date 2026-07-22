@@ -1,0 +1,1 @@
+Clean UI-only icon polish PR trigger.
