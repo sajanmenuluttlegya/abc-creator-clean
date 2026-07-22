@@ -3,8 +3,17 @@
 import Link from "next/link";
 import { ToolCategorySidebar } from "@/components/ToolCategorySidebar";
 import { PlatformToolIcon, ToolCategoryIcon } from "@/components/PlatformToolLogo";
+import { ThemeIcon } from "@/components/ThemeIcon";
 import { publicTools } from "@/lib/tools/public-tools";
 import { getToolCreditLabel } from "@/lib/tools/credit-costs";
+
+function isMarketingCampaignCategory(category: string) {
+  return category.toLowerCase().includes("marketing campaign");
+}
+
+function isCybersecurityCategory(category: string) {
+  return category.toLowerCase().includes("cybersecurity");
+}
 
 export default function ToolsPage() {
   const categories = [...new Set(publicTools.map((tool) => tool.category))];
@@ -51,7 +60,11 @@ export default function ToolsPage() {
         {Object.entries(toolsByCategory).map(([category, tools]) => (
           <div key={category} className="mb-12">
             <h2 className="text-2xl font-semibold text-white mb-8 flex items-center gap-3">
-              <ToolCategoryIcon category={category} size="sm" />
+              {isMarketingCampaignCategory(category) ? (
+                <ThemeIcon name="campaign" size="sm" />
+              ) : (
+                <ToolCategoryIcon category={category} size="sm" />
+              )}
               {category}
             </h2>
 
@@ -62,8 +75,16 @@ export default function ToolsPage() {
                   href={`/tools/${tool.slug}`}
                   className="group rounded-2xl bg-white/5 border border-purple-500/20 hover:border-purple-500/50 p-8 backdrop-blur-sm transition-all duration-200 hover:bg-white/10 hover:shadow-lg hover:shadow-purple-500/10"
                 >
-                  <div className="flex items-start justify-between mb-4">
-                    <PlatformToolIcon tool={tool} />
+                  <div className="flex items-start justify-between gap-6 mb-4">
+                    {isMarketingCampaignCategory(category) ? (
+                      <ThemeIcon name="campaign" size="xl" />
+                    ) : isCybersecurityCategory(category) ? (
+                      <span className="mr-3 inline-flex shrink-0 pt-1">
+                        <ThemeIcon name="shield" size="lg" />
+                      </span>
+                    ) : (
+                      <PlatformToolIcon tool={tool} />
+                    )}
                     <span className="px-3 py-1 text-xs bg-purple-500/30 text-purple-200 rounded-full font-medium">
                       {category}
                     </span>
