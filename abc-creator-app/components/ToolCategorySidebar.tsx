@@ -4,11 +4,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMemo, useState } from "react";
 import { ToolCategoryIcon } from "@/components/PlatformToolLogo";
+import { ThemeIcon } from "@/components/ThemeIcon";
 import { publicTools } from "@/lib/tools/public-tools";
 import { getToolCreditLabel } from "@/lib/tools/credit-costs";
 
 interface ToolCategorySidebarProps {
   activeSlug?: string;
+}
+
+function isMarketingCampaignCategory(category: string) {
+  return category.toLowerCase().includes("marketing campaign");
 }
 
 export function ToolCategorySidebar({ activeSlug }: ToolCategorySidebarProps) {
@@ -62,7 +67,11 @@ export function ToolCategorySidebar({ activeSlug }: ToolCategorySidebarProps) {
                     className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
                   >
                     <span className="flex min-w-0 items-center gap-2 text-sm font-bold text-white">
-                      <ToolCategoryIcon category={category} size="xs" />
+                      {isMarketingCampaignCategory(category) ? (
+                        <ThemeIcon name="campaign" size="xs" />
+                      ) : (
+                        <ToolCategoryIcon category={category} size="xs" />
+                      )}
                       <span className="truncate">{category}</span>
                     </span>
                     <span className="flex items-center gap-2 text-xs font-semibold text-purple-200">
