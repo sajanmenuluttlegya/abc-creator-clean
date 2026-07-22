@@ -62,6 +62,50 @@ export function ThemeIcon({ name, size = "md", className = "" }: ThemeIconProps)
       return <IconShell name={name} size={size} className={className}><path {...commonStroke} d="M4 13.5V9.8l11-4.3v12.8l-11-4.8Z" /><path {...commonStroke} d="M15 8.3h2a3.2 3.2 0 0 1 0 6.4h-2" opacity="0.65" /><path {...commonStroke} d="m7 15 1.5 4" /></IconShell>;
     case "product":
       return <IconShell name={name} size={size} className={className}><path {...commonStroke} d="M6 8.5 12 5l6 3.5v7L12 19l-6-3.5v-7Z" /><path {...commonStroke} d="m6.5 8.8 5.5 3.3 5.5-3.3M12 12.1V19" opacity="0.7" /></IconShell>;
+    case "book":
+      return <IconShell name={name} size={size} className={className}><path {...commonStroke} d="M4.5 5.5A3.5 3.5 0 0 1 8 4h4v15H8a3.5 3.5 0 0 0-3.5 1.5v-15Z" /><path {...commonStroke} d="M19.5 5.5A3.5 3.5 0 0 0 16 4h-4v15h4a3.5 3.5 0 0 1 3.5 1.5v-15Z" /></IconShell>;
+    case "email":
+      return <IconShell name={name} size={size} className={className}><rect {...commonStroke} x="3.5" y="5.5" width="17" height="13" rx="2" /><path {...commonStroke} d="m4.5 7 7.5 6 7.5-6" /></IconShell>;
+    case "document":
+      return <IconShell name={name} size={size} className={className}><path {...commonStroke} d="M6 3.5h8l4 4V20H6V3.5Z" /><path {...commonStroke} d="M14 3.5V8h4M9 12h6M9 15.5h6" opacity="0.75" /></IconShell>;
+    case "code":
+      return <IconShell name={name} size={size} className={className}><path {...commonStroke} d="m8.5 7-5 5 5 5M15.5 7l5 5-5 5M13.5 4.5l-3 15" /></IconShell>;
+    case "briefcase":
+      return <IconShell name={name} size={size} className={className}><rect {...commonStroke} x="3.5" y="7" width="17" height="12" rx="2" /><path {...commonStroke} d="M9 7V4.5h6V7M3.5 12h17M10 12v2h4v-2" /></IconShell>;
+    case "home":
+      return <IconShell name={name} size={size} className={className}><path {...commonStroke} d="m3.5 11 8.5-7 8.5 7" /><path {...commonStroke} d="M5.5 9.5V20h13V9.5M10 20v-6h4v6" /></IconShell>;
+    case "food":
+      return <IconShell name={name} size={size} className={className}><circle {...commonStroke} cx="13" cy="12" r="6" /><path {...commonStroke} d="M3.8 4v7M2.5 4v4.2a1.3 1.3 0 0 0 2.6 0V4M3.8 11v9M20 4v16M20 4c-2 1.6-2.3 4.8 0 6" /></IconShell>;
+    case "fashion":
+      return <IconShell name={name} size={size} className={className}><path {...commonStroke} d="M10 6.2a2 2 0 1 1 3.5 1.3L12 9" /><path {...commonStroke} d="m12 9-8 7h16l-8-7Z" /></IconShell>;
+    case "research":
+      return <IconShell name={name} size={size} className={className}><path {...commonStroke} d="M5 4h10v9H5z" /><path {...commonStroke} d="M8 7h4M8 10h3" opacity="0.7" /><circle {...commonStroke} cx="15.5" cy="15.5" r="4" /><path {...commonStroke} d="m18.4 18.4 2.1 2.1" /></IconShell>;
+    case "education":
+      return <IconShell name={name} size={size} className={className}><path {...commonStroke} d="m3 9 9-5 9 5-9 5-9-5Z" /><path {...commonStroke} d="M6 11.5v4.2c3.8 2.6 8.2 2.6 12 0v-4.2M21 9v6" /></IconShell>;
+    case "chart":
+      return <IconShell name={name} size={size} className={className}><path {...commonStroke} d="M4 20V4M4 20h16" /><path {...commonStroke} d="M8 17v-5M12 17V8M16 17v-9M20 17V5" /></IconShell>;
+    case "finance":
+      return <IconShell name={name} size={size} className={className}><circle {...commonStroke} cx="8" cy="12" r="4.5" /><path {...commonStroke} d="M8 9.5v5M6.5 10.5h2.2a1.1 1.1 0 0 1 0 2.2H7.3a1.1 1.1 0 0 0 0 2.2H9.5M13.5 17l2.5-3 2 1 2.5-4" /></IconShell>;
+    case "legal":
+      return <IconShell name={name} size={size} className={className}><path {...commonStroke} d="M12 4v16M7 20h10M5 7h14M7 7l-3 6h6L7 7ZM17 7l-3 6h6l-3-6Z" /></IconShell>;
+    case "support":
+      return <IconShell name={name} size={size} className={className}><path {...commonStroke} d="M4 13v-2a8 8 0 0 1 16 0v2" /><path {...commonStroke} d="M4 12h3v5H5a1 1 0 0 1-1-1v-4ZM20 12h-3v5h2a1 1 0 0 0 1-1v-4ZM17 18c-1 1.3-2.6 2-5 2" /></IconShell>;
+    case "sales":
+      return <IconShell name={name} size={size} className={className}><path {...commonStroke} d="M4 19h16M6 16l4-4 3 2 5-7" /><path {...commonStroke} d="M14.5 7H18v3.5" /></IconShell>;
+    case "people":
+      return <IconShell name={name} size={size} className={className}><circle {...commonStroke} cx="9" cy="8" r="3" /><circle {...commonStroke} cx="17" cy="9" r="2.2" /><path {...commonStroke} d="M3.5 20v-2.2A4.8 4.8 0 0 1 8.3 13h1.4a4.8 4.8 0 0 1 4.8 4.8V20M15 14.2h1.7a3.8 3.8 0 0 1 3.8 3.8v2" /></IconShell>;
+    case "shield":
+      return <IconShell name={name} size={size} className={className}><path {...commonStroke} d="M12 3.5 19 6v5.2c0 4.6-2.7 7.5-7 9.3-4.3-1.8-7-4.7-7-9.3V6l7-2.5Z" /><path {...commonStroke} d="m9 12 2 2 4-4" /></IconShell>;
+    case "presentation":
+      return <IconShell name={name} size={size} className={className}><rect {...commonStroke} x="3.5" y="4" width="17" height="12" rx="1.5" /><path {...commonStroke} d="M12 16v4M8 20h8M7 12l3-3 2 2 4-4" /></IconShell>;
+    case "poster":
+      return <IconShell name={name} size={size} className={className}><rect {...commonStroke} x="5" y="3" width="14" height="18" rx="2" /><path {...commonStroke} d="M8 7h8M8 10h5M8 17l3-3 2 2 3-4" /></IconShell>;
+    case "social":
+      return <IconShell name={name} size={size} className={className}><circle {...commonStroke} cx="6" cy="12" r="2.5" /><circle {...commonStroke} cx="18" cy="6" r="2.5" /><circle {...commonStroke} cx="18" cy="18" r="2.5" /><path {...commonStroke} d="m8.2 10.8 7.6-3.6M8.2 13.2l7.6 3.6" /></IconShell>;
+    case "video":
+      return <IconShell name={name} size={size} className={className}><rect {...commonStroke} x="3.5" y="6" width="13" height="12" rx="2" /><path {...commonStroke} d="m16.5 10 4-2v8l-4-2" /><path d="m8.5 9.5 4.5 2.5-4.5 2.5v-5Z" fill="currentColor" /></IconShell>;
+    case "script":
+      return <IconShell name={name} size={size} className={className}><path {...commonStroke} d="M6 3.5h9l3 3V20H6V3.5Z" /><path {...commonStroke} d="M15 3.5V7h3M9 11h6M9 14h6M9 17h4" opacity="0.75" /></IconShell>;
     case "bolt":
       return <IconShell name={name} size={size} className={className}><path {...commonStroke} d="M13 2.8 5.8 13h5.4L10 21.2 18.2 10h-5.6L13 2.8Z" /></IconShell>;
     case "spark":

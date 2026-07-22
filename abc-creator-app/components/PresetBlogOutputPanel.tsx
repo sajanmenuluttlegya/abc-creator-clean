@@ -6,6 +6,7 @@ import { getToolCreditEstimate } from "@/lib/tools/credit-costs";
 import { downloadOutput, type OutputDownloadFormat } from "@/lib/download/exportDocuments";
 import { downloadHtmlOutput } from "@/lib/download/exportHtml";
 import { PresetBlogOutputEditor } from "./PresetBlogOutputEditor";
+import { ToolActionIcon } from "./PlatformToolLogo";
 
 type PresetDownloadFormat = OutputDownloadFormat | "html";
 
@@ -181,9 +182,12 @@ export function PresetBlogOutputPanel({
               <h3 className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-purple-200">Recommended next actions</h3>
               <div className="space-y-3">
                 {recommendedNextActions.map((action) => (
-                  <a key={`${action.href}-${action.label}`} href={action.href} className="block rounded-xl border border-purple-400/20 bg-black/35 p-4 transition hover:border-purple-300/50 hover:bg-purple-500/10">
-                    <div className="text-sm font-semibold text-white">{action.label}</div>
-                    <p className="mt-1 text-xs leading-5 text-gray-400">{action.description}</p>
+                  <a key={`${action.href}-${action.label}`} href={action.href} className="flex items-start gap-3 rounded-xl border border-purple-400/20 bg-black/35 p-4 transition hover:border-purple-300/50 hover:bg-purple-500/10">
+                    <ToolActionIcon href={action.href} size="md" />
+                    <div>
+                      <div className="text-sm font-semibold text-white">{action.label}</div>
+                      <p className="mt-1 text-xs leading-5 text-gray-400">{action.description}</p>
+                    </div>
                   </a>
                 ))}
               </div>
