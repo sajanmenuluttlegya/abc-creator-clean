@@ -7,4 +7,4 @@ jobs:
   documentation-only:
     runs-on: ubuntu-latest
     steps:
-      - run: echo "Implementation is applied and validated by the temporary PR workflow."
+      - run: echo "Implementation is applied and validated by the temporary PR workflow. Retry 2."
