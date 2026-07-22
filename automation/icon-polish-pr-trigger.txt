@@ -1,0 +1,1 @@
+Trigger UI-only icon polish validation.
