@@ -6,6 +6,7 @@ import remarkGfm from "remark-gfm";
 import { downloadOutput, type OutputDownloadFormat } from "@/lib/download/exportDocuments";
 import { downloadHtmlOutput } from "@/lib/download/exportHtml";
 import type { RecommendedNextAction } from "@/lib/tools/public-tools";
+import { ToolActionIcon } from "./PlatformToolLogo";
 
 type DownloadFormat = OutputDownloadFormat | "html";
 
@@ -206,7 +207,7 @@ export function EmailOutputEditorPanel({ isLoading, output, downloadFileBaseName
           </div>
         )
       ) : isLoading ? <div className="flex items-center gap-3 rounded-2xl border border-purple-500/20 bg-white/5 p-5 text-purple-200"><div className="h-5 w-5 animate-spin rounded-full border-2 border-purple-400 border-t-transparent" /><p>Generating...</p></div> : <div className="rounded-2xl border border-purple-500/15 bg-black/70 p-6 text-gray-400">Your generated result will appear here. Email outputs can be edited, copied, or downloaded from this panel.</div>}
-      {showNextActions ? <div className="mt-7 border-t border-white/10 pt-5"><h3 className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Continue with</h3><div className="divide-y divide-white/[0.07]">{recommendedNextActions.map((action) => <a key={`${action.href}-${action.label}`} href={action.href} className="group/action flex items-center justify-between gap-5 py-4"><div><div className="text-sm font-semibold text-white group-hover/action:text-purple-200">{action.label}</div><p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500">{action.description}</p></div><span className="text-lg text-purple-300 transition-transform group-hover/action:translate-x-1">→</span></a>)}</div></div> : null}
+      {showNextActions ? <div className="mt-7 border-t border-white/10 pt-5"><h3 className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Continue with</h3><div className="divide-y divide-white/[0.07]">{recommendedNextActions.map((action) => <a key={`${action.href}-${action.label}`} href={action.href} className="group/action flex items-center justify-between gap-5 py-4"><div className="flex items-center gap-3"><ToolActionIcon href={action.href} size="sm" /><div><div className="text-sm font-semibold text-white group-hover/action:text-purple-200">{action.label}</div><p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500">{action.description}</p></div></div><span className="text-lg text-purple-300 transition-transform group-hover/action:translate-x-1">→</span></a>)}</div></div> : null}
     </div>
   );
 }

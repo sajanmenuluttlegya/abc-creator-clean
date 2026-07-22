@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
 import { ThemeIcon } from "@/components/ThemeIcon";
-import type { Tool } from "@/lib/tools/public-tools";
+import { getToolBySlug, type Tool } from "@/lib/tools/public-tools";
 
 type ToolCardTool = Tool;
+export type ToolSymbolSize = "xs" | "sm" | "md" | "lg" | "xl";
 type PlatformLogoName =
   | "youtube"
   | "linkedin"
@@ -27,13 +28,66 @@ type PlatformLogoName =
   | "microsoft"
   | "blogger";
 
+const symbolSizeClasses: Record<ToolSymbolSize, string> = {
+  xs: "h-4 w-4",
+  sm: "h-5 w-5",
+  md: "h-7 w-7",
+  lg: "h-10 w-10",
+  xl: "h-12 w-12",
+};
+
+function getCategoryLogoName(category: string): PlatformLogoName | null {
+  const value = category.toLowerCase();
+  if (value.includes("blog")) return "blogger";
+  if (value.includes("youtube")) return "youtube";
+  return null;
+}
+
+function getCategoryThemeIcon(category: string): string | null {
+  const value = category.toLowerCase();
+  if (value.includes("book")) return "book";
+  if (value.includes("screenwriting")) return "script";
+  if (value.includes("film") || value.includes("video")) return "video";
+  if (value.includes("animation")) return "animation";
+  if (value.includes("storyboard") || value.includes("comic")) return "storyboard";
+  if (value.includes("email")) return "email";
+  if (value.includes("image")) return "image";
+  if (value.includes("ad copy")) return "ad-copy";
+  if (value.includes("seo")) return "seo";
+  if (value.includes("summar") || value.includes("file")) return "document";
+  if (value.includes("coding") || value.includes("developer")) return "code";
+  if (value.includes("ai") || value.includes("prompt")) return "prompt";
+  if (value.includes("productivity") || value.includes("planning")) return "calendar";
+  if (value.includes("career") || value.includes("professional")) return "briefcase";
+  if (value.includes("interior") || value.includes("architecture")) return "home";
+  if (value.includes("food") || value.includes("hospitality")) return "food";
+  if (value.includes("fashion") || value.includes("apparel")) return "fashion";
+  if (value.includes("marketing")) return "ad-copy";
+  if (value.includes("research") || value.includes("knowledge")) return "research";
+  if (value.includes("education") || value.includes("learning")) return "education";
+  if (value.includes("data") || value.includes("business intelligence")) return "chart";
+  if (value.includes("finance") || value.includes("accounting")) return "finance";
+  if (value.includes("legal") || value.includes("compliance")) return "legal";
+  if (value.includes("customer support") || value.includes("service operations")) return "support";
+  if (value.includes("sales") || value.includes("crm") || value.includes("revenue")) return "sales";
+  if (value.includes("hr") || value.includes("people operations")) return "people";
+  if (value.includes("cybersecurity") || value.includes("it operations")) return "shield";
+  if (value.includes("presentation") || value.includes("pitch")) return "presentation";
+  if (value.includes("poster") || value.includes("promotional")) return "poster";
+  if (value.includes("social")) return "social";
+  if (value.includes("e-commerce") || value.includes("ecommerce")) return "product";
+  if (value.includes("writing")) return "writing-pad";
+  return null;
+}
+
 function getPlatformLogoName(tool: ToolCardTool): PlatformLogoName | null {
   const identity = `${tool.slug} ${tool.name}`.toLowerCase().replace(/[_/]+/g, " ");
   const category = tool.category.toLowerCase();
   const contains = (...terms: string[]) => terms.some((term) => identity.includes(term));
 
-  if (category.includes("blog")) return "blogger";
-  if (category.includes("youtube") || contains("youtube")) return "youtube";
+  const categoryLogo = getCategoryLogoName(tool.category);
+  if (categoryLogo) return categoryLogo;
+  if (contains("youtube")) return "youtube";
   if (contains("linkedin")) return "linkedin";
   if (contains("facebook")) return "facebook";
   if (contains("instagram")) return "instagram";
@@ -58,17 +112,17 @@ function getPlatformLogoName(tool: ToolCardTool): PlatformLogoName | null {
   return null;
 }
 
-function PlatformLogoShell({ children }: { children: ReactNode }) {
+function PlatformLogoShell({ children, size }: { children: ReactNode; size: ToolSymbolSize }) {
   return (
-    <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center bg-transparent" aria-hidden="true">
+    <span className={`inline-flex ${symbolSizeClasses[size]} shrink-0 items-center justify-center bg-transparent`} aria-hidden="true">
       {children}
     </span>
   );
 }
 
-function PlatformLogo({ name }: { name: PlatformLogoName }) {
+function PlatformLogo({ name, size }: { name: PlatformLogoName; size: ToolSymbolSize }) {
   const common = {
-    className: "h-12 w-12",
+    className: symbolSizeClasses[size],
     viewBox: "0 0 24 24",
     xmlns: "http://www.w3.org/2000/svg",
     focusable: "false" as const,
@@ -77,7 +131,7 @@ function PlatformLogo({ name }: { name: PlatformLogoName }) {
   switch (name) {
     case "blogger":
       return (
-        <PlatformLogoShell>
+        <PlatformLogoShell size={size}>
           <svg {...common}>
             <rect x="1.4" y="1.4" width="21.2" height="21.2" rx="4.6" fill="#FF6D2D" />
             <path fill="#fff" d="M8.6 5.1h3.8a4.6 4.6 0 0 1 4.6 4.6v.8c0 .9.4 1.3 1.3 1.3h.4c1.2 0 2.2 1 2.2 2.2v2.4a3.8 3.8 0 0 1-3.8 3.8H8.6A5.5 5.5 0 0 1 3.1 14.7V10.6a5.5 5.5 0 0 1 5.5-5.5Zm.5 3a1.15 1.15 0 1 0 0 2.3h4a1.15 1.15 0 1 0 0-2.3h-4Zm0 6a1.15 1.15 0 1 0 0 2.3h7.2a1.15 1.15 0 1 0 0-2.3H9.1Z" />
@@ -86,7 +140,7 @@ function PlatformLogo({ name }: { name: PlatformLogoName }) {
       );
     case "youtube":
       return (
-        <PlatformLogoShell>
+        <PlatformLogoShell size={size}>
           <svg {...common}>
             <path fill="#FF0000" d="M22.2 7.1a2.8 2.8 0 0 0-2-2C18.4 4.6 15.7 4.5 12 4.5s-6.4.1-8.2.6a2.8 2.8 0 0 0-2 2A29 29 0 0 0 1.4 12c0 1.8.1 3.5.4 4.9a2.8 2.8 0 0 0 2 2c1.8.5 4.5.6 8.2.6s6.4-.1 8.2-.6a2.8 2.8 0 0 0 2-2c.3-1.4.4-3.1.4-4.9s-.1-3.5-.4-4.9Z" />
             <path fill="#fff" d="m9.7 15.7 6-3.7-6-3.7v7.4Z" />
@@ -95,7 +149,7 @@ function PlatformLogo({ name }: { name: PlatformLogoName }) {
       );
     case "linkedin":
       return (
-        <PlatformLogoShell>
+        <PlatformLogoShell size={size}>
           <svg {...common}>
             <rect x="2" y="2" width="20" height="20" rx="3.2" fill="#0A66C2" />
             <circle cx="7" cy="7.3" r="1.45" fill="#fff" />
@@ -105,7 +159,7 @@ function PlatformLogo({ name }: { name: PlatformLogoName }) {
       );
     case "facebook":
       return (
-        <PlatformLogoShell>
+        <PlatformLogoShell size={size}>
           <svg {...common}>
             <circle cx="12" cy="12" r="10.5" fill="#1877F2" />
             <path fill="#fff" d="M13.7 21v-7h2.4l.4-2.8h-2.8V9.4c0-.8.2-1.4 1.4-1.4h1.5V5.5c-.3 0-1.2-.1-2.2-.1-2.2 0-3.7 1.3-3.7 3.8v2.1H8.6V14h2.5v7h2.6Z" />
@@ -114,13 +168,13 @@ function PlatformLogo({ name }: { name: PlatformLogoName }) {
       );
     case "instagram":
       return (
-        <PlatformLogoShell>
+        <PlatformLogoShell size={size}>
           <img src="/platform-logos/instagram.svg" alt="" className="h-12 w-12 object-contain" />
         </PlatformLogoShell>
       );
     case "tiktok":
       return (
-        <PlatformLogoShell>
+        <PlatformLogoShell size={size}>
           <svg {...common}>
             <path d="M14.2 3.2c.3 2.5 1.8 4 4.3 4.2v3a8.7 8.7 0 0 1-4.3-1.2v6.2a5.6 5.6 0 1 1-4.8-5.5v3.1a2.6 2.6 0 1 0 1.8 2.4V3.2h3Z" fill="#25F4EE" transform="translate(-.45 .35)" />
             <path d="M14.2 3.2c.3 2.5 1.8 4 4.3 4.2v3a8.7 8.7 0 0 1-4.3-1.2v6.2a5.6 5.6 0 1 1-4.8-5.5v3.1a2.6 2.6 0 1 0 1.8 2.4V3.2h3Z" fill="#FE2C55" transform="translate(.45 -.2)" />
@@ -130,7 +184,7 @@ function PlatformLogo({ name }: { name: PlatformLogoName }) {
       );
     case "x":
       return (
-        <PlatformLogoShell>
+        <PlatformLogoShell size={size}>
           <svg {...common} fill="none">
             <path d="M4 4 20 20M20 4 4 20" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" />
           </svg>
@@ -138,7 +192,7 @@ function PlatformLogo({ name }: { name: PlatformLogoName }) {
       );
     case "pinterest":
       return (
-        <PlatformLogoShell>
+        <PlatformLogoShell size={size}>
           <svg {...common}>
             <circle cx="12" cy="12" r="10.3" fill="#E60023" />
             <path fill="#fff" d="M11 18.7c.8-2.1 1.1-3.2 1.6-5.5-.5-1-.1-3.1 1-3.1.9 0 1.2.7 1.2 1.5 0 .9-.6 2.3-.9 3.6-.3 1 .6 1.8 1.6 1.8 1.9 0 3.2-2.4 3.2-5.2 0-2.1-1.7-4.5-5-4.5-3.6 0-5.7 2.7-5.7 5.5 0 1 .4 2.4 1.2 2.8.1.1.1.2.1.4l-.4 1.5c-.1.5-.5.6-.9.4-1.6-.7-2.3-2.8-2.3-5 0-3.7 3.1-8.1 9.2-8.1 4.9 0 8.1 3.5 8.1 7.3 0 5-2.8 8.7-6.9 8.7-1.4 0-2.7-.8-3.1-1.7l-.9 3.4c-.3 1.2-.9 2.4-1.5 3.3H7.2c1-1.4 2.1-3.8 2.6-5.6l1.2-4.5Z" transform="scale(.72) translate(4.7 4.3)" />
@@ -147,7 +201,7 @@ function PlatformLogo({ name }: { name: PlatformLogoName }) {
       );
     case "google":
       return (
-        <PlatformLogoShell>
+        <PlatformLogoShell size={size}>
           <svg {...common}>
             <path fill="#4285F4" d="M21.4 12.2c0-.7-.1-1.4-.2-2H12v3.8h5.3a4.5 4.5 0 0 1-2 3v2.5h3.2c1.9-1.8 2.9-4.3 2.9-7.3Z" />
             <path fill="#34A853" d="M12 21.7c2.7 0 5-.9 6.6-2.3l-3.2-2.5c-.9.6-2 1-3.4 1-2.6 0-4.8-1.8-5.6-4.1H3v2.6A10 10 0 0 0 12 21.7Z" />
@@ -158,7 +212,7 @@ function PlatformLogo({ name }: { name: PlatformLogoName }) {
       );
     case "meta":
       return (
-        <PlatformLogoShell>
+        <PlatformLogoShell size={size}>
           <svg {...common} fill="none">
             <path d="M3.1 15.5c1.8-5.1 3.8-8 6.1-8 3.4 0 4.6 9 7.5 9 1.7 0 3-1.7 4.2-5.1" stroke="#0866FF" strokeWidth="2.6" strokeLinecap="round" />
             <path d="M3.1 15.5c1.2 1.1 2.3 1.6 3.4 1.6 3.3 0 4.6-9.1 7.6-9.1 2.5 0 4.5 3.1 6.8 7.5" stroke="#00A6FF" strokeWidth="2.6" strokeLinecap="round" />
@@ -167,7 +221,7 @@ function PlatformLogo({ name }: { name: PlatformLogoName }) {
       );
     case "reddit":
       return (
-        <PlatformLogoShell>
+        <PlatformLogoShell size={size}>
           <svg {...common}>
             <circle cx="12" cy="12" r="10.3" fill="#FF4500" />
             <path d="M6.1 13.2c0-2 2.6-3.7 5.9-3.7s5.9 1.7 5.9 3.7-2.6 3.7-5.9 3.7-5.9-1.7-5.9-3.7Z" fill="#fff" />
@@ -180,7 +234,7 @@ function PlatformLogo({ name }: { name: PlatformLogoName }) {
       );
     case "whatsapp":
       return (
-        <PlatformLogoShell>
+        <PlatformLogoShell size={size}>
           <svg {...common}>
             <circle cx="12" cy="12" r="10.3" fill="#25D366" />
             <path fill="#fff" d="M7.5 6.8c.4-.4 1-.5 1.4-.2l1.4 2.5c.2.4.1.8-.2 1.1l-.8.8c.7 1.6 2.1 3 3.8 3.8l.8-.9c.3-.3.8-.4 1.1-.2l2.5 1.4c.4.3.5.9.2 1.4-.7 1.1-1.9 1.8-3.2 1.7-4.7-.4-8.3-4-8.7-8.7-.1-1.2.6-2.4 1.7-3.1Z" />
@@ -189,7 +243,7 @@ function PlatformLogo({ name }: { name: PlatformLogoName }) {
       );
     case "amazon":
       return (
-        <PlatformLogoShell>
+        <PlatformLogoShell size={size}>
           <svg {...common}>
             <path fill="#fff" d="M8.1 14.5c0-2.2 1.8-3.5 5.1-3.5.8 0 1.5.1 2.1.2v-.6c0-1.5-.8-2.2-2.5-2.2-1.3 0-2.7.4-4 1.1L8 7.1A12 12 0 0 1 13.4 6c3.7 0 5.4 1.7 5.4 5v6.8h-3.3v-1.4c-1 1.1-2.4 1.7-4 1.7-2 0-3.4-1.4-3.4-3.6Zm7.2-1.1a8 8 0 0 0-1.7-.2c-1.5 0-2.3.5-2.3 1.4 0 .8.6 1.3 1.6 1.3 1.1 0 1.9-.4 2.4-1v-1.5Z" />
             <path d="M5.4 19.1c3.9 2.3 8.8 2.5 13 .6" fill="none" stroke="#FF9900" strokeWidth="1.7" strokeLinecap="round" />
@@ -199,7 +253,7 @@ function PlatformLogo({ name }: { name: PlatformLogoName }) {
       );
     case "shopify":
       return (
-        <PlatformLogoShell>
+        <PlatformLogoShell size={size}>
           <svg {...common}>
             <path fill="#95BF47" d="m7 6.2 1-2.5c.4-1 1.3-1.7 2.3-1.7.8 0 1.4.4 1.8 1 .6-.4 1.2-.6 1.9-.5 1.6.2 2.4 1.8 2.8 3.2l2.8 1.1-2 14.4L5 18.9 7 6.2Z" />
             <path fill="#fff" d="M14.7 8.3c-.7-.4-1.5-.6-2.3-.6-1.9 0-3.1 1.1-3.1 2.6 0 2.7 3.6 2.6 3.6 4.2 0 .4-.4.8-1.2.8-1 0-2.1-.5-2.8-1l-.8 2.4c.8.6 2.1 1.1 3.5 1.1 2.4 0 3.8-1.3 3.8-3.2 0-2.9-3.7-2.7-3.7-4.2 0-.4.4-.7 1-.7.8 0 1.6.3 2.1.6l-.1-2Z" />
@@ -208,7 +262,7 @@ function PlatformLogo({ name }: { name: PlatformLogoName }) {
       );
     case "etsy":
       return (
-        <PlatformLogoShell>
+        <PlatformLogoShell size={size}>
           <svg {...common}>
             <path fill="#F1641E" d="M5 3h14v4.1h-2.1c-.4-1.3-1-1.6-2.7-1.6H9.6v5h3.2c1.6 0 2-.4 2.3-1.8h1.8v6.1h-1.8c-.3-1.4-.7-1.8-2.3-1.8H9.6v5.5h4.9c1.9 0 2.6-.5 3.3-2.3H20L19.5 21H5v-2h1.6V5H5V3Z" />
           </svg>
@@ -216,7 +270,7 @@ function PlatformLogo({ name }: { name: PlatformLogoName }) {
       );
     case "ebay":
       return (
-        <PlatformLogoShell>
+        <PlatformLogoShell size={size}>
           <svg {...common} viewBox="0 0 48 24">
             <text x="1" y="17" fontFamily="Arial, sans-serif" fontSize="17" fontWeight="700" fill="#E53238">e</text>
             <text x="11" y="17" fontFamily="Arial, sans-serif" fontSize="17" fontWeight="700" fill="#0064D2">b</text>
@@ -227,7 +281,7 @@ function PlatformLogo({ name }: { name: PlatformLogoName }) {
       );
     case "snapchat":
       return (
-        <PlatformLogoShell>
+        <PlatformLogoShell size={size}>
           <svg {...common}>
             <path d="M12 3.1c3 0 4.5 2.3 4.5 5.1 0 1 .1 1.8.7 2.5.5.6 1.3.7 2 .9.5.1.8.5.7.9-.1.6-1.2.9-2.1 1.2-.5.2-.8.4-1 .8-.3.7-.2 1.5-.9 1.8-.5.2-1.2 0-1.9.3-.6.3-1.1 1.1-2 1.1s-1.4-.8-2-1.1c-.7-.3-1.4-.1-1.9-.3-.7-.3-.6-1.1-.9-1.8-.2-.4-.5-.6-1-.8-.9-.3-2-.6-2.1-1.2-.1-.4.2-.8.7-.9.7-.2 1.5-.3 2-.9.6-.7.7-1.5.7-2.5 0-2.8 1.5-5.1 4.5-5.1Z" fill="#fff" stroke="#111" strokeWidth="1.1" strokeLinejoin="round" />
           </svg>
@@ -235,7 +289,7 @@ function PlatformLogo({ name }: { name: PlatformLogoName }) {
       );
     case "telegram":
       return (
-        <PlatformLogoShell>
+        <PlatformLogoShell size={size}>
           <svg {...common}>
             <circle cx="12" cy="12" r="10.3" fill="#2AABEE" />
             <path fill="#fff" d="m5.5 11.7 11.7-4.5c.6-.2 1.1.1.9.9l-2 9.4c-.1.7-.6.9-1.2.6l-3.1-2.3-1.5 1.5c-.2.2-.3.3-.6.3l.2-3.2 5.8-5.3c.3-.2 0-.4-.3-.2l-7.2 4.5-3.1-1c-.7-.2-.7-.6.4-.7Z" />
@@ -244,7 +298,7 @@ function PlatformLogo({ name }: { name: PlatformLogoName }) {
       );
     case "discord":
       return (
-        <PlatformLogoShell>
+        <PlatformLogoShell size={size}>
           <svg {...common}>
             <path fill="#5865F2" d="M5.1 5.7A16 16 0 0 1 9 4.4l.5 1a13 13 0 0 1 5 0l.5-1a16 16 0 0 1 3.9 1.3c2.5 3.6 3.1 7.1 2.7 10.5a16 16 0 0 1-4.9 2.5l-1.2-1.7c.8-.3 1.5-.7 2.1-1.2-.2.1-.4.3-.6.4-3.2 1.5-6.8 1.5-10 0l-.6-.4c.7.5 1.4.9 2.1 1.2l-1.2 1.7a16 16 0 0 1-4.9-2.5c-.4-3.4.2-6.9 2.7-10.5Z" />
             <circle cx="9.2" cy="12" r="1.35" fill="#fff" />
@@ -254,7 +308,7 @@ function PlatformLogo({ name }: { name: PlatformLogoName }) {
       );
     case "threads":
       return (
-        <PlatformLogoShell>
+        <PlatformLogoShell size={size}>
           <svg {...common} fill="none">
             <path d="M17.8 10.6c-.4-4-2.4-6.3-5.8-6.3-4.3 0-7 3-7 7.7 0 4.9 2.8 7.7 7.2 7.7 3.5 0 5.9-1.9 5.9-4.7 0-2.4-1.8-4-4.7-4-2.3 0-3.8 1.1-3.8 2.8 0 1.5 1.2 2.5 2.9 2.5 2.9 0 5.3-2.1 5.3-5.7 0-2.4-.8-4.4-2.2-5.7" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
@@ -262,7 +316,7 @@ function PlatformLogo({ name }: { name: PlatformLogoName }) {
       );
     case "gmail":
       return (
-        <PlatformLogoShell>
+        <PlatformLogoShell size={size}>
           <svg {...common} fill="none">
             <path d="M3.5 6.5 12 13l8.5-6.5" stroke="#EA4335" strokeWidth="2.5" strokeLinejoin="round" />
             <path d="M3.5 6.5V18" stroke="#34A853" strokeWidth="2.5" />
@@ -273,7 +327,7 @@ function PlatformLogo({ name }: { name: PlatformLogoName }) {
       );
     case "microsoft":
       return (
-        <PlatformLogoShell>
+        <PlatformLogoShell size={size}>
           <svg {...common}>
             <rect x="3" y="3" width="8" height="8" fill="#F25022" />
             <rect x="13" y="3" width="8" height="8" fill="#7FBA00" />
@@ -285,8 +339,28 @@ function PlatformLogo({ name }: { name: PlatformLogoName }) {
   }
 }
 
-export function PlatformToolIcon({ tool, fallback }: { tool: ToolCardTool; fallback?: ReactNode }) {
+export function PlatformToolIcon({ tool, fallback, size = "xl" }: { tool: ToolCardTool; fallback?: ReactNode; size?: ToolSymbolSize }) {
   const platformLogo = getPlatformLogoName(tool);
-  return platformLogo ? <PlatformLogo name={platformLogo} /> : (fallback ?? <ThemeIcon name={tool.icon} size="xl" />);
+  if (platformLogo) return <PlatformLogo name={platformLogo} size={size} />;
+  const categoryIcon = getCategoryThemeIcon(tool.category);
+  if (categoryIcon) return <ThemeIcon name={categoryIcon} size={size} />;
+  return fallback ?? <ThemeIcon name={tool.icon} size={size} />;
+}
+
+export function ToolCategoryIcon({ category, size = "sm" }: { category: string; size?: ToolSymbolSize }) {
+  const categoryLogo = getCategoryLogoName(category);
+  if (categoryLogo) return <PlatformLogo name={categoryLogo} size={size} />;
+  return <ThemeIcon name={getCategoryThemeIcon(category) || "folder"} size={size} />;
+}
+
+function slugFromToolHref(href: string) {
+  const cleanHref = href.split("#", 1)[0].split("?", 1)[0];
+  const parts = cleanHref.split("/").filter(Boolean);
+  return parts.at(-1) || "";
+}
+
+export function ToolActionIcon({ href, size = "md" }: { href: string; size?: ToolSymbolSize }) {
+  const tool = getToolBySlug(slugFromToolHref(href));
+  return tool ? <PlatformToolIcon tool={tool} size={size} /> : <ThemeIcon name="spark" size={size} />;
 }
 

@@ -7,6 +7,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { Components } from "react-markdown";
 import { getToolBySlug, type RecommendedNextAction } from "@/lib/tools/public-tools";
+import { ToolActionIcon } from "./PlatformToolLogo";
 import { getBookTitleSelection, isBookTitleOptionBlock } from "@/lib/tools/book-title-selection";
 import { downloadOutput, type OutputDownloadFormat } from "@/lib/download/exportDocuments";
 import { downloadHtmlOutput } from "@/lib/download/exportHtml";
@@ -816,10 +817,10 @@ export function OutputPanel({ isLoading, output, recommendedNextActions = [], do
           {showNextActions ? (isBlogWorkflowTool(toolSlug) ? (
             <div className="mt-5 rounded-2xl border border-purple-500/20 bg-purple-500/10 p-5">
               <h3 className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-purple-200">Recommended next actions</h3>
-              <div className="space-y-3">{recommendedNextActions.map((action) => <Link key={`${action.href}-${action.label}`} href={action.href} className="block rounded-xl border border-purple-400/20 bg-black/35 p-4 transition hover:border-purple-300/50 hover:bg-purple-500/10"><div className="text-sm font-semibold text-white">{action.label}</div><p className="mt-1 text-xs leading-5 text-gray-400">{action.description}</p></Link>)}</div>
+              <div className="space-y-3">{recommendedNextActions.map((action) => <Link key={`${action.href}-${action.label}`} href={action.href} className="flex items-start gap-3 rounded-xl border border-purple-400/20 bg-black/35 p-4 transition hover:border-purple-300/50 hover:bg-purple-500/10"><ToolActionIcon href={action.href} size="md" /><div><div className="text-sm font-semibold text-white">{action.label}</div><p className="mt-1 text-xs leading-5 text-gray-400">{action.description}</p></div></Link>)}</div>
             </div>
           ) : (
-            <div className="mt-7 border-t border-white/10 pt-5"><h3 className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Continue with</h3><div className="divide-y divide-white/[0.07]">{recommendedNextActions.map((action) => <Link key={`${action.href}-${action.label}`} href={action.href} className="group/action flex items-center justify-between gap-5 py-4"><div><div className="text-sm font-semibold text-white group-hover/action:text-purple-200">{action.label}</div><p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500">{action.description}</p></div><span className="text-lg text-purple-300 transition-transform group-hover/action:translate-x-1">→</span></Link>)}</div></div>
+            <div className="mt-7 border-t border-white/10 pt-5"><h3 className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Continue with</h3><div className="divide-y divide-white/[0.07]">{recommendedNextActions.map((action) => <Link key={`${action.href}-${action.label}`} href={action.href} className="group/action flex items-center justify-between gap-5 py-4"><div className="flex items-center gap-3"><ToolActionIcon href={action.href} size="sm" /><div><div className="text-sm font-semibold text-white group-hover/action:text-purple-200">{action.label}</div><p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500">{action.description}</p></div></div><span className="text-lg text-purple-300 transition-transform group-hover/action:translate-x-1">→</span></Link>)}</div></div>
           )) : null}
         </>
       ) : isLoading ? <div className="flex items-center gap-3 rounded-2xl border border-purple-500/20 bg-white/5 p-5 text-purple-200"><div className="h-5 w-5 animate-spin rounded-full border-2 border-purple-400 border-t-transparent" /><p>Generating...</p></div> : <div className="rounded-2xl border border-purple-500/15 bg-black/70 p-6 text-gray-400">Your generated result will appear here. Text tools can be copied or downloaded from this panel.</div>}
