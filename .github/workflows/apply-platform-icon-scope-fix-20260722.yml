@@ -82,3 +82,5 @@ jobs:
           git add -A
           git commit -m 'Use exact platform logos on list and tool pages'
           git push origin HEAD:fix/instagram-logo-and-detail-platform-icons-20260722
+
+# Trigger marker: exact Instagram asset and tool-page platform icons.
