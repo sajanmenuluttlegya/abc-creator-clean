@@ -35,6 +35,9 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Correct guarded platform shell count
+        run: sed -i 's/, 21, "platform logo shell sizing")/, 22, "platform logo shell sizing")/' automation/apply_tool_symbol_system_20260722.py
+
       - name: Apply guarded symbol-system patch
         run: python automation/apply_tool_symbol_system_20260722.py
 
