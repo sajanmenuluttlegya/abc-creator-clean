@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ToolFormRenderer } from "@/components/ToolFormRenderer";
 import { ThemeIcon } from "@/components/ThemeIcon";
+import { PlatformToolIcon } from "@/components/PlatformToolLogo";
 import { ImageTextToImagePanel } from "@/components/ImageTextToImagePanel";
 import { ImageUpscalePanel } from "@/components/ImageUpscalePanel";
 import { ImageBackgroundRemoverPanel } from "@/components/ImageBackgroundRemoverPanel";
@@ -123,7 +124,7 @@ export default function DynamicToolPage() {
       <section className={`mx-auto max-w-[1500px] px-6 pb-12 ${useModernToolUI ? "abc-modern-tool-ui" : ""}`}> 
         <div className="mb-12">
           <div className="mb-6 flex items-center gap-6">
-            <span className="text-5xl leading-none" aria-hidden="true">{tool.detailEmoji}</span>
+            <PlatformToolIcon tool={tool} fallback={<span className="text-5xl leading-none" aria-hidden="true">{tool.detailEmoji}</span>} />
             <div>
               <h1 className="mb-2 text-4xl font-bold text-white">{tool.name}</h1>
               <p className="text-gray-400">{tool.description}</p>
